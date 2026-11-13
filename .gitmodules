@@ -1,0 +1,18 @@
+[submodule "forks/web"]
+	path = forks/web
+	url = https://github.com/georgonr/psst-web
+	branch = psst
+	shallow = true
+	ignore = all
+[submodule "forks/android"]
+	path = forks/android
+	url = https://github.com/georgonr/psst-android
+	branch = psst
+	shallow = true
+	ignore = all
+[submodule "forks/ios"]
+	path = forks/ios
+	url = https://github.com/georgonr/psst-ios
+	branch = psst
+	shallow = true
+	ignore = all
