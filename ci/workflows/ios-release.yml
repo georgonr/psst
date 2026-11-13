@@ -1,0 +1,272 @@
+# PSST iOS — signed device build (archive + IPA export, optional TestFlight upload).
+#
+# Never runs automatically. Fill these repository secrets first (Settings > Secrets and variables > Actions):
+#   IOS_DIST_CERT_P12_BASE64          base64 of the "Apple Distribution" certificate + private key (.p12)
+#   IOS_DIST_CERT_PASSWORD            password of that .p12
+#   IOS_PROVISIONING_PROFILES_BASE64  base64 of a .zip containing the three App Store provisioning profiles
+#                                     (*.mobileprovision) for eu.macet.psst, eu.macet.psst.nse, eu.macet.psst.shareextension
+#   APPLE_TEAM_ID                     10-character Apple Developer Team ID
+# Only for "upload_to_testflight":
+#   APP_STORE_CONNECT_API_KEY_ID      App Store Connect API key id
+#   APP_STORE_CONNECT_ISSUER_ID       App Store Connect issuer id
+#   APP_STORE_CONNECT_API_KEY_BASE64  base64 of AuthKey_<KEY_ID>.p8
+# See docs/build/ios.md for how to create them.
+name: iOS release (signed)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "georgonr/psst-ios ref to build"
+        default: psst
+        required: true
+      build_number:
+        description: "CFBundleVersion (empty = workflow run number)"
+        required: false
+      upload_to_testflight:
+        description: "Upload the IPA to App Store Connect / TestFlight"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-release
+  cancel-in-progress: false
+
+env:
+  FORK_REPO: georgonr/psst-ios
+  BUNDLE_ID: eu.macet.psst
+
+jobs:
+  release:
+    name: Archive + export IPA
+    runs-on: macos-26 # same image / Xcode 27 as ios.yml
+    timeout-minutes: 180
+
+    steps:
+      - name: Check secrets
+        env:
+          IOS_DIST_CERT_P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          IOS_DIST_CERT_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+          IOS_PROVISIONING_PROFILES_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILES_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          UPLOAD: ${{ inputs.upload_to_testflight }}
+        run: |
+          missing=()
+          for s in IOS_DIST_CERT_P12_BASE64 IOS_DIST_CERT_PASSWORD IOS_PROVISIONING_PROFILES_BASE64 APPLE_TEAM_ID; do
+            [ -n "${!s}" ] || missing+=("$s")
+          done
+          if [ "$UPLOAD" = "true" ]; then
+            for s in APP_STORE_CONNECT_API_KEY_ID APP_STORE_CONNECT_ISSUER_ID APP_STORE_CONNECT_API_KEY_BASE64; do
+              [ -n "${!s}" ] || missing+=("$s")
+            done
+          fi
+          if [ ${#missing[@]} -gt 0 ]; then
+            for s in "${missing[@]}"; do echo "::error title=Missing secret::Repository secret $s is not set"; done
+            echo "Missing secrets: ${missing[*]}. See docs/build/ios.md (section 'Podpísaný build')." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "::error::APPLE_TEAM_ID must be 10 upper-case alphanumerics"; exit 1; }
+          echo "All required secrets are present."
+
+      - name: Checkout psst-ios
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.FORK_REPO }}
+          ref: ${{ inputs.ref }}
+          path: ios
+          fetch-depth: 1
+          lfs: false
+          submodules: false
+          persist-credentials: false
+
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "::error::Xcode 27 not installed"; exit 1; }
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Install signing certificate
+        env:
+          P12_BASE64: ${{ secrets.IOS_DIST_CERT_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DIST_CERT_PASSWORD }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/psst-signing.keychain-db"
+          KEYCHAIN_PASSWORD=$(uuidgen)
+          echo "$P12_BASE64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/dist.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN" >/dev/null
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          rm "$RUNNER_TEMP/dist.p12"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          echo "SIGNING_KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+
+      - name: Install provisioning profiles
+        env:
+          PROFILES_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILES_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/profiles" ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "$PROFILES_BASE64" | base64 --decode > "$RUNNER_TEMP/profiles.bin"
+          # Accept a .zip with several profiles or a single .mobileprovision
+          if unzip -tq "$RUNNER_TEMP/profiles.bin" >/dev/null 2>&1; then
+            unzip -jq "$RUNNER_TEMP/profiles.bin" '*.mobileprovision' -d "$RUNNER_TEMP/profiles"
+          else
+            cp "$RUNNER_TEMP/profiles.bin" "$RUNNER_TEMP/profiles/profile.mobileprovision"
+          fi
+          : > "$RUNNER_TEMP/profiles.tsv"
+          for p in "$RUNNER_TEMP"/profiles/*.mobileprovision; do
+            security cms -D -i "$p" > "$RUNNER_TEMP/p.plist"
+            UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$RUNNER_TEMP/p.plist")
+            NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/p.plist")
+            APPID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$RUNNER_TEMP/p.plist")
+            BID=${APPID#*.}
+            cp "$p" ~/Library/MobileDevice/Provisioning\ Profiles/"$UUID".mobileprovision
+            cp "$RUNNER_TEMP/p.plist" "$RUNNER_TEMP/profiles/$BID.plist"
+            printf '%s\t%s\t%s\n' "$BID" "$NAME" "$UUID" >> "$RUNNER_TEMP/profiles.tsv"
+            echo "profile '$NAME' ($UUID) -> $BID"
+          done
+          for b in "$BUNDLE_ID" "$BUNDLE_ID.nse" "$BUNDLE_ID.shareextension"; do
+            grep -q "^$b	" "$RUNNER_TEMP/profiles.tsv" || { echo "::error::No provisioning profile for $b in IOS_PROVISIONING_PROFILES_BASE64"; exit 1; }
+          done
+
+      - name: Install tools
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1
+          brew install xcodegen
+          mkdir -p "$RUNNER_TEMP/shims"
+          for t in swiftlint swiftformat; do printf '#!/bin/sh\nexit 0\n' > "$RUNNER_TEMP/shims/$t"; chmod +x "$RUNNER_TEMP/shims/$t"; done
+          echo "$RUNNER_TEMP/shims" >> "$GITHUB_PATH"
+
+      - name: Configure signing + generate project
+        working-directory: ios
+        env:
+          BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
+        run: |
+          profile() { awk -F'\t' -v b="$1" '$1==b {print $2}' "$RUNNER_TEMP/profiles.tsv"; }
+          # Per-target manual signing, merged into the XcodeGen spec via an extra include.
+          cat > psst-signing.yml <<EOF
+          targets:
+            ElementX:
+              settings:
+                base:
+                  PROVISIONING_PROFILE_SPECIFIER: "$(profile "$BUNDLE_ID")"
+            NSE:
+              settings:
+                base:
+                  PROVISIONING_PROFILE_SPECIFIER: "$(profile "$BUNDLE_ID.nse")"
+            ShareExtension:
+              settings:
+                base:
+                  PROVISIONING_PROFILE_SPECIFIER: "$(profile "$BUNDLE_ID.shareextension")"
+          EOF
+          python3 - <<'PY'
+          import re
+          s = open("project.yml").read()
+          s = s.replace("include:\n", "include:\n- path: psst-signing.yml\n", 1)
+          s = re.sub(r"CURRENT_PROJECT_VERSION: \d+", "CURRENT_PROJECT_VERSION: " + __import__("os").environ["BUILD_NUMBER"], s)
+          open("project.yml", "w").write(s)
+          PY
+          # App Store builds need the production APNs environment.
+          sed -i '' 's/aps-environment: development/aps-environment: production/' ElementX/SupportingFiles/target.yml
+          # The NSE filtering entitlement must be granted by Apple on request. Without it in the profile,
+          # drop it (notifications then can't be silently filtered, everything else works).
+          if ! /usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.usernotifications.filtering' \
+               "$RUNNER_TEMP/profiles/$BUNDLE_ID.nse.plist" >/dev/null 2>&1; then
+            echo "::warning::NSE profile lacks com.apple.developer.usernotifications.filtering - removing it from NSE entitlements"
+            sed -i '' '/com.apple.developer.usernotifications.filtering: true/d' NSE/SupportingFiles/target.yml
+          fi
+          cat psst-signing.yml
+          xcodegen
+
+      - name: Archive
+        working-directory: ios
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -project ElementX.xcodeproj -scheme ElementX -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/psst.xcarchive" \
+            -skipPackagePluginValidation -skipMacroValidation \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" COMPILER_INDEX_STORE_ENABLE=NO \
+            > "$RUNNER_TEMP/archive.log" 2>&1 &
+          pid=$!
+          while kill -0 $pid 2>/dev/null; do sleep 60; echo "[$(date +%T)] $(tail -1 "$RUNNER_TEMP/archive.log" | cut -c1-160)"; done
+          wait $pid && rc=0 || rc=$?
+          grep -E 'error:' "$RUNNER_TEMP/archive.log" | sort -u | head -100 || true
+          tail -5 "$RUNNER_TEMP/archive.log"
+          exit $rc
+
+      - name: Export IPA
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          python3 - <<'PY'
+          import os, plistlib
+          profiles = {}
+          for line in open(os.path.join(os.environ["RUNNER_TEMP"], "profiles.tsv")):
+              bid, name, _uuid = line.rstrip("\n").split("\t")
+              profiles[bid] = name
+          options = {
+              "method": "app-store-connect",
+              "teamID": os.environ["APPLE_TEAM_ID"],
+              "signingStyle": "manual",
+              "signingCertificate": "Apple Distribution",
+              "provisioningProfiles": profiles,
+              "uploadSymbols": True,
+              "manageAppVersionAndBuildNumber": False,
+          }
+          with open(os.path.join(os.environ["RUNNER_TEMP"], "ExportOptions.plist"), "wb") as f:
+              plistlib.dump(options, f)
+          PY
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/psst.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export"
+          ls -l "$RUNNER_TEMP/export"
+          IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
+          mv "$IPA" "$RUNNER_TEMP/export/psst.ipa"
+
+      - name: Upload to TestFlight
+        if: ${{ inputs.upload_to_testflight }}
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$KEY_BASE64" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_"$KEY_ID".p8
+          xcrun altool --upload-app --type ios --file "$RUNNER_TEMP/export/psst.ipa" \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: psst-ios-ipa
+          path: |
+            ${{ runner.temp }}/export/psst.ipa
+            ${{ runner.temp }}/export/*.plist
+          retention-days: 30
+
+      - name: Upload logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-release-logs
+          path: ${{ runner.temp }}/archive.log
+          if-no-files-found: ignore
+
+      - name: Clean up keychain
+        if: always()
+        run: |
+          [ -n "${SIGNING_KEYCHAIN:-}" ] && security delete-keychain "$SIGNING_KEYCHAIN" || true
+          rm -rf ~/.appstoreconnect ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision
