@@ -159,25 +159,40 @@ def c_health():
     return f"Synapse OK, spec verzie: {', '.join(r.json()['versions'][-3:])}"
 
 
-@check("1.2", "admin cez registration_shared_secret (scripts/create-admin.sh)")
+def mas_cli(*args) -> str:
+    """mas-cli manage … v MAS kontajneri (stdout+stderr — MAS loguje výsledky na stderr)."""
+    p = subprocess.run(["docker", "compose", "exec", "-T", "mas", "mas-cli", "manage", *args,
+                        "--config", "/config/config.yaml"], cwd=SERVER, capture_output=True, text=True, timeout=120)
+    if p.returncode != 0:
+        raise RuntimeError(f"mas-cli {args[0]}: {p.stderr[-300:]}")
+    return p.stdout + p.stderr
+
+
+def compat_login(user, password):
+    r = req("POST", f"{BASE}/_matrix/client/v3/login", json={
+        "type": "m.login.password", "identifier": {"type": "m.id.user", "user": user}, "password": password,
+        "initial_device_display_name": "psst-smoke"})
+    expect(r.status_code == 200 and "access_token" in r.json(), f"login {user}: {r.status_code} {r.text[:200]}")
+    return r.json()
+
+
+@check("1.2", "Synapse admin token cez MAS (scripts/members.sh)")
 def c_admin():
-    pw = secrets.token_hex(12)
-    run_script("./scripts/create-admin.sh", "psstadmin", pw)
+    run_script("./scripts/members.sh", "list")
     tok = (SERVER / "secrets" / "admin_token").read_text().strip()
-    r = S.get(f"{DIRECT}/_synapse/admin/v2/users/@psstadmin:{DOMAIN}", headers=auth(tok), timeout=10)
-    expect(r.status_code == 200 and r.json().get("admin") is True, f"admin flag: {r.status_code} {r.text[:200]}")
+    r = S.get(f"{DIRECT}/_synapse/admin/v1/server_version", headers=auth(tok), timeout=10)
+    expect(r.status_code == 200, f"admin API s MAS tokenom: {r.status_code} {r.text[:200]}")
     CTX["admin_token"] = tok
-    return "@psstadmin je server admin"
+    return "servisný admin token (MAS compat, admin scope) funguje"
 
 
-@check("1.3", "registračné tokeny cez admin API (scripts/new-invite.sh)")
+@check("1.3", "pozývacie tokeny v MAS (scripts/members.sh invite)")
 def c_tokens():
-    need("admin_token")
-    CTX["tok_single"] = run_script("./scripts/new-invite.sh", "1", "1").splitlines()[-1]
-    CTX["tok_multi"] = run_script("./scripts/new-invite.sh", "3", "1").splitlines()[-1]
-    lst = run_script("./scripts/new-invite.sh", "--list")
-    expect(CTX["tok_single"] in lst and CTX["tok_multi"] in lst, "tokeny nie sú v zozname")
-    return f"2 tokeny vytvorené (1× a 3× použiteľný)"
+    CTX["tok_single"] = run_script("./scripts/members.sh", "invite", "1", "1").splitlines()[-1]
+    CTX["tok_multi"] = run_script("./scripts/members.sh", "invite", "3", "1").splitlines()[-1]
+    expect(all(len(CTX[k]) >= 8 for k in ("tok_single", "tok_multi")), f"tokeny: {CTX['tok_single']}, {CTX['tok_multi']}")
+    (SERVER.parent / ".local-test-tokens.json").write_text(json.dumps({k: CTX[k] for k in ("tok_single", "tok_multi")}))
+    return "2 tokeny vytvorené (1× a 3× použiteľný) — registráciu nimi overuje scripts/web/register-test.mjs"
 
 
 @check("1.4", "admin API je z internetu blokované, z loopbacku dostupné")
@@ -190,47 +205,35 @@ def c_admin_blocked():
     return f"verejne 404, loopback 200 (Synapse {r2.json().get('server_version')})"
 
 
-# ----------------------------------------------------------------------------- 2. registrácia
-@check("2.1", "registrácia BEZ tokenu je odmietnutá")
+# ----------------------------------------------------------------------------- 2. registrácia (MAS)
+@check("2.1", "registrácia mimo MAS nie je možná; MAS ponúka registráciu (prompt=create) s tokenom")
 def c_reg_no_token():
-    r = register("eve", "Passw0rd-" + secrets.token_hex(4), token=None, dummy_without_token=True)
-    expect("access_token" not in r.text, "registrácia bez tokenu prešla!")
-    flows = CTX.get("flows_seen") or []
-    expect(flows and all("m.login.registration_token" in f["stages"] for f in flows),
-           f"nie každý flow vyžaduje token: {flows}")
+    r = req("POST", f"{BASE}/_matrix/client/v3/register", json={"username": "eve", "password": "Passw0rd-x1"})
+    expect("access_token" not in r.text and r.status_code in (400, 401, 403, 404, 405), f"Synapse /register: {r.status_code} {r.text[:150]}")
     r2 = req("POST", f"{BASE}/_matrix/client/v3/register?kind=guest", json={})
-    expect(r2.status_code == 403, f"guest registrácia: {r2.status_code}")
-    return f"bez tokenu {r.status_code}, flows={[f['stages'] for f in flows]}, guest {r2.status_code}"
+    expect("access_token" not in r2.text, f"guest registrácia prešla: {r2.text[:150]}")
+    d = S.get(f"https://{os.environ.get('AUTH_DOMAIN', 'auth.macet.eu')}/.well-known/openid-configuration", timeout=10).json()
+    expect("create" in d.get("prompt_values_supported", []), f"prompt=create chýba: {d.get('prompt_values_supported')}")
+    meta = S.get(f"{BASE}/_matrix/client/v1/auth_metadata", timeout=10).json()
+    expect(meta.get("issuer", "").startswith("https://auth."), f"auth_metadata issuer: {meta.get('issuer')}")
+    return f"Synapse /register {r.status_code}, guest {r2.status_code}, MAS issuer {meta['issuer']}, prompt=create"
 
 
-@check("2.2", "registrácia s neplatným tokenom je odmietnutá")
-def c_reg_bad_token():
-    r = S.get(f"{BASE}/_matrix/client/v1/register/m.login.registration_token/validity",
-              params={"token": "neplatny-token"}, timeout=10)
-    expect(r.status_code == 200 and r.json().get("valid") is False, f"validity: {r.status_code} {r.text}")
-    r = register("mallory", "Passw0rd-" + secrets.token_hex(4), token="neplatny-token")
-    expect("access_token" not in r.text, "registrácia s neplatným tokenom prešla!")
-    return f"validity=false, registrácia {r.status_code}"
-
-
-@check("2.3", "registrácia S tokenom (m.login.registration_token): alice, bob, carol")
+@check("2.3", "účty alice, bob, carol (mas-cli) + prihlásenie cez MAS compat /login")
 def c_reg_ok():
-    need("tok_single", "tok_multi")
     users = {}
     pw = {u: "Passw0rd-" + secrets.token_hex(6) for u in ("alice", "bob", "carol")}
-    r = register("alice", pw["alice"], token=CTX["tok_single"])
-    expect(r.status_code == 200 and "access_token" in r.json(), f"alice: {r.status_code} {r.text[:200]}")
-    users["alice"] = r.json()
-    # jednorazový token je už spotrebovaný
-    r = register("bob", pw["bob"], token=CTX["tok_single"])
-    expect("access_token" not in r.text, "jednorazový token bol použitý 2×!")
-    for u in ("bob", "carol"):
-        r = register(u, pw[u], token=CTX["tok_multi"])
-        expect(r.status_code == 200 and "access_token" in r.json(), f"{u}: {r.status_code} {r.text[:200]}")
-        users[u] = r.json()
+    for u in pw:
+        try:
+            mas_cli("register-user", "--yes", u, "--password", pw[u], "--ignore-password-complexity")
+        except RuntimeError as e:
+            if "already exists" not in str(e):
+                raise
+            mas_cli("set-password", u, pw[u], "--ignore-complexity")
+        users[u] = compat_login(u, pw[u])
     CTX["users"] = users
     CTX["passwords"] = pw
-    return "registrovaní: " + ", ".join(v["user_id"] for v in users.values()) + "; jednorazový token 2× odmietnutý"
+    return "prihlásení: " + ", ".join(v["user_id"] for v in users.values())
 
 
 # ----------------------------------------------------------------------------- 3. federácia vypnutá
@@ -582,7 +585,7 @@ def c_call():
 
 
 def main():
-    checks = [c_health, c_admin, c_tokens, c_admin_blocked, c_reg_no_token, c_reg_bad_token, c_reg_ok,
+    checks = [c_health, c_admin, c_tokens, c_admin_blocked, c_reg_no_token, c_reg_ok,
               c_federation, c_e2ee_dm, c_group, c_wellknown, c_transports, c_lk_health, c_rtc_legacy,
               c_rtc_cs, c_containers, c_app, c_call]
     only = os.environ.get("SMOKE_ONLY")

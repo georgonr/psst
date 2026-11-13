@@ -50,9 +50,14 @@ openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass "file:$PASS_FILE" -in "$O
   || die "overenie zálohy zlyhalo"
 
 # rotácia
-[ "$(date -u +%u)" = 7 ] && cp "$OUT" "$OUT.sha256" "$DEST/weekly/"
-[ "$(date -u +%d)" = 01 ] && cp "$OUT" "$OUT.sha256" "$DEST/monthly/"
-prune() { ls -1t "$1"/psst-*.tar.gz.enc 2>/dev/null | tail -n +$(($2 + 1)) | while read -r f; do rm -f "$f" "$f.sha256"; done; }
+if [ "$(date -u +%u)" = 7 ]; then cp "$OUT" "$OUT.sha256" "$DEST/weekly/"; fi
+if [ "$(date -u +%d)" = 01 ]; then cp "$OUT" "$OUT.sha256" "$DEST/monthly/"; fi
+prune() { # prune <adresár> <ponechať>
+  local f n=0
+  for f in $(ls -1t "$1"/psst-*.tar.gz.enc 2>/dev/null || true); do
+    n=$((n + 1)); if [ "$n" -gt "$2" ]; then rm -f "$f" "$f.sha256"; fi
+  done
+}
 prune "$DEST/daily" 7; prune "$DEST/weekly" 4; prune "$DEST/monthly" 6
 
 if [ -n "${BACKUP_RSYNC_TARGET:-}" ]; then

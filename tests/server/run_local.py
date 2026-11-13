@@ -10,7 +10,10 @@ from pathlib import Path
 
 HOSTS = {os.environ.get(k, d) for k, d in (("MATRIX_DOMAIN", "chat.macet.eu"),
                                            ("APP_DOMAIN", "app.macet.eu"),
-                                           ("CALL_DOMAIN", "call.macet.eu"))}
+                                           ("CALL_DOMAIN", "call.macet.eu"),
+                                           ("AUTH_DOMAIN", "auth.macet.eu"),
+                                           ("NTFY_DOMAIN", "ntfy.macet.eu"),
+                                           ("TURN_DOMAIN", "turn.macet.eu"))}
 _orig = socket.getaddrinfo
 
 def _gai(host, *a, **kw):

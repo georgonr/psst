@@ -46,20 +46,11 @@ def check(name, ok, detail=""):
     return ok
 
 
-def register(user, password, token):
-    url = f"{BASE}/_matrix/client/v3/register"
-    body = {"username": user, "password": password, "initial_device_display_name": "psst-extra"}
-    r = S.post(url, json=body)
-    if r.status_code == 400 and r.json().get("errcode") == "M_USER_IN_USE":
-        r = S.post(f"{BASE}/_matrix/client/v3/login", json={"type": "m.login.password",
-                   "identifier": {"type": "m.id.user", "user": user}, "password": password})
-        return r.json()
-    sess = r.json()["session"]
-    r = S.post(url, json={**body, "auth": {"type": "m.login.registration_token", "token": token, "session": sess}})
-    if r.status_code == 401:
-        r = S.post(url, json={**body, "auth": {"type": "m.login.dummy", "session": sess}})
-    r.raise_for_status()
-    return r.json()
+def register(user, password, token=None):
+    # PSST: účty spravuje MAS — testovací účet sa vytvorí cez mas-cli (registráciu tokenom overuje register-test.mjs)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from masuser import ensure_user
+    return ensure_user(S, BASE, user, password)
 
 
 async def main():
@@ -70,12 +61,11 @@ async def main():
 
     acc_file = ROOT / ".local-test-accounts.json"
     accounts = json.loads(acc_file.read_text()) if acc_file.exists() else {}
-    token = subprocess.run(["scripts/new-invite.sh", "2", "1"], cwd=SERVER, capture_output=True,
-                           text=True, check=True).stdout.strip()
+    token = None
     for u in ("dana", "erik"):
         accounts.setdefault(u, "psst-" + secrets.token_urlsafe(12))
         j = register(u, accounts[u], token)
-        check(f"registrácia/login {u} (token)", "access_token" in j, j.get("user_id"))
+        check(f"účet/login {u} (MAS)", "access_token" in j, j.get("user_id"))
     acc_file.write_text(json.dumps(accounts, indent=2))
     os.chmod(acc_file, 0o600)
 
