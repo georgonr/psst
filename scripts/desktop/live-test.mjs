@@ -19,6 +19,8 @@ const proc = spawn(path.join(app, "Contents/MacOS/psst"), [
     "--remote-debugging-port=9333",
     "--host-resolver-rules=MAP chat.macet.eu 127.0.0.1, MAP app.macet.eu 127.0.0.1, MAP call.macet.eu 127.0.0.1",
     "--ignore-certificate-errors",
+    // bez prístupu ku kľúčenke macOS (inak nový ad-hoc podpis vyvolá dialóg a zablokuje appku)
+    "--use-mock-keychain",
     `--profile-dir=${profile}`,
 ], { stdio: ["ignore", "pipe", "pipe"] });
 let log = "";
@@ -37,21 +39,18 @@ for (let i = 0; i < 60 && !page; i++) {
 }
 check("hlavné okno načítané", !!page, page?.url());
 try {
-    await page.waitForSelector("#mx_LoginForm_username", { timeout: 90000 });
+    await page.waitForSelector(".mx_ServerPicker_server, .mx_Login_fullWidthButton", { timeout: 90000 });
     check("okno má titulok psst", (await page.title()).toLowerCase().includes("psst"), await page.title());
     const server = await page.locator(".mx_ServerPicker_server").innerText();
     check("login: chat.macet.eu, bez zmeny homeservera", server.includes("chat.macet.eu") && (await page.locator(".mx_ServerPicker_change").count()) === 0, server);
+    const cont = await page.locator('.mx_Login_fullWidthButton, button:has-text("Continue"), button:has-text("Pokračovať"), [role=button]:has-text("Pokračovať")').count();
+    check("login ponúka prihlásenie cez MAS (Continue → auth.macet.eu v systémovom prehliadači)", cont > 0, `tlačidlá: ${cont}`);
     await page.screenshot({ path: path.join(out, "1-login.png") });
-    await page.fill("#mx_LoginForm_username", user);
-    await page.fill("#mx_LoginForm_password", password);
-    await page.click(".mx_Login_submit");
-    await page.waitForSelector(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel", { timeout: 120000 });
-    await page.waitForTimeout(6000);
-    await page.keyboard.press("Escape").catch(() => {});
-    await page.screenshot({ path: path.join(out, "2-home.png") });
-    check("prihlásenie do desktop appky", true, page.url());
-    const rooms = await page.locator("text=Kanál PSST").count();
-    check("zoznam miestností obsahuje Kanál PSST", rooms > 0, `${rooms}`);
+    // Create account (registrácia s pozvánkou) — tiež cez MAS
+    await page.goto(page.url().split("#")[0] + "#/register");
+    await page.waitForTimeout(4000);
+    check("registrácia: obrazovka Create account (chat.macet.eu)", (await page.locator("body").innerText()).includes("chat.macet.eu"));
+    await page.screenshot({ path: path.join(out, "2-register.png") });
 } catch (e) {
     check("priebeh testu", false, String(e).slice(0, 300));
     await page?.screenshot({ path: path.join(out, "FAIL.png") }).catch(() => {});

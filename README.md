@@ -4,6 +4,8 @@
 `chat.macet.eu` a klienti Element s vlastným brandingom pre web, Windows, macOS, Android a iOS.
 
 - uzavretý server: federácia vypnutá, verejná registrácia zakázaná, účty len cez **pozývacie tokeny**
+  (registrácia priamo v appkách cez Matrix Authentication Service)
+- notifikácie bez Google a Element: Android cez vlastný ntfy (UnifiedPush), iOS cez vlastný Sygnal (APNs)
 - 1:1 chaty, skupiny, kanály (adresár miestností viditeľný len používateľom servera), súbory
 - end-to-end šifrovanie predvolene vo všetkých nových miestnostiach
 - hlasové a video hovory vrátane skupinových: Element Call + self-hosted LiveKit SFU
@@ -14,6 +16,9 @@
 | Homeserver | `chat.macet.eu` |
 | Web | `app.macet.eu` |
 | Element Call (samostatne) | `call.macet.eu` |
+| Prihlásenie / registrácia (MAS) | `auth.macet.eu` |
+| Android notifikácie (ntfy) | `ntfy.macet.eu` |
+| TURN | `turn.macet.eu` |
 | Bundle / package id | `eu.macet.psst` |
 
 ## Štruktúra repa
@@ -29,7 +34,8 @@ forks/             git submoduly (vetva psst):
   web/             georgonr/psst-web     ← element-hq/element-web v1.12.35 (web + desktop v apps/desktop)
   android/         georgonr/psst-android ← element-hq/element-x-android v26.11.0
   ios/             georgonr/psst-ios     ← element-hq/element-x-ios 26.11.0
-server/            docker compose stack: Synapse, PostgreSQL, LiveKit, lk-jwt-service, Element Call, nginx, certbot
+server/            docker compose stack: Synapse, MAS, PostgreSQL, LiveKit, coturn, lk-jwt-service, Element Call,
+                   ntfy, Sygnal, nginx, certbot; deploy.sh, members/backup/restore/healthcheck — DEPLOY-CHECKLIST.md
 tests/server/      smoke test servera (registrácia tokenom, E2EE správa, skupina, federácia off, MatrixRTC)
 docs/              podrobnosti po platformách: decisions/, build/, report/
 DECISIONS.md       všetky rozhodnutia a dôvody
