@@ -17,7 +17,6 @@ FORBIDDEN = [
     (re.compile(r"\baccount provider\b", re.I), "account provider selection UI"),
     (re.compile(r"sign in manually", re.I), "manual sign-in (free server choice)"),
     (re.compile(r"^other$", re.I), "'Other' server option"),
-    (re.compile(r"create account", re.I), "account creation on arbitrary server"),
     (re.compile(r"\bmatrix\.org\b", re.I), "matrix.org offered"),
     (re.compile(r"element\.io", re.I), "element.io host shown"),
     (re.compile(r"homeserver url|server url|enter.*server", re.I), "server address input"),

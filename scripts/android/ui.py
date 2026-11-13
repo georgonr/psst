@@ -21,7 +21,9 @@ cmd, *rest = sys.argv[1:]
 if cmd == "texts":
     print([n["text"] or n["desc"] for n in nodes(dump()) if n["text"] or n["desc"]])
 elif cmd == "tap":
-    for n in nodes(dump()):
+    ns = list(nodes(dump()))
+    exact = [n for n in ns if rest[0].lower() in (n["text"].lower(), n["desc"].lower())]
+    for n in exact + ns:
         if rest[0].lower() in (n["text"] + " " + n["desc"]).lower():
             adb("shell", "input", "tap", *map(str, n["c"])); print("tapped", n["text"] or n["desc"]); break
     else: sys.exit(f"not found: {rest[0]}")
