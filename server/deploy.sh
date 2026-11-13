@@ -5,6 +5,8 @@
 #
 #   Voľby:
 #     --apple-team-id <ID>  Apple Developer Team ID (iOS push cez Sygnal, universal links)
+#     --contact "<text>"    kontakt prevádzkovateľa na stránkach Podmienky/Súkromie (napr. e-mail)
+#     --hosting "<text>"    kde je server (napr. "Hetzner Online GmbH, Nemecko (EÚ)")
 #     --staging             certifikát z Let's Encrypt staging (skúška, nie dôveryhodný)
 #     --skip-harden         nemeniť systém (SSH, UFW, fail2ban, aktualizácie, cron)
 #     --skip-preflight      preskočiť pre-flight kontrolu (neodporúča sa)
@@ -28,12 +30,14 @@ set -euo pipefail
 
 usage() { sed -n '2,25p' "$0"; exit "${1:-0}"; }
 
-SERVER_IP=""; LE_EMAIL=""; TEAM_ID=""
+SERVER_IP=""; LE_EMAIL=""; TEAM_ID=""; CONTACT=""; HOSTING=""
 LETSENCRYPT=1; PULL=1; HARDEN=1; PREFLIGHT=1; LOCAL_TEST=0; STAGING=0
 POSITIONAL=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --apple-team-id) TEAM_ID="${2:?chýba hodnota pre --apple-team-id}"; shift ;;
+    --contact) CONTACT="${2:?chýba hodnota pre --contact}"; shift ;;
+    --hosting) HOSTING="${2:?chýba hodnota pre --hosting}"; shift ;;
     --staging) STAGING=1 ;;
     --skip-harden) HARDEN=0 ;;
     --skip-preflight) PREFLIGHT=0 ;;
@@ -148,6 +152,8 @@ for k in $ENV_KEYS; do grep -q "^${k}=" .env || printf '%s=%s\n' "$k" "$(default
 # hodnoty z príkazového riadka majú prednosť (zmena IP/e-mailu/Team ID pri opakovanom nasadení)
 if [ "$LOCAL_TEST" = 0 ]; then set_env SERVER_IP "$SERVER_IP"; set_env LIVEKIT_NODE_IP "$SERVER_IP"; set_env LETSENCRYPT_EMAIL "$LE_EMAIL"; fi
 [ -n "$TEAM_ID" ] && set_env APPLE_TEAM_ID "$TEAM_ID"
+[ -n "$CONTACT" ] && set_env OPERATOR_CONTACT "\"$CONTACT\""
+[ -n "$HOSTING" ] && set_env OPERATOR_HOSTING "\"$HOSTING\""
 # skripty (members/backup/healthcheck) musia používať rovnaké compose súbory
 if [ "$LOCAL_TEST" = 1 ]; then set_env COMPOSE_FILE "compose.yml:compose.test.yml"; else set_env COMPOSE_FILE "compose.yml"; fi
 chmod 600 .env
@@ -239,7 +245,16 @@ render templates/ntfy/server.yml                data/config/ntfy/server.yml
 render templates/element-call/config.json       data/config/element-call/config.json
 render templates/app/config.json                data/config/app-default/config.json
 render templates/app/index.html                 data/config/app-default/index.html
-for f in templates/app/legal/*.html; do render "$f" "data/config/app-default/legal/$(basename "$f")"; done
+for f in templates/app/legal/*.html; do
+  out="data/config/app-default/legal/$(basename "$f")"
+  render "$f" "$out"
+  # kontakt a hosting prevádzkovateľa (--contact / --hosting); inak zostanú viditeľné zástupné texty
+  esc() { printf '%s' "$1" | sed -e 's/[&|\\]/\\&/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+  [ -n "${OPERATOR_CONTACT:-}" ] && sed -i.bak "s|\[DOPLNIT_KONTAKT\]|$(esc "$OPERATOR_CONTACT")|g" "$out"
+  [ -n "${OPERATOR_HOSTING:-}" ] && sed -i.bak "s|\[DOPLNIT_POSKYTOVATEL_A_KRAJINA_SERVERA\]|$(esc "$OPERATOR_HOSTING")|g" "$out"
+  rm -f "$out.bak"
+done
+grep -q 'DOPLNIT_KONTAKT' data/config/app-default/legal/terms.html && warn "Podmienky/Súkromie: chýba kontakt — spustite znova s --contact \"vas@email\""
 mkdir -p data/config/app-default/.well-known
 render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
 render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
