@@ -109,11 +109,11 @@ if [ "$PREFLIGHT" = 1 ]; then
   done
   if ip -4 addr 2>/dev/null | grep -q "inet ${SERVER_IP}/"; then log "  IP   $SERVER_IP je na tomto serveri  OK"
   else warn "  IP   $SERVER_IP nie je na sieťovom rozhraní (NAT v cloude?) — pokračujem, LiveKit ju ohlási ako node_ip"; fi
-  # porty: obsadené smú byť len naším stackom (docker-proxy)
+  # porty: obsadené smú byť len naším stackom (docker-proxy, alebo dockerd pri userland-proxy=false; coturn)
   for p in 80/tcp 443/tcp 7881/tcp 7882/udp 3478/udp; do
     proto="${p#*/}"; port="${p%/*}"; flag=-ltnpH; [ "$proto" = udp ] && flag=-lunpH
     owner="$(ss $flag "sport = :$port" 2>/dev/null | awk '{print $NF}' | head -1)"
-    if [ -z "$owner" ] || echo "$owner" | grep -q docker-proxy; then log "  port $p voľný/náš  OK"
+    if [ -z "$owner" ] || echo "$owner" | grep -qE 'docker-proxy|dockerd|turnserver'; then log "  port $p voľný/náš  OK"
     else warn "  port $p obsadený: $owner"; FAIL=1; fi
   done
   free_gb=$(df -BG --output=avail . | tail -1 | tr -dc 0-9)
@@ -359,7 +359,7 @@ if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
   compose run --rm --no-deps -T --entrypoint sh certbot -c \
     'rm -rf /etc/letsencrypt/live/psst /etc/letsencrypt/archive/psst /etc/letsencrypt/renewal/psst.conf'
   # shellcheck disable=SC2086
-  if compose run --rm --no-deps -T certbot certonly --webroot -w /var/www/certbot --cert-name psst $DOMAIN_ARGS \
+  if compose run --rm --no-deps -T --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name psst $DOMAIN_ARGS \
        --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email --non-interactive --key-type ecdsa $STAGING_ARG; then
     compose exec -T nginx nginx -s reload
     log "certifikát Let's Encrypt nainštalovaný"
