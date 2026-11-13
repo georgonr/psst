@@ -16,3 +16,5 @@ node_modules/
 .DS_Store
 *.log
 __pycache__/
+.build-*.log
+.local-test-accounts.json
