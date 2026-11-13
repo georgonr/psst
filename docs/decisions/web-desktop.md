@@ -119,7 +119,7 @@ Targets: macOS universal `dmg` + `zip`, Windows x64 `squirrel` (Setup .exe) + `m
 
 ## CI
 
-**C-1 — Workflow `.github/workflows/web-desktop.yml` v hlavnom repe** (D5 v DECISIONS.md), checkoutuje
+**C-1 — Workflow `ci/workflows/web-desktop.yml` v hlavnom repe** (D5 v DECISIONS.md; do `.github/workflows/` ho skopíruje `scripts/enable-ci.sh`, keď bude mať token scope `workflow` — GitHub inak push odmietne), checkoutuje
 `georgonr/psst-web@psst` (vstup `web_ref`). Kroky kopírujú upstream (`scripts/layered.sh`,
 `pnpm run build`, `pnpm install --filter element-desktop`, `asar-webapp`, `build:universal`/`build`).
 Rozdiel: web build **bez `CI_PACKAGE`** (upstream ním vypína minifikáciu v PR buildoch; my chceme produkčný,

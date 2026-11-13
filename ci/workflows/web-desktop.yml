@@ -1,0 +1,264 @@
+# psst Web + Desktop: builds the psst-branded Element Web (georgonr/psst-web, branch `psst`),
+# smoke-tests it in headless Chromium and packages Element Desktop (macOS + Windows) around
+# that very same web build. Mirrors upstream element-web build.yml / build_desktop_*.yaml.
+name: Web + Desktop
+on:
+    workflow_dispatch:
+        inputs:
+            web_ref:
+                description: "Branch/tag/SHA of georgonr/psst-web to build"
+                required: false
+                default: psst
+    push:
+        branches: [main]
+        paths:
+            - .github/workflows/web-desktop.yml
+            - ci/workflows/web-desktop.yml
+            - scripts/web/**
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+permissions:
+    contents: read
+env:
+    WEB_REPO: georgonr/psst-web
+    WEB_REF: ${{ inputs.web_ref || 'psst' }}
+    NX_DEFAULT_OUTPUT_STYLE: stream-without-prefixes
+    NX_NO_CLOUD: "true"
+jobs:
+    web:
+        name: Build web
+        runs-on: ubuntu-24.04
+        outputs:
+            version: ${{ steps.version.outputs.version }}
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  repository: ${{ env.WEB_REPO }}
+                  ref: ${{ env.WEB_REF }}
+                  persist-credentials: false
+
+            - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+              with:
+                  node-version-file: .node-version
+                  cache: true
+                  install: false
+
+            - name: Install dependencies (upstream layered.sh)
+              run: ./scripts/layered.sh
+
+            - name: Version
+              id: version
+              run: |
+                  PKG=$(jq -r .version apps/web/package.json)
+                  echo "version=${PKG}-psst.$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+
+            - name: Use psst config.json
+              working-directory: apps/web
+              run: cp psst/config.json config.json
+
+            - name: Build (production, minified)
+              working-directory: apps/web
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: pnpm run build
+
+            - name: Package tarball
+              run: |
+                  test -f apps/web/webapp/config.json
+                  mkdir -p out
+                  cp -r apps/web/webapp "out/psst-web-${VERSION}"
+                  tar -C out -czf "psst-web-${VERSION}.tar.gz" "psst-web-${VERSION}"
+                  ls -la ./*.tar.gz
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: psst-web-dist
+                  path: psst-web-*.tar.gz
+                  if-no-files-found: error
+                  retention-days: 30
+
+    web-smoke:
+        name: Smoke test web
+        needs: web
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+              with:
+                  name: psst-web-dist
+                  path: dist
+
+            - name: Unpack
+              run: |
+                  mkdir -p webapp
+                  tar -C webapp --strip-components=1 -xzf dist/psst-web-*.tar.gz
+                  find webapp -maxdepth 1 | head -50
+
+            - name: Install Playwright + Chromium
+              run: |
+                  mkdir -p /tmp/pw && cd /tmp/pw
+                  npm init -y >/dev/null
+                  npm install --no-audit --no-fund playwright@1.64.1
+                  npx playwright install --with-deps chromium
+
+            - name: Run smoke test
+              run: |
+                  cp scripts/web/smoke.mjs /tmp/pw/smoke.mjs
+                  cd /tmp/pw && node smoke.mjs "$GITHUB_WORKSPACE/webapp" "$GITHUB_WORKSPACE/smoke"
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              if: always()
+              with:
+                  name: psst-web-smoke
+                  path: smoke
+                  retention-days: 30
+
+    desktop-mac:
+        name: Desktop macOS (universal, unsigned)
+        needs: web
+        runs-on: macos-15
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  repository: ${{ env.WEB_REPO }}
+                  ref: ${{ env.WEB_REF }}
+                  persist-credentials: false
+
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+              with:
+                  name: psst-web-dist
+                  path: web-dist
+
+            - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+              with:
+                  python-version: "3.13"
+
+            - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+              with:
+                  node-version-file: apps/desktop/.node-version
+                  cache: true
+                  install: false
+
+            # Prebuilt seshat binaries for both architectures are needed for the universal build
+            - name: Enable optional dependencies for both architectures
+              run: |
+                  cat >> pnpm-workspace.yaml <<EOF
+
+                  supportedArchitectures:
+                      os: [current]
+                      cpu: [x64, arm64]
+                  EOF
+
+            - name: Install deps
+              working-directory: apps/desktop
+              run: pnpm install --frozen-lockfile --filter element-desktop
+
+            - name: Build webapp.asar from this run's web build
+              working-directory: apps/desktop
+              run: |
+                  mkdir -p webapp
+                  tar -C webapp --strip-components=1 -xzf ../../web-dist/psst-web-*.tar.gz
+                  cmp webapp/config.json ../web/psst/config.json
+                  pnpm run asar-webapp
+                  ls -la webapp.asar
+
+            - name: Build app (unsigned)
+              working-directory: apps/desktop
+              run: pnpm run build:universal --publish never -m dmg zip
+              env:
+                  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+                  VARIANT_PATH: psst/build.json
+
+            - name: Check output
+              working-directory: apps/desktop
+              run: |
+                  ls -la dist
+                  test -f dist/psst-*.dmg
+                  test -f dist/psst-*-mac.zip
+                  /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" dist/mac-universal/psst.app/Contents/Info.plist
+                  /usr/libexec/PlistBuddy -c "Print :CFBundleName" dist/mac-universal/psst.app/Contents/Info.plist
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: psst-desktop-macos
+                  path: |
+                      apps/desktop/dist/*.dmg
+                      apps/desktop/dist/*-mac.zip
+                  if-no-files-found: error
+                  retention-days: 30
+
+    desktop-win:
+        name: Desktop Windows (x64, unsigned)
+        needs: web
+        runs-on: windows-2025
+        defaults:
+            run:
+                shell: bash
+        steps:
+            # Tweak line endings to make nx happy, workaround for https://github.com/nrwl/nx/issues/35828
+            - name: Configure git line endings
+              run: |
+                  git config --system core.autocrlf false
+                  git config --system core.eol lf
+
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  repository: ${{ env.WEB_REPO }}
+                  ref: ${{ env.WEB_REF }}
+                  persist-credentials: false
+
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+              with:
+                  name: psst-web-dist
+                  path: web-dist
+
+            - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+              with:
+                  node-version-file: apps/desktop/.node-version
+                  cache: true
+                  install: false
+
+            - name: Install deps
+              working-directory: apps/desktop
+              run: pnpm install --frozen-lockfile --filter element-desktop
+
+            - name: Build webapp.asar from this run's web build
+              working-directory: apps/desktop
+              run: |
+                  mkdir -p webapp
+                  tar -C webapp --strip-components=1 -xzf ../../web-dist/psst-web-*.tar.gz
+                  cmp webapp/config.json ../web/psst/config.json
+                  pnpm run asar-webapp
+                  ls -la webapp.asar
+
+            - name: Build app (unsigned)
+              working-directory: apps/desktop
+              run: pnpm run build --publish never -w squirrel msi
+              env:
+                  VARIANT_PATH: psst/build.json
+
+            - name: Check output
+              working-directory: apps/desktop
+              run: |
+                  find dist -maxdepth 2 -type f | sort
+                  ls dist/squirrel-windows*/*.exe
+                  ls dist/*.msi
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              with:
+                  name: psst-desktop-windows
+                  path: |
+                      apps/desktop/dist/squirrel-windows*/*.exe
+                      apps/desktop/dist/*.msi
+                  if-no-files-found: error
+                  retention-days: 30

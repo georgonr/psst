@@ -18,7 +18,10 @@ Zdroj: `georgonr/psst-web`, vetva `psst` (base `v1.12.35`). V hlavnom repe je fo
 
 ## CI (odporúčané)
 
-Workflow: `.github/workflows/web-desktop.yml` (spúšťa sa ručne alebo pushom do `main` pri zmene workflowu / `scripts/web/**`).
+Workflow: `ci/workflows/web-desktop.yml` → po aktivácii `.github/workflows/web-desktop.yml` (spúšťa sa ručne alebo pushom do `main` pri zmene workflowu / `scripts/web/**`).
+
+Aktivácia (jednorazovo, interaktívne): `gh auth refresh -h github.com -s workflow && ./scripts/enable-ci.sh`.
+Statická kontrola: `actionlint ci/workflows/web-desktop.yml` (actionlint 1.x, bez nálezov).
 
 ```sh
 gh workflow run web-desktop.yml -R georgonr/psst            # default web_ref=psst
@@ -39,7 +42,6 @@ Joby a artefakty:
 | `desktop-mac` | macos-15 | `psst-desktop-macos` | `psst-<ver>-universal.dmg`, `psst-<ver>-universal-mac.zip` (unsigned) |
 | `desktop-win` | windows-2025 | `psst-desktop-windows` | `squirrel-windows/psst Setup <ver>.exe`, `psst-<ver>.msi` (unsigned) |
 
-> Push workflowu vyžaduje token so scope **`workflow`** (`gh auth refresh -h github.com -s workflow`).
 
 ## Lokálne (len ak je dosť miesta: ~6–8 GB pre node_modules + build)
 
