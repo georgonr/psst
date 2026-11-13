@@ -1,4 +1,4 @@
-# Lokálny test (CI: .github/workflows/server-smoke.yml). NIE pre produkciu.
+# Lokálny test (CI: ci/workflows/server-smoke.yml). NIE pre produkciu.
 #   COMPOSE_FILE=compose.yml:compose.test.yml ./deploy.sh --no-letsencrypt
 # Rozdiely voči produkcii:
 #   - certbot sa nespúšťa (certifikát ostáva self-signed z deploy.sh),

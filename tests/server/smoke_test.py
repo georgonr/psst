@@ -32,8 +32,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.macet.eu")
 APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.macet.eu")
 CALL_DOMAIN = os.environ.get("CALL_DOMAIN", "call.macet.eu")
-BASE = f"https://{DOMAIN}"
-DIRECT = "http://127.0.0.1:8008"  # Synapse loopback (ako cez SSH tunel)
+BASE = os.environ.get("SMOKE_BASE", f"https://{DOMAIN}")
+DIRECT = os.environ.get("SMOKE_DIRECT", "http://127.0.0.1:8008")  # Synapse loopback (ako cez SSH tunel)
 SFU_URL = f"wss://{DOMAIN}/livekit/sfu"
 REPO = Path(__file__).resolve().parents[2]
 SERVER = REPO / "server"
