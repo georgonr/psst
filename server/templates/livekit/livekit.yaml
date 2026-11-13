@@ -1,0 +1,22 @@
+# LiveKit SFU — šablóna (./deploy.sh → data/config/livekit/livekit.yaml)
+port: 7880
+logging:
+  level: info
+rtc:
+  # ICE/TCP fallback (keď UDP nie je dostupné)
+  tcp_port: 7881
+  # všetko UDP médium cez jeden port (UDP mux) → vo firewalle stačí 7882/udp
+  udp_port: 7882
+  use_external_ip: __LIVEKIT_USE_EXTERNAL_IP__
+__LIVEKIT_NODE_IP_LINE__
+keys:
+  __LIVEKIT_API_KEY__: __LIVEKIT_API_SECRET__
+room:
+  # miestnosti vytvára len lk-jwt-service (pre používateľov z __MATRIX_DOMAIN__)
+  auto_create: false
+webhook:
+  api_key: __LIVEKIT_API_KEY__
+  urls:
+    - http://lk-jwt-service:8080/sfu_webhook
+turn:
+  enabled: false

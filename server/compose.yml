@@ -1,0 +1,161 @@
+# PSST server stack — Synapse + PostgreSQL + LiveKit SFU + lk-jwt-service + Element Call + nginx + certbot.
+# Spúšťa sa cez ./deploy.sh (vygeneruje .env, konfigurácie do data/config a certifikáty).
+# Všetky dáta sú v server/data/ (migrácia = skopírovať adresár server/).
+
+name: psst
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
+
+services:
+  postgres:
+    image: docker.io/library/postgres:18.7-alpine
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      POSTGRES_USER: synapse
+      POSTGRES_DB: synapse
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run ./deploy.sh first}
+      # Synapse vyžaduje C collation / ctype
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U synapse -d synapse"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [psst]
+
+  synapse:
+    image: ghcr.io/element-hq/synapse:v1.165.0
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["run", "--config-path", "/config/homeserver.yaml"]
+    volumes:
+      - ./data/config/synapse:/config:ro
+      - ./data/synapse:/data
+    # Client API len na loopback hostiteľa (admin API cez SSH tunel). Verejne ide všetko cez nginx.
+    ports:
+      - "127.0.0.1:8008:8008"
+    healthcheck:
+      test: ["CMD", "curl", "-fSs", "http://localhost:8008/health"]
+      interval: 15s
+      timeout: 5s
+      start_period: 60s
+      retries: 10
+    networks: [psst]
+
+  livekit:
+    image: docker.io/livekit/livekit-server:v1.13.11
+    restart: unless-stopped
+    logging: *logging
+    command: ["--config", "/etc/livekit.yaml"]
+    volumes:
+      - ./data/config/livekit/livekit.yaml:/etc/livekit.yaml:ro
+    ports:
+      # WebRTC média: ICE/TCP fallback + UDP mux. Signalizácia (7880) ide len cez nginx.
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7880/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks: [psst]
+
+  lk-jwt-service:
+    image: ghcr.io/element-hq/lk-jwt-service:0.10.0
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      synapse:
+        condition: service_started
+      livekit:
+        condition: service_started
+    environment:
+      # Verejná URL SFU — vracia sa klientom a cez ňu (nginx) služba volá aj LiveKit RoomService API.
+      LIVEKIT_URL: wss://${MATRIX_DOMAIN}/livekit/sfu
+      LIVEKIT_KEY: ${LIVEKIT_API_KEY}
+      LIVEKIT_SECRET: ${LIVEKIT_API_SECRET}
+      LIVEKIT_JWT_BIND: ":8080"
+      LIVEKIT_FULL_ACCESS_HOMESERVERS: ${MATRIX_DOMAIN}
+      # federácia je vypnutá → nikto zvonka nesmie publikovať na našom SFU
+      LIVEKIT_REMOTE_CAN_PUBLISH_HOMESERVERS: ""
+      LIVEKIT_AS_REGISTRATION_FILE: /config/lk-jwt-appservice.yaml
+      LIVEKIT_HS_SERVER_NAME: ${MATRIX_DOMAIN}
+      LIVEKIT_CS_API_URL_OVERRIDES: ${MATRIX_DOMAIN}=http://synapse:8008
+      LIVEKIT_SANITY_CHECK_INTERVAL_SECONDS: "60"
+    volumes:
+      - ./data/config/synapse/lk-jwt-appservice.yaml:/config/lk-jwt-appservice.yaml:ro
+    healthcheck:
+      test: ["CMD", "/lk-jwt-service-healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks: [psst]
+
+  element-call:
+    image: ghcr.io/element-hq/element-call:v0.28.2
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - ./data/config/element-call/config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks: [psst]
+
+  nginx:
+    image: docker.io/library/nginx:1.30.6-alpine
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      - synapse
+      - lk-jwt-service
+      - livekit
+      - element-call
+    # Periodický reload, aby nginx načítal obnovené certifikáty od certbota.
+    command: ["/bin/sh", "-c", "while :; do sleep 21600 & wait $${!}; nginx -s reload; done & exec nginx -g 'daemon off;'"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./data/config/nginx:/etc/nginx/conf.d:ro
+      - ./data/config/app-default:/srv/app-default:ro
+      - ./app:/srv/app:ro
+      - ./data/certbot/conf:/etc/letsencrypt:ro
+      - ./data/certbot/www:/var/www/certbot:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      psst:
+        # lk-jwt-service overuje OpenID tokeny cez https://<MATRIX_DOMAIN>:8448 a volá LiveKit API cez
+        # wss://<MATRIX_DOMAIN>/livekit/sfu — v internej sieti to vedie priamo na tento nginx.
+        aliases:
+          - ${MATRIX_DOMAIN}
+
+  certbot:
+    image: docker.io/certbot/certbot:v5.10.0
+    restart: unless-stopped
+    logging: *logging
+    entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 43200 & wait $${!}; done"]
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    networks: [psst]
+
+networks:
+  psst:
+    name: psst

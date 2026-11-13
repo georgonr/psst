@@ -1,0 +1,14 @@
+# Lokálny test (CI: .github/workflows/server-smoke.yml). NIE pre produkciu.
+#   COMPOSE_FILE=compose.yml:compose.test.yml ./deploy.sh --no-letsencrypt
+# Rozdiely voči produkcii:
+#   - certbot sa nespúšťa (certifikát ostáva self-signed z deploy.sh),
+#   - lk-jwt-service neoveruje TLS (self-signed certifikát na nginx:443/8448),
+#   - LiveKit nezisťuje verejnú IP cez STUN (LIVEKIT_USE_EXTERNAL_IP=false v .env).
+# server_name ostáva chat.macet.eu; testy mapujú domény na 127.0.0.1 cez /etc/hosts.
+services:
+  certbot:
+    profiles: ["production-only"]
+  lk-jwt-service:
+    environment:
+      LIVEKIT_INSECURE_SKIP_VERIFY_TLS: YES_I_KNOW_WHAT_I_AM_DOING
+      LIVEKIT_LOG_LEVEL: debug

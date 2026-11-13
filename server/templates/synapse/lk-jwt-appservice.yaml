@@ -1,0 +1,16 @@
+# Registrácia lk-jwt-service ako application service (MSC4502 + MSC4512).
+# Šablóna — tokeny dopĺňa ./deploy.sh zo server/.env.
+id: "lk-jwt-service"
+as_token: "__LK_JWT_AS_TOKEN__"
+hs_token: "__LK_JWT_HS_TOKEN__"
+sender_localpart: "_lk_jwt_service"
+namespaces:
+  users:
+    - exclusive: false
+      regex: ".*"
+# služba nepotrebuje žiadny tok udalostí
+url: null
+rate_limited: false
+io.element.msc4502.scopes: ["urn:matrix:client:io.element.msc4502:rooms:is_joined"]
+io.element.msc4512.proxy_prefix: "rtc/livekit"
+io.element.msc4512.proxy_url: "http://lk-jwt-service:8080"

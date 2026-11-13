@@ -1,0 +1,8 @@
+# generated on first run / runtime data — never commit
+.env
+data/
+secrets/
+backups/
+# PSST web dist is downloaded by scripts/fetch-web.sh
+app/*
+!app/.gitkeep

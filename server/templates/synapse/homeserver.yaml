@@ -1,0 +1,113 @@
+# PSST — Synapse konfigurácia (šablóna; ./deploy.sh ju vyrenderuje do data/config/synapse/homeserver.yaml).
+# Zástupné symboly __NAZOV__ sa nahradia hodnotami zo server/.env.
+# Dokumentácia: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
+
+server_name: "__MATRIX_DOMAIN__"
+public_baseurl: "https://__MATRIX_DOMAIN__/"
+pid_file: /data/homeserver.pid
+report_stats: false
+enable_metrics: false
+
+listeners:
+  # Client API (+ /_synapse/client). Kontajner je publikovaný len na 127.0.0.1:8008 hostiteľa;
+  # verejný prístup ide výhradne cez nginx. ŽIADNY "federation" resource → federácia nebeží.
+  - port: 8008
+    type: http
+    tls: false
+    x_forwarded: true
+    bind_addresses: ["0.0.0.0"]
+    resources:
+      - names: [client]
+        compress: false
+  # Len OpenID userinfo (/_matrix/federation/v1/openid/userinfo) pre lk-jwt-service (MatrixRTC).
+  # Nie je publikovaný na hostiteľa; dostupný iba z internej Docker siete cez nginx:8448.
+  - port: 8009
+    type: http
+    tls: false
+    x_forwarded: true
+    bind_addresses: ["0.0.0.0"]
+    resources:
+      - names: [openid]
+        compress: false
+
+database:
+  name: psycopg2
+  args:
+    user: synapse
+    password: "__POSTGRES_PASSWORD__"
+    dbname: synapse
+    host: postgres
+    port: 5432
+    cp_min: 5
+    cp_max: 10
+
+log_config: "/config/log.config"
+media_store_path: /data/media_store
+signing_key_path: "/data/__MATRIX_DOMAIN__.signing.key"
+max_upload_size: 100M
+
+# --- Federácia vypnutá ---
+federation_domain_whitelist: []
+trusted_key_servers: []
+suppress_key_server_warning: true
+allow_public_rooms_over_federation: false
+serve_server_wellknown: false
+
+# --- Registrácia len s pozývacím tokenom ---
+enable_registration: true
+registration_requires_token: true
+allow_guest_access: false
+registration_shared_secret: "__SYNAPSE_REGISTRATION_SHARED_SECRET__"
+macaroon_secret_key: "__SYNAPSE_MACAROON_SECRET_KEY__"
+form_secret: "__SYNAPSE_FORM_SECRET__"
+# bez e-mailu, captchy a 3PID
+enable_3pid_lookup: false
+enable_set_displayname: true
+enable_set_avatar_url: true
+
+# --- Súkromie ---
+presence:
+  enabled: false
+url_preview_enabled: false
+require_auth_for_profile_requests: true
+limit_profile_requests_to_users_who_share_rooms: true
+allow_public_rooms_without_auth: false
+user_directory:
+  enabled: true
+  search_all_users: false
+# Všetky nové miestnosti (aj skupinové) sú šifrované end-to-end.
+encryption_enabled_by_default_for_room_type: all
+
+# --- MatrixRTC / Element Call ---
+experimental_features:
+  # MSC4143: aktivuje aj nestabilný /_matrix/client/unstable/org.matrix.msc4143/rtc/transports (MSC4519)
+  msc4143_enabled: true
+  # MSC4502 + MSC4512: lk-jwt-service ako application service (overenie členstva, proxy /rtc/livekit)
+  msc4502_enabled: true
+  msc4512_enabled: true
+  # MSC3266 (room summary) a MSC4222 (state_after) sú v Synapse >= 1.165 stabilné → bez flagu.
+
+# MSC4140 delayed events (stabilná voľba)
+max_event_delay_duration: 24h
+
+matrix_rtc:
+  transports:
+    # stabilný transport: klient si token vypýta cez C-S API (/_matrix/client/v1/rtc/livekit/get_token),
+    # Synapse požiadavku preposiela lk-jwt-service (MSC4512 proxy).
+    - type: m.livekit
+      url: "wss://__MATRIX_DOMAIN__/livekit/sfu"
+    # starší (nestabilný) transport pre klientov, ktorí ešte poznajú len livekit_service_url
+    - type: livekit
+      url: "wss://__MATRIX_DOMAIN__/livekit/sfu"
+      livekit_service_url: "https://__MATRIX_DOMAIN__/livekit/jwt"
+
+app_service_config_files:
+  - /config/lk-jwt-appservice.yaml
+
+# Rate limity podľa Element Call self-hosting návodu
+rc_message:
+  per_second: 0.5
+  burst_count: 30
+rc_delayed_event_mgmt:
+  per_second: 1
+  burst_count: 20
