@@ -98,7 +98,7 @@ case "$cmd" in
   admin)
     need_user "${1:-}"; pw="$(gen_password)"
     mas register-user --yes "$1" --password "$pw" --admin --ignore-password-complexity >/dev/null
-    log "admin účet @$1:${MATRIX_DOMAIN} vytvorený. Heslo (zmeňte si ho po prihlásení na https://${AUTH_DOMAIN}/account):"
+    log "admin účet @$1:${MATRIX_DOMAIN} vytvorený. Heslo (zmeňte si ho po prihlásení na https://${AUTH_DOMAIN}${AUTH_PREFIX:-}/account):"
     echo "$pw"
     ;;
   password)

@@ -5,10 +5,10 @@
 #
 #  - admin používateľ so SSH kľúčom a sudo (ak sa nasadzuje ako root: vytvorí "psst" s kľúčmi roota)
 #  - SSH: len kľúčom, root login vypnutý — LEN ak má admin aspoň jeden SSH kľúč (inak by ste sa zamkli)
-#  - UFW: povolené len 22/tcp, 80/tcp, 443/tcp, 7881/tcp (LiveKit ICE/TCP), 7882/udp (médiá), 3478/udp (TURN)
+#  - UFW: povolené len 22/tcp, 80/tcp, 443/tcp, 7881/tcp (LiveKit ICE/TCP), 7882/udp (médiá); TURN len TLS cez 443
 #  - fail2ban (sshd), automatické bezpečnostné aktualizácie (unattended-upgrades)
 # Pozn.: porty publikované Dockerom obchádzajú UFW — compose.yml preto publikuje verejne len 80, 443,
-# 7881/tcp, 7882/udp a 3478/udp; Synapse a MAS admin API sú len na 127.0.0.1.
+# 7881/tcp a 7882/udp; Synapse a MAS admin API sú len na 127.0.0.1.
 set -euo pipefail
 log()  { printf '\033[1;34m[harden]\033[0m %s\n' "$*" >&2; }
 warn() { printf '\033[1;33m[harden] VAROVANIE:\033[0m %s\n' "$*" >&2; }
@@ -67,7 +67,7 @@ else
 fi
 
 # ------------------------------------------------------------------ UFW
-log "UFW: deny incoming; povolené 22/tcp (limit), 80/tcp, 443/tcp, 7881/tcp, 7882/udp, 3478/udp"
+log "UFW: deny incoming; povolené 22/tcp (limit), 80/tcp, 443/tcp, 7881/tcp, 7882/udp"
 ufw --force default deny incoming >/dev/null
 ufw --force default allow outgoing >/dev/null
 ufw limit 22/tcp comment 'SSH' >/dev/null
@@ -75,7 +75,7 @@ ufw allow 80/tcp comment 'HTTP - LetsEncrypt, redirect' >/dev/null
 ufw allow 443/tcp comment 'HTTPS + TURN/TLS' >/dev/null
 ufw allow 7881/tcp comment 'LiveKit ICE/TCP' >/dev/null
 ufw allow 7882/udp comment 'LiveKit media' >/dev/null
-ufw allow 3478/udp comment 'TURN/UDP (coturn)' >/dev/null
+ufw delete allow 3478/udp >/dev/null 2>&1 || true   # TURN/UDP sa nepublikuje (D42)
 # nginx (Docker sieť 172.30.0.0/24) → coturn v host sieti (TURN/TLS na 443 ukončený v nginx)
 ufw allow from 172.30.0.0/24 to any port 3478 proto tcp comment 'nginx → coturn' >/dev/null
 ufw --force enable >/dev/null

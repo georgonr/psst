@@ -2,12 +2,14 @@
 # MAS spravuje účty, prihlásenie a registráciu (OIDC) pre __MATRIX_DOMAIN__.
 # Registrácia: heslom, VÝHRADNE s pozývacím tokenom (scripts/members.sh invite), bez e-mailu.
 http:
-  public_base: https://__AUTH_DOMAIN__/
-  issuer: https://__AUTH_DOMAIN__/
+  # bez vlastnej subdomény: MAS na ceste __AUTH_PREFIX__ domény __AUTH_DOMAIN__ (DECISIONS D42)
+  public_base: __MAS_PUBLIC_BASE__
+  issuer: __MAS_PUBLIC_BASE__
   # požiadavky prichádzajú len cez nginx v Docker sieti
   trusted_proxies: [172.30.0.0/24, 127.0.0.0/8]
   listeners:
     - name: web
+      prefix: "__AUTH_PREFIX__"   # deploy.sh riadok zmaže, ak je AUTH_PREFIX prázdny
       resources:
         - name: discovery
         - name: human

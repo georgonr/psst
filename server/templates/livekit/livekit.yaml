@@ -9,16 +9,12 @@ rtc:
   udp_port: 7882
   use_external_ip: __LIVEKIT_USE_EXTERNAL_IP__
 __LIVEKIT_NODE_IP_LINE__
-  # TURN pre siete bez UDP: TLS na 443 (cez nginx SNI) a UDP 3478 — coturn
+  # TURN pre siete bez UDP: len TLS na 443 (nginx SNI+ALPN → coturn). TURN/UDP 3478 sa nepublikuje
+  # (firewall povoľuje len 22, 80, 443, 7881/tcp, 7882/udp — DECISIONS D42).
   turn_servers:
     - host: __TURN_DOMAIN__
       port: 443
       protocol: tls
-      secret: __TURN_SECRET__
-      ttl: 14400
-    - host: __TURN_DOMAIN__
-      port: 3478
-      protocol: udp
       secret: __TURN_SECRET__
       ttl: 14400
 keys:

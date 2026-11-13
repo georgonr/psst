@@ -59,7 +59,7 @@ allow_public_rooms_without_auth: false
 room_list_publication_rules:
   - action: allow
 
-# --- Účty, prihlásenie a registrácia: Matrix Authentication Service (MAS, __AUTH_DOMAIN__) ---
+# --- Účty, prihlásenie a registrácia: Matrix Authentication Service (MAS, __MAS_PUBLIC_BASE__) ---
 # Registrácia prebieha v MAS (aj z Element X), výhradne s pozývacím tokenom (scripts/members.sh invite).
 enable_registration: false
 password_config:
@@ -67,7 +67,7 @@ password_config:
 allow_guest_access: false
 matrix_authentication_service:
   enabled: true
-  endpoint: http://mas:8080/
+  endpoint: http://mas:8080__AUTH_PREFIX__/
   secret_path: /config/mas_shared_secret
 macaroon_secret_key: "__SYNAPSE_MACAROON_SECRET_KEY__"
 form_secret: "__SYNAPSE_FORM_SECRET__"

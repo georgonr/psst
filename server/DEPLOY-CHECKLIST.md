@@ -24,12 +24,10 @@ existujúci AAAA záznam pre tieto mená by rozbil Let's Encrypt aj klientov.
 
 | Názov | Typ | Hodnota | Na čo |
 |---|---|---|---|
-| `chat.macet.eu` | A | `<IP>` | Matrix homeserver (Synapse), LiveKit signalizácia, iOS push |
+| `chat.macet.eu` | A | `<IP>` | Matrix homeserver (Synapse), prihlásenie/registrácia (MAS na `/auth/`), LiveKit signalizácia, iOS push |
 | `app.macet.eu` | A | `<IP>` | PSST web, Podmienky, Ochrana súkromia, App Links |
-| `auth.macet.eu` | A | `<IP>` | prihlásenie a registrácia (MAS) |
-| `call.macet.eu` | A | `<IP>` | Element Call (samostatná webová appka hovorov) |
-| `ntfy.macet.eu` | A | `<IP>` | Android notifikácie (UnifiedPush) |
-| `turn.macet.eu` | A | `<IP>` | TURN pre hovory zo sietí bez UDP |
+| `call.macet.eu` | A | `<IP>` | Element Call + TURN/TLS na 443 (pre siete bez UDP) |
+| `push.macet.eu` | A | `<IP>` | Android notifikácie (ntfy / UnifiedPush) |
 | `macet.eu` | CAA | `0 issue "letsencrypt.org"` | (voliteľné) len Let's Encrypt smie vydať certifikát |
 
 Kontrola: `dig +short chat.macet.eu` (a ďalšie) musí vrátiť `<IP>` — deploy.sh to overí sám a bez toho nepokračuje.
@@ -43,7 +41,6 @@ Kontrola: `dig +short chat.macet.eu` (a ďalšie) musí vrátiť `<IP>` — depl
 | 443 | TCP | HTTPS (všetky domény) + TURN cez TLS |
 | 7881 | TCP | hovory — ICE/TCP |
 | 7882 | UDP | hovory — médiá |
-| 3478 | UDP | TURN/UDP |
 
 Odchádzajúce: všetko povolené (Let's Encrypt, sťahovanie image, APNs). Na serveri samotnom nastaví
 rovnaké pravidlá UFW `deploy.sh`.
@@ -84,7 +81,7 @@ sudo scripts/healthcheck.sh                   # všetko OK?
 
 - [ ] `https://app.macet.eu` sa načíta, „Create account" s pozvánkou funguje, prihlásenie funguje
 - [ ] Android: nainštalovať `psst-26.11.0-arm64-v8a.apk` + appku **ntfy** (F-Droid/GitHub), v ntfy nastaviť
-      *Default server* = `https://ntfy.macet.eu` a vypnúť optimalizáciu batérie → notifikácie
+      *Default server* = `https://push.macet.eu` a vypnúť optimalizáciu batérie → notifikácie
 - [ ] iOS: TestFlight cez `ios-release.yml` (vyžaduje Apple Developer účet a secrets)
 - [ ] skúšobný hovor 1:1 aj skupinový
 - [ ] heslo k zálohám uložené mimo servera; voliteľne kópia záloh mimo servera:

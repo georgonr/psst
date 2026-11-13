@@ -224,3 +224,36 @@ About, päta prihlásenia), Android a iOS (Nastavenia → About/Legal).
 
 **D41 — Desktop build bez nx cache (`NX_SKIP_NX_CACHE=true`).** nx považoval balenie desktopu za nezmenené aj po
 výmene `webapp.asar` a vrátil starý dmg z cache (so starým webom). CI cache nepoužíva; lokálne je to nutné.
+
+## Produkčné nasadenie na PSST (Hetzner CX33, 204.168.160.131) — 2026-11-13/14
+
+**D42 — Produkcia beží len na 4 doménach: chat, app, call, push.macet.eu.** DNS (webglobe) má A záznamy len pre
+tieto štyri mená; `auth.`, `ntfy.`, `turn.macet.eu` padajú na wildcard starého servera (195.181.248.25) a zmeniť
+ich nevieme. Preto:
+- **MAS** beží na ceste `https://chat.macet.eu/auth/` (MAS `listeners[].prefix: /auth`, `public_base`/`issuer`
+  s cestou). Klienti ho nachádzajú dynamicky cez `/_matrix/client/v1/auth_metadata` — appky netreba meniť.
+  Compat `/_matrix/client/*/login|logout|refresh` nginx prepíše na `/auth/_matrix/…`. Synapse volá MAS na
+  `http://mas:8080/auth/`. Samostatná subdoména sa dá zapnúť v `.env` (`AUTH_DOMAIN=auth.… AUTH_PREFIX=`).
+- **ntfy (UnifiedPush + Matrix push brána)** je na `push.macet.eu` (zadanie). Android fork: predvolená push
+  brána `https://push.macet.eu/_matrix/push/v1/notify` → nový APK.
+- **TURN/TLS na 443 zdieľa doménu `call.macet.eu`** s Element Call. nginx stream rozhoduje podľa SNI **a ALPN**:
+  SNI call.macet.eu bez ALPN h2/http/1.x → TURN (coturn), inak HTTPS. Prehliadače vždy posielajú ALPN, TURN
+  klient WebRTC nie. `TURN_DOMAIN=turn.…` v `.env` vráti samostatnú doménu.
+- **TURN/UDP 3478 sa nepublikuje** — politika firewallu je len 22, 80, 443, 7881/tcp, 7882/udp. coturn počúva
+  len na bráne Docker siete (172.30.0.1) pre nginx; LiveKit klientom ponúka iba `turns:call.macet.eu:443`.
+
+**D43 — Docker nesmie obísť UFW.** `daemon.json`: `"ip": "127.0.0.1"` (port bez IP sa publikuje len na loopback),
+`no-new-privileges`, `live-restore`, `userland-proxy: false`, `icc: false`, json-file 20m×5. Verejné porty sú
+v compose explicitne `0.0.0.0:` (nginx 80/443, LiveKit 7881/tcp, 7882/udp). Navyše reťazec `DOCKER-USER`
+(v `/etc/ufw/after.rules`) púšťa z eth0 do kontajnerov len nové spojenia na 80, 443, 7881/tcp, 7882/udp —
+aj omylom publikovaný port zostane zvonka zatvorený. IPv6: AAAA záznamy nie sú, Docker IPv6 nemá → na IPv6
+je dostupný len SSH.
+
+**D44 — Hardening servera robí operátor mimo deploy.sh, deploy beží s `--skip-harden`.** Server už má
+prísnejší hardening (`AllowUsers deploy`, sysctl, AIDE, ClamAV, auditd, noexec /tmp, swap — viď
+`~/proj/psst-server-notes.md`); `harden.sh` by vytvoril ďalšieho používateľa a otvoril 3478/udp. Cron
+(zálohy + healthcheck) teraz deploy.sh inštaluje aj pri `--skip-harden` (okrem `--local-test`).
+`harden.sh` už 3478/udp neotvára.
+
+**D45 — Žiadne externé notifikácie zo servera.** AIDE (denne), ClamAV (týždenne), healthcheck (systém denne +
+stack každých 10 min) píšu len do `/var/log/psst/*.log` a `/var/log/psst-*.log` (logrotate týždenne, 12×).

@@ -32,8 +32,8 @@ check() { # check <popis> <url> <grep-vzor>
 }
 check ".well-known/matrix/client + rtc_foci"       "https://$MATRIX_DOMAIN/.well-known/matrix/client" "livekit_service_url"
 check "Synapse client API"                          "https://$MATRIX_DOMAIN/_matrix/client/versions" '"versions"'
-check "Synapse → MAS (auth_metadata)"               "https://$MATRIX_DOMAIN/_matrix/client/v1/auth_metadata" "https://$AUTH_DOMAIN/"
-check "MAS OIDC discovery (registrácia povolená)"   "https://$AUTH_DOMAIN/.well-known/openid-configuration" '"create"'
+check "Synapse → MAS (auth_metadata)"               "https://$MATRIX_DOMAIN/_matrix/client/v1/auth_metadata" "https://$AUTH_DOMAIN${AUTH_PREFIX:-}/"
+check "MAS OIDC discovery (registrácia povolená)"   "https://$AUTH_DOMAIN${AUTH_PREFIX:-}/.well-known/openid-configuration" '"create"'
 check "MAS compat login"                            "https://$MATRIX_DOMAIN/_matrix/client/v3/login" "m.login.sso"
 check "PSST web"                                    "https://$APP_DOMAIN/" "<html"
 check "Podmienky / Ochrana súkromia"                "https://$APP_DOMAIN/terms.html" "psst"

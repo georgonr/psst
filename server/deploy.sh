@@ -65,10 +65,19 @@ MATRIX_DOMAIN="${MATRIX_DOMAIN:-chat.macet.eu}"
 DOMAIN_BASE="${MATRIX_DOMAIN#*.}"
 APP_DOMAIN="${APP_DOMAIN:-app.${DOMAIN_BASE}}"
 CALL_DOMAIN="${CALL_DOMAIN:-call.${DOMAIN_BASE}}"
-AUTH_DOMAIN="${AUTH_DOMAIN:-auth.${DOMAIN_BASE}}"
-NTFY_DOMAIN="${NTFY_DOMAIN:-ntfy.${DOMAIN_BASE}}"
-TURN_DOMAIN="${TURN_DOMAIN:-turn.${DOMAIN_BASE}}"
-ALL_DOMAINS="$MATRIX_DOMAIN $APP_DOMAIN $CALL_DOMAIN $AUTH_DOMAIN $NTFY_DOMAIN $TURN_DOMAIN"
+# Produkcia má DNS len pre chat/app/call/push (viď DECISIONS D42):
+#  - MAS beží na ceste https://<MATRIX_DOMAIN>/auth/ (AUTH_PREFIX), nie na vlastnej subdoméne
+#  - ntfy (UnifiedPush + Matrix push brána) na push.<doména>
+#  - TURN/TLS zdieľa :443 s <CALL_DOMAIN> — nginx ho rozlíši podľa ALPN (TURN klient neposiela h2/http/1.1)
+# Samostatné subdomény sa dajú zapnúť cez .env (AUTH_DOMAIN=auth.… AUTH_PREFIX= TURN_DOMAIN=turn.…).
+AUTH_DOMAIN="${AUTH_DOMAIN:-${MATRIX_DOMAIN}}"
+if [ -z "${AUTH_PREFIX+x}" ]; then
+  if [ "$AUTH_DOMAIN" = "$MATRIX_DOMAIN" ]; then AUTH_PREFIX=/auth; else AUTH_PREFIX=""; fi
+fi
+NTFY_DOMAIN="${NTFY_DOMAIN:-push.${DOMAIN_BASE}}"
+TURN_DOMAIN="${TURN_DOMAIN:-${CALL_DOMAIN}}"
+ALL_DOMAINS="$(printf '%s\n' "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" "$TURN_DOMAIN" | awk '!s[$0]++' | tr '\n' ' ')"
+ALL_DOMAINS="${ALL_DOMAINS% }"
 NGINX_IP=172.30.0.10
 DOCKER_GW=172.30.0.1   # brána Docker siete "psst" (coturn v host sieti počúva aj tu pre nginx)
 
@@ -125,10 +134,10 @@ if [ "$HARDEN" = 1 ]; then
 fi
 
 # ----------------------------------------------------------------- 2. .env + secrets
-ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID"
+ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID"
 default_for() {
   case "$1" in
-    MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|NTFY_DOMAIN|TURN_DOMAIN) eval "echo \$$1" ;;
+    MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|AUTH_PREFIX|NTFY_DOMAIN|TURN_DOMAIN) eval "echo \$$1" ;;
     SERVER_IP|LIVEKIT_NODE_IP) echo "$SERVER_IP" ;;
     LETSENCRYPT_EMAIL) echo "$LE_EMAIL" ;;
     LIVEKIT_USE_EXTERNAL_IP) echo false ;;   # node_ip = IP servera (zadaná pri nasadení)
@@ -158,6 +167,10 @@ if [ "$LOCAL_TEST" = 0 ]; then set_env SERVER_IP "$SERVER_IP"; set_env LIVEKIT_N
 if [ "$LOCAL_TEST" = 1 ]; then set_env COMPOSE_FILE "compose.yml:compose.test.yml"; else set_env COMPOSE_FILE "compose.yml"; fi
 chmod 600 .env
 load_env
+# odvodené hodnoty (po načítaní .env)
+MAS_PUBLIC_BASE="https://${AUTH_DOMAIN}${AUTH_PREFIX}/"
+TURN_DOMAIN_RE_SED="$(printf "%s" "$TURN_DOMAIN" | sed "s/\\./\\\\\\\\./g")"   # call\\.macet\\.eu pre sed → call\.macet\.eu v nginx
+ALL_DOMAINS="$(printf "%s\n" "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" "$TURN_DOMAIN" | awk "!s[\$0]++" | tr "\n" " ")"; ALL_DOMAINS="${ALL_DOMAINS% }"
 
 # MAS: šifrovací kľúč, podpisové kľúče (RSA + EC), zdieľané tajomstvo so Synapse
 [ -s secrets/mas/encryption ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/encryption
@@ -183,6 +196,8 @@ render() { # render <template> <output>
   sed -e "s|__MATRIX_DOMAIN__|${MATRIX_DOMAIN}|g" -e "s|__APP_DOMAIN__|${APP_DOMAIN}|g" \
       -e "s|__CALL_DOMAIN__|${CALL_DOMAIN}|g" -e "s|__AUTH_DOMAIN__|${AUTH_DOMAIN}|g" \
       -e "s|__NTFY_DOMAIN__|${NTFY_DOMAIN}|g" -e "s|__TURN_DOMAIN__|${TURN_DOMAIN}|g" \
+      -e "s|__AUTH_PREFIX__|${AUTH_PREFIX}|g" -e "s|__MAS_PUBLIC_BASE__|${MAS_PUBLIC_BASE}|g" \
+      -e "s|__TURN_DOMAIN_RE__|${TURN_DOMAIN_RE_SED}|g" \
       -e "s|__NGINX_IP__|${NGINX_IP}|g" -e "s|__SERVER_IP__|${SERVER_IP}|g" \
       -e "s|__DOCKER_GW__|${DOCKER_GW}|g" -e "s|__TURN_SECRET__|${TURN_SECRET}|g" \
       -e "s|__POSTGRES_PASSWORD__|${POSTGRES_PASSWORD}|g" \
@@ -204,6 +219,8 @@ render templates/synapse/lk-jwt-appservice.yaml data/config/synapse/lk-jwt-appse
 cat secrets/mas/mas_shared_secret > data/config/synapse/mas_shared_secret
 chmod 644 data/config/synapse/mas_shared_secret
 render templates/mas/config.yaml                data/config/mas/config.yaml
+# MAS na vlastnej subdoméne → bez prefixu (MAS nepovoľuje prázdny prefix)
+[ -n "$AUTH_PREFIX" ] || sed -i.bak '/^      prefix: ""/d' data/config/mas/config.yaml && rm -f data/config/mas/config.yaml.bak
 if [ "$LOCAL_TEST" = 1 ]; then
   # lokálne prichádzajú všetci testovací klienti z jednej IP → voľnejšie limity MAS
   cat >> data/config/mas/config.yaml <<'YAML'
@@ -224,10 +241,10 @@ if [ "$LOCAL_TEST" = 1 ]; then
 else
   PRIV_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1)"
   if [ -z "$PRIV_IP" ] || [ "$PRIV_IP" = "$SERVER_IP" ]; then
-    TURN_LISTEN="listening-ip=${SERVER_IP}\nlistening-ip=${DOCKER_GW}\nrelay-ip=${SERVER_IP}"
+    TURN_LISTEN="listening-ip=${DOCKER_GW}\nrelay-ip=${SERVER_IP}"   # len TLS cez nginx (UDP 3478 sa nepublikuje)
     TURN_PEERS="allowed-peer-ip=${SERVER_IP}"
   else   # cloud s 1:1 NAT (verejná IP nie je na rozhraní)
-    TURN_LISTEN="listening-ip=${PRIV_IP}\nlistening-ip=${DOCKER_GW}\nrelay-ip=${PRIV_IP}\nexternal-ip=${SERVER_IP}/${PRIV_IP}"
+    TURN_LISTEN="listening-ip=${DOCKER_GW}\nrelay-ip=${PRIV_IP}\nexternal-ip=${SERVER_IP}/${PRIV_IP}"
     TURN_PEERS="allowed-peer-ip=${SERVER_IP}\nallowed-peer-ip=${PRIV_IP}"
   fi
 fi
@@ -241,6 +258,13 @@ rm -f data/config/coturn/turnserver.tpl
 chmod 644 data/config/coturn/turnserver.conf
 render templates/nginx/nginx.conf               data/config/nginx-main/nginx.conf
 render templates/nginx/psst.conf                data/config/nginx/psst.conf
+# MAS: buď cesta na MATRIX_DOMAIN (MAS_PATH), alebo samostatný vhost (AUTH_VHOST) — nikdy oboje
+if [ -n "$AUTH_PREFIX" ] && [ "$AUTH_DOMAIN" = "$MATRIX_DOMAIN" ]; then
+  sed -i.bak '/# >>> AUTH_VHOST/,/# <<< AUTH_VHOST/d' data/config/nginx/psst.conf
+else
+  sed -i.bak '/# >>> MAS_PATH/,/# <<< MAS_PATH/d' data/config/nginx/psst.conf
+fi
+rm -f data/config/nginx/psst.conf.bak
 render templates/ntfy/server.yml                data/config/ntfy/server.yml
 render templates/element-call/config.json       data/config/element-call/config.json
 render templates/app/config.json                data/config/app-default/config.json
@@ -346,7 +370,8 @@ if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
 fi
 
 # ----------------------------------------------------------------- 7. zálohy + healthcheck
-if [ "$HARDEN" = 1 ] && [ "$(id -u)" = 0 ]; then
+# cron aj pri --skip-harden (systém zabezpečený inak) — len nie pri lokálnom teste
+if [ "$LOCAL_TEST" = 0 ] && [ "$(id -u)" = 0 ]; then
   SERVER_DIR="$(pwd)"
   cat > /etc/cron.d/psst <<CRON
 # PSST — spravuje server/deploy.sh

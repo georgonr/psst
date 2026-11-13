@@ -1,6 +1,6 @@
 # PSST mobil — registrácia cez MAS, OAuth metadáta, push, právne odkazy
 
-Kontext: homeserver `chat.macet.eu` deleguje autentifikáciu na Matrix Authentication Service (`https://auth.macet.eu/`).
+Kontext: homeserver `chat.macet.eu` deleguje autentifikáciu na Matrix Authentication Service (`https://chat.macet.eu/auth/` — D42).
 MAS má zapnutú registráciu heslom, vyžaduje registračný (pozývací) token, e-mail nevyžaduje, dynamická registrácia
 klientov je povolená (`allow_host_mismatch: true`). Tento dokument nahrádza časť D14 (registrácia už nie je len na webe)
 a aktualizuje A5, A8 (Android), I11, I12, I13 (iOS) a D17.
@@ -45,15 +45,15 @@ predtým viedol na LICENSE súbor forku — licencia je naďalej dostupná cez o
 `psstLock.yaml` teraz očakáva „Create account“ na onboardingu; `assertNoServerChoice.yaml` ho už nezakazuje
 (objavuje sa aj na stránke MAS po kliknutí na Sign in).
 
-**M6 — Push: predvolená UnifiedPush Matrix gateway `https://ntfy.macet.eu/_matrix/push/v1/notify`.**
+**M6 — Push: predvolená UnifiedPush Matrix gateway `https://push.macet.eu/_matrix/push/v1/notify`.**
 `UnifiedPushConfig.DEFAULT_PUSH_GATEWAY_HTTP_URL` (predtým `matrix.gateway.unifiedpush.org`). Appka najprv skúša
-gateway na hoste endpointu distribútora (`/_matrix/push/v1/notify` discovery); ntfy.macet.eu sa použije, keď ho
+gateway na hoste endpointu distribútora (`/_matrix/push/v1/notify` discovery); push.macet.eu sa použije, keď ho
 distribútor neponúka. Firebase ostáva vypnutý (`PUSH_CONFIG_INCLUDE_FIREBASE = false`), takže UnifiedPush je jediný
 poskytovateľ — nie je čo „preferovať“. Testy v „Troubleshoot notifications“ nemajú natvrdo žiadny Element/Google host
 (loopback test ide cez gateway aktuálneho pushera); odkaz na zoznam distribútorov `unifiedpush.org/users/distributors/`
 ostal (len informačná stránka). Pozor: ntfy gateway prijíma iba pushkey na vlastnom serveri, takže reálne funguje pre
-ntfy app nastavenú na server `https://ntfy.macet.eu` — vtedy ju appka nájde aj discovery. Odporúčanie pre členov:
-v ntfy appke nastaviť predvolený server `https://ntfy.macet.eu`.
+ntfy app nastavenú na server `https://push.macet.eu` — vtedy ju appka nájde aj discovery. Odporúčanie pre členov:
+v ntfy appke nastaviť predvolený server `https://push.macet.eu`.
 
 ## iOS
 

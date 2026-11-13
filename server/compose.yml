@@ -61,8 +61,8 @@ services:
       - ./data/config/livekit/livekit.yaml:/etc/livekit.yaml:ro
     ports:
       # WebRTC média: ICE/TCP fallback + UDP mux. Signalizácia (7880) ide len cez nginx.
-      - "7881:7881/tcp"
-      - "7882:7882/udp"
+      - "0.0.0.0:7881:7881/tcp"
+      - "0.0.0.0:7882:7882/udp"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:7880/"]
       interval: 15s
@@ -189,8 +189,8 @@ services:
     # Periodický reload, aby nginx načítal obnovené certifikáty od certbota.
     command: ["/bin/sh", "-c", "while :; do sleep 21600 & wait $${!}; nginx -s reload; done & exec nginx -g 'daemon off;'"]
     ports:
-      - "80:80"
-      - "443:443"
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
     volumes:
       - ./data/config/nginx-main/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./data/config/nginx:/etc/nginx/conf.d:ro
@@ -213,7 +213,6 @@ services:
         aliases:
           - ${MATRIX_DOMAIN}
           - ${NTFY_DOMAIN}
-          - ${AUTH_DOMAIN}
 
   certbot:
     image: docker.io/certbot/certbot:v5.10.0
