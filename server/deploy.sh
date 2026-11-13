@@ -210,8 +210,12 @@ render() { # render <template> <output>
       -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
       "$1" > "$2.tmp"
   if grep -q '__[A-Z_]*__' "$2.tmp"; then die "nevyplnený placeholder v $2: $(grep -o '__[A-Z_]*__' "$2.tmp" | sort -u | tr '\n' ' ')"; fi
-  mv "$2.tmp" "$2"
+  # zapisovať NA MIESTE (nie mv): jednotlivé súbory sú v kontajneroch bind-mountované a mv by vytvoril nový
+  # inode — bežiaci kontajner by naďalej videl starú verziu (napr. nginx.conf)
+  if [ -f "$2" ]; then cat "$2.tmp" > "$2"; rm -f "$2.tmp"; else mv "$2.tmp" "$2"; fi
 }
+cfg_sums() { (cd data/config 2>/dev/null && find . -type f -exec cksum {} + 2>/dev/null | sort -k3) || true; }
+CFG_BEFORE="$(cfg_sums)"
 log "renderujem konfigurácie do data/config/"
 render templates/synapse/homeserver.yaml        data/config/synapse/homeserver.yaml
 render templates/synapse/log.config             data/config/synapse/log.config
@@ -347,6 +351,23 @@ compose run --rm --no-deps -T --entrypoint sh synapse -c '[ "$(stat -c %u /data)
 
 log "štartujem celý stack"
 compose up -d --remove-orphans
+# služby, ktorých konfigurácia sa pri tomto behu zmenila, reštartovať (compose up -d zmenu obsahu nevidí)
+if [ -n "$CFG_BEFORE" ]; then
+  CHANGED="$(diff <(printf '%s\n' "$CFG_BEFORE") <(cfg_sums) | awk '/^[<>]/{print $4}' | cut -d/ -f2 | sort -u || true)"
+  RESTART=""
+  for d in $CHANGED; do
+    case "$d" in
+      nginx|nginx-main|app-default) RESTART+=" nginx" ;;
+      synapse) RESTART+=" synapse lk-jwt-service" ;;
+      livekit|mas|coturn|element-call|ntfy|sygnal) RESTART+=" $d" ;;
+    esac
+  done
+  RESTART="$(printf '%s\n' $RESTART | sort -u | tr '\n' ' ')"
+  if [ -n "${RESTART// }" ]; then
+    log "zmenená konfigurácia → reštartujem:$RESTART"
+    for svc in $RESTART; do compose ps --status running --services 2>/dev/null | grep -qx "$svc" && compose restart "$svc" >/dev/null; done
+  fi
+fi
 wait_healthy synapse 300 || { compose logs --tail=80 synapse mas; die "Synapse nenaštartoval"; }
 wait_healthy nginx 90 || { compose logs --tail=80 nginx; die "nginx nenaštartoval"; }
 compose exec -T nginx nginx -s reload >/dev/null 2>&1 || true
