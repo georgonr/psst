@@ -102,6 +102,9 @@ jobs:
           xcodebuild -resolvePackageDependencies -project ElementX.xcodeproj -scheme ElementX \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" | tail -40
 
+      # Ad-hoc signing (identity "-") so the simulator honours entitlements (keychain access group,
+      # app group). A fully unsigned build has no keychain access -> Element X locks itself (PIN screen).
+      # DEVELOPMENT_TEAM is a placeholder only used to form the keychain group prefix in the simulator.
       - name: Build for iOS Simulator
         working-directory: ios
         run: |
@@ -110,7 +113,9 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath "$RUNNER_TEMP/dd" -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" \
             -skipPackagePluginValidation -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ARCHS=arm64 \
+            COMPILER_INDEX_STORE_ENABLE=NO ARCHS=arm64 \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO PROVISIONING_PROFILE_SPECIFIER= \
+            DEVELOPMENT_TEAM=PSSTSIMULA \
             > "$RUNNER_TEMP/build.log" 2>&1 &
           pid=$!
           while kill -0 $pid 2>/dev/null; do
