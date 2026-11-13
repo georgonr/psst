@@ -46,8 +46,10 @@ tar -C "$WORK" -czf - "psst-backup-$TS" \
   | openssl enc -aes-256-cbc -salt -pbkdf2 -iter 600000 -pass "file:$PASS_FILE" -out "$OUT"
 (cd "$(dirname "$OUT")" && shasum -a 256 "$(basename "$OUT")" 2>/dev/null || sha256sum "$(basename "$OUT")") > "$OUT.sha256"
 # overenie: dá sa dešifrovať a obsahuje podpisový kľúč
-openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass "file:$PASS_FILE" -in "$OUT" | tar -tzf - | grep -q 'signing.key' \
-  || die "overenie zálohy zlyhalo"
+# celý zoznam najprv do premennej: `| grep -q` by pri pipefail ukončil tar cez SIGPIPE → falošná chyba
+LISTING="$(openssl enc -d -aes-256-cbc -pbkdf2 -iter 600000 -pass "file:$PASS_FILE" -in "$OUT" | tar -tzf -)" \
+  || die "overenie zálohy zlyhalo (dešifrovanie/rozbalenie)"
+printf '%s\n' "$LISTING" | grep -q 'signing.key' || die "overenie zálohy zlyhalo (chýba signing.key)"
 
 # rotácia
 if [ "$(date -u +%u)" = 7 ]; then cp "$OUT" "$OUT.sha256" "$DEST/weekly/"; fi
