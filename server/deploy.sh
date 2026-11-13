@@ -31,7 +31,7 @@ require_cmd docker openssl sed
 docker compose version >/dev/null 2>&1 || die "potrebný je Docker Compose v2 (docker compose)"
 
 # ------------------------------------------------------------------ 1. .env
-ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN LETSENCRYPT_EMAIL LETSENCRYPT_STAGING LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN"
+ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN LETSENCRYPT_EMAIL LETSENCRYPT_STAGING LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN ANDROID_CERT_SHA256 APPLE_TEAM_ID"
 
 default_for() {
   case "$1" in
@@ -45,6 +45,10 @@ default_for() {
     LIVEKIT_API_KEY) echo "psst$(gen_secret 6)" ;;
     LIVEKIT_API_SECRET) gen_secret 32 ;;
     POSTGRES_PASSWORD) gen_secret 24 ;;
+    # odtlačok release certifikátu z ~/psst-keys (verejný údaj) — pre Android App Links
+    ANDROID_CERT_SHA256) echo "${ANDROID_CERT_SHA256:-3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99}" ;;
+    # Apple Team ID (10 znakov) — doplniť po založení Apple Developer účtu; prázdne = iOS universal links nefungujú
+    APPLE_TEAM_ID) echo "${APPLE_TEAM_ID:-}" ;;
     *) gen_secret 32 ;;
   esac
 }
@@ -88,6 +92,8 @@ render() { # render <template> <output>
       -e "s|__LK_JWT_AS_TOKEN__|${LK_JWT_AS_TOKEN}|g" \
       -e "s|__LK_JWT_HS_TOKEN__|${LK_JWT_HS_TOKEN}|g" \
       -e "s|__LIVEKIT_API_KEY__|${LIVEKIT_API_KEY}|g" \
+      -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" \
+      -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
       -e "s|__LIVEKIT_API_SECRET__|${LIVEKIT_API_SECRET}|g" \
       -e "s|__LIVEKIT_USE_EXTERNAL_IP__|${LIVEKIT_USE_EXTERNAL_IP}|g" \
       -e "s|__LIVEKIT_NODE_IP_LINE__|${NODE_IP_LINE}|g" \
@@ -104,6 +110,9 @@ render templates/nginx/psst.conf              data/config/nginx/psst.conf
 render templates/element-call/config.json     data/config/element-call/config.json
 render templates/app/config.json              data/config/app-default/config.json
 render templates/app/index.html               data/config/app-default/index.html
+mkdir -p data/config/app-default/.well-known
+render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
+render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
 if [ ! -f app/index.html ]; then
   warn "app/ neobsahuje PSST web — dávam dočasnú stránku (stiahnite web: scripts/fetch-web.sh)"
   cp data/config/app-default/index.html app/index.html
