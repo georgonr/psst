@@ -12,7 +12,7 @@ note() { printf '  \033[33mWARN\033[0m  %s\n' "$*"; WARNS=$((WARNS + 1)); }
 [ "$QUIET" = 1 ] || echo "PSST healthcheck $(date -u +%FT%TZ)"
 
 # --- kontajnery
-for svc in postgres synapse mas ntfy livekit lk-jwt-service element-call nginx; do
+for svc in postgres synapse mas ntfy livekit coturn lk-jwt-service element-call nginx; do
   cid="$(compose ps -q "$svc" 2>/dev/null || true)"
   if [ -z "$cid" ]; then bad "kontajner $svc nebeží"; continue; fi
   st="$(docker inspect -f '{{.State.Status}}{{if .State.Health}}/{{.State.Health.Status}}{{end}}' "$cid")"
