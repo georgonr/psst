@@ -40,6 +40,8 @@ if [ "$(id -u)" = 0 ]; then chown -R 65532:65532 secrets/mas; else chmod 755 sec
 log "obnovujem Synapse dáta (médiá + podpisový kľúč)"
 compose run --rm --no-deps -T --entrypoint sh synapse -c 'tar -C /data -xzf - && chown -R 991:991 /data' < "$B/synapse-data.tar.gz"
 log "obnovujem databázy"
+# prázdny dátový adresár musí patriť používateľovi postgres (entrypoint postgres 18 už beží ako postgres)
+compose run --rm --no-deps -T --entrypoint sh postgres -c 'chown -R postgres:postgres /var/lib/postgresql && chmod 700 /var/lib/postgresql'
 compose up -d postgres
 wait_healthy postgres 120 || die "PostgreSQL nenaštartoval"
 compose exec -T postgres psql -U synapse -d synapse -qc "DROP DATABASE IF EXISTS mas" >/dev/null

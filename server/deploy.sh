@@ -310,6 +310,8 @@ fi
 if [ "$PULL" = 1 ]; then log "sťahujem image"; compose pull --quiet 2>/dev/null || compose pull; fi
 
 log "štartujem PostgreSQL"
+compose run --rm --no-deps -T --entrypoint sh postgres -c \
+  '[ "$(stat -c %U /var/lib/postgresql)" = postgres ] || chown -R postgres:postgres /var/lib/postgresql' >/dev/null
 compose up -d postgres
 wait_healthy postgres 120 || die "PostgreSQL nenaštartoval"
 # databáza pre MAS (idempotentne)
