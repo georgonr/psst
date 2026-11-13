@@ -55,4 +55,5 @@ cmp -s "$B/signing.key" <(compose run --rm --no-deps -T --entrypoint cat synapse
 log "štartujem stack"
 compose up -d --remove-orphans
 wait_healthy synapse 300 || die "Synapse nenaštartoval"
+for svc in nginx ntfy element-call livekit lk-jwt-service; do wait_healthy "$svc" 120 || warn "$svc ešte nie je healthy"; done
 log "obnova hotová — overte: scripts/healthcheck.sh"

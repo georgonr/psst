@@ -93,7 +93,8 @@ rm -rf webapp && VERSION="$(jq -r .version package.json)-psst.$(git rev-parse --
 cd forks/web && printf '\nsupportedArchitectures:\n    os: [current]\n    cpu: [x64, arm64]\n' >> pnpm-workspace.yaml
 cd apps/desktop && pnpm install --frozen-lockfile --filter element-desktop
 mkdir webapp && tar -C webapp --strip-components=1 -xzf ../../../../dist/psst-web-*.tar.gz && pnpm run asar-webapp
-CSC_IDENTITY_AUTO_DISCOVERY=false VARIANT_PATH=psst/build.json pnpm run build:universal --publish never -m dmg zip
+NX_SKIP_NX_CACHE=true CSC_IDENTITY_AUTO_DISCOVERY=false VARIANT_PATH=psst/build.json pnpm run build:universal --publish never -m dmg zip
+# NX_SKIP_NX_CACHE: inak nx vráti starý dmg z cache aj po výmene webapp.asar (D41)
 
 # Android — APK a AAB v SAMOSTATNÝCH príkazoch (build skript vypína ABI splity, ak je v príkaze "bundle")
 cd forks/android && echo "sdk.dir=$ANDROID_HOME" > local.properties
@@ -101,16 +102,25 @@ cd forks/android && echo "sdk.dir=$ANDROID_HOME" > local.properties
 ./gradlew --no-daemon :app:bundleFdroidRelease        # ≈12 min
 scripts/android/sign-release.sh <adresár s *-unsigned.apk / *.aab> dist/android
 
-# Server lokálne (test režim: self-signed, voľnejšie login limity)
-cd server && COMPOSE_FILE=compose.yml:compose.test.yml LIVEKIT_USE_EXTERNAL_IP=false LIVEKIT_NODE_IP=127.0.0.1 \
-  ./deploy.sh --no-letsencrypt
-~/.local/psst-venv/bin/python tests/server/run_local.py      # smoke test bez /etc/hosts
-~/.local/psst-venv/bin/python tests/server/extra_test.py     # kanál + súbory
+# Server lokálne (test režim: self-signed certifikát, compose.test.yml, voľnejšie limity)
+cd server && ./deploy.sh --local-test
+PY=~/.local/psst-venv/bin/python
+$PY tests/server/run_local.py          # smoke test (17 kontrol) bez /etc/hosts
+$PY tests/server/extra_test.py         # kanál + šifrované súbory (9)
+$PY tests/server/oidc_clients_test.py  # MAS registrácia OIDC klientov všetkých appiek (5)
+node scripts/web/register-test.mjs <out> <token1x> <token3x>   # registrácia tokenom cez MAS (4)
+node scripts/web/live-test.mjs <out> <user> <pass>             # web naostro (7)
+node scripts/web/call-test.mjs <out> <roomId> <label> <u1> <p1> <u2> <p2>   # hovor (5)
+PSST_RELAY_ONLY=1 scripts/web/docker/run-call-test.sh <out> …  # hovor len cez TURN/TLS 443 (6)
+cd server && scripts/backup.sh && scripts/restore.sh backups/daily/psst-….tar.gz.enc --force
 ```
 
 Živé testy klientov proti lokálnemu stacku: `scripts/web/live-test.mjs`, `scripts/web/call-test.mjs`,
 `scripts/desktop/live-test.mjs` (Playwright), Android `scripts/android/ui.py` + emulátor s `-writable-system`
 (testovací certifikát v systémových CA, `10.0.2.2 chat.macet.eu …` v `/system/etc/hosts`). Podrobnosti v REPORT.md.
+
+PSST web pre server: GitHub Release `web-<verzia>` s `psst-web.tar.gz` (stiahne `server/scripts/fetch-web.sh`):
+`gh release create web-<verzia> dist/psst-web.tar.gz --latest`.
 
 Cez GitHub Actions: Windows inštalátor (`web-desktop.yml` → `desktop-win`) a iOS simulátor (`ios.yml`,
 runner `xcode-27`, Xcode 27.x, `ARCHS=arm64`).
