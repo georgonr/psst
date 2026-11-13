@@ -53,6 +53,12 @@ suppress_key_server_warning: true
 allow_public_rooms_over_federation: false
 serve_server_wellknown: false
 
+# --- Kanály: adresár miestností je viditeľný len prihláseným PSST používateľom ---
+# Bez federácie a s registráciou len cez tokeny je "verejná" miestnosť = kanál servera.
+allow_public_rooms_without_auth: false
+room_list_publication_rules:
+  - action: allow
+
 # --- Registrácia len s pozývacím tokenom ---
 enable_registration: true
 registration_requires_token: true
