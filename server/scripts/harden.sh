@@ -71,7 +71,7 @@ log "UFW: deny incoming; povolené 22/tcp (limit), 80/tcp, 443/tcp, 7881/tcp, 78
 ufw --force default deny incoming >/dev/null
 ufw --force default allow outgoing >/dev/null
 ufw limit 22/tcp comment 'SSH' >/dev/null
-ufw allow 80/tcp comment "HTTP (Let's Encrypt, presmerovanie)" >/dev/null
+ufw allow 80/tcp comment 'HTTP - LetsEncrypt, redirect' >/dev/null
 ufw allow 443/tcp comment 'HTTPS + TURN/TLS' >/dev/null
 ufw allow 7881/tcp comment 'LiveKit ICE/TCP' >/dev/null
 ufw allow 7882/udp comment 'LiveKit media' >/dev/null
