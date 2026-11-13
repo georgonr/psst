@@ -1,0 +1,19 @@
+# Sygnal — self-hosted Matrix push brána pre iOS (APNs). ./deploy.sh ho vyrenderuje a spustí
+# LEN ak existuje server/secrets/apns/AuthKey_<KEY_ID>.p8 (stiahnutý z Apple Developer → Keys).
+log:
+  setup:
+    version: 1
+    formatters: {normal: {format: "%(asctime)s [%(process)d] %(levelname)-5s %(name)s %(message)s"}}
+    handlers: {stderr: {class: logging.StreamHandler, formatter: normal, stream: ext://sys.stderr}}
+    loggers: {sygnal: {propagate: false, handlers: [stderr], level: INFO}}
+    root: {handlers: [stderr], level: INFO}
+  access: {x_forwarded_for: true}
+http:
+  bind_addresses: ["0.0.0.0"]
+  port: 5000
+metrics:
+  prometheus: {enabled: false}
+  opentracing: {enabled: false}
+  sentry: {enabled: false}
+apps:
+__SYGNAL_APPS__

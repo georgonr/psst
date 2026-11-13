@@ -1,0 +1,94 @@
+# Matrix Authentication Service (MAS) — šablóna (./deploy.sh → data/config/mas/config.yaml)
+# MAS spravuje účty, prihlásenie a registráciu (OIDC) pre __MATRIX_DOMAIN__.
+# Registrácia: heslom, VÝHRADNE s pozývacím tokenom (scripts/members.sh invite), bez e-mailu.
+http:
+  public_base: https://__AUTH_DOMAIN__/
+  issuer: https://__AUTH_DOMAIN__/
+  # požiadavky prichádzajú len cez nginx v Docker sieti
+  trusted_proxies: [172.30.0.0/24, 127.0.0.0/8]
+  listeners:
+    - name: web
+      resources:
+        - name: discovery
+        - name: human
+        - name: oauth
+        - name: compat
+        - name: graphql
+        - name: assets
+      binds:
+        - address: "0.0.0.0:8080"
+    - name: internal
+      resources:
+        - name: health
+        - name: adminapi
+      binds:
+        - address: "0.0.0.0:8081"
+
+database:
+  uri: postgresql://synapse:__POSTGRES_PASSWORD__@postgres/mas
+
+matrix:
+  kind: synapse
+  homeserver: __MATRIX_DOMAIN__
+  secret_file: /secrets/mas_shared_secret
+  endpoint: http://synapse:8008/
+
+secrets:
+  encryption_file: /secrets/encryption
+  keys:
+    - kid: psst-rsa
+      key_file: /secrets/rsa.pem
+    - kid: psst-ec
+      key_file: /secrets/ec.pem
+
+passwords:
+  enabled: true
+  schemes:
+    - version: 1
+      algorithm: argon2id
+  minimum_complexity: 3
+
+account:
+  password_registration_enabled: true
+  password_registration_email_required: false
+  password_registration_token_required: true
+  password_recovery_enabled: false
+  email_change_allowed: true
+  displayname_change_allowed: true
+  password_change_allowed: true
+  account_deactivation_allowed: true
+  login_with_email_allowed: false
+
+# Bez e-mailového servera (registrácia ani obnova hesla e-mail nevyžadujú)
+email:
+  from: '"psst" <noreply@__AUTH_DOMAIN__>'
+  reply_to: '"psst" <noreply@__AUTH_DOMAIN__>'
+  transport: blackhole
+
+captcha:
+  service: ~
+
+policy:
+  data:
+    client_registration:
+      # Element X / Web / Desktop sa registrujú dynamicky; metadáta (client_uri, tos, policy) sú
+      # na app doméne, redirect schémy eu.macet.* → povoliť rozdielny host
+      allow_host_mismatch: true
+      allow_insecure_uris: false
+      allow_missing_client_uri: false
+    registration:
+      banned_usernames:
+        literals: [admin, administrator, root, psst, psstadmin, support, moderator, system, matrix, synapse]
+
+branding:
+  service_name: psst
+  policy_uri: https://__APP_DOMAIN__/privacy.html
+  tos_uri: https://__APP_DOMAIN__/terms.html
+
+telemetry:
+  tracing:
+    exporter: none
+  metrics:
+    exporter: none
+  sentry:
+    dsn: ~

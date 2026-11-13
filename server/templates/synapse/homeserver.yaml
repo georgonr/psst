@@ -1,5 +1,5 @@
 # PSST — Synapse konfigurácia (šablóna; ./deploy.sh ju vyrenderuje do data/config/synapse/homeserver.yaml).
-# Zástupné symboly __NAZOV__ sa nahradia hodnotami zo server/.env.
+# Zástupné symboly (meno v dvojitých podčiarkovníkoch) sa nahradia hodnotami zo server/.env.
 # Dokumentácia: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
 
 server_name: "__MATRIX_DOMAIN__"
@@ -59,11 +59,16 @@ allow_public_rooms_without_auth: false
 room_list_publication_rules:
   - action: allow
 
-# --- Registrácia len s pozývacím tokenom ---
-enable_registration: true
-registration_requires_token: true
+# --- Účty, prihlásenie a registrácia: Matrix Authentication Service (MAS, __AUTH_DOMAIN__) ---
+# Registrácia prebieha v MAS (aj z Element X), výhradne s pozývacím tokenom (scripts/members.sh invite).
+enable_registration: false
+password_config:
+  enabled: false
 allow_guest_access: false
-registration_shared_secret: "__SYNAPSE_REGISTRATION_SHARED_SECRET__"
+matrix_authentication_service:
+  enabled: true
+  endpoint: http://mas:8080/
+  secret_path: /config/mas_shared_secret
 macaroon_secret_key: "__SYNAPSE_MACAROON_SECRET_KEY__"
 form_secret: "__SYNAPSE_FORM_SECRET__"
 # bez e-mailu, captchy a 3PID
@@ -159,3 +164,13 @@ rc_message:
 rc_delayed_event_mgmt:
   per_second: 1
   burst_count: 20
+
+# --- Push notifikácie (vlastné brány: ntfy pre Android/UnifiedPush, Sygnal pre iOS/APNs) ---
+# Obsah správ do push brán neposielame (len event_id; appka si správu stiahne a dešifruje sama).
+push:
+  include_content: false
+# Push brány bežia na tomto serveri za nginx (pevná IP v Docker sieti). Synapse inak blokuje
+# súkromné rozsahy (ip_range_blacklist) — povolená je len táto jedna adresa.
+ip_range_whitelist:
+  - __NGINX_IP__
+

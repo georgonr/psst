@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Stiahne PSST Element Web distribúciu do server/app/ (servíruje ju nginx na APP_DOMAIN).
 #
-#   scripts/fetch-web.sh                       najnovší artefakt "psst-web-dist" z georgonr/psst (gh CLI)
-#   PSST_WEB_RUN_ID=123456 scripts/fetch-web.sh  artefakt z konkrétneho behu
-#   PSST_WEB_DIST_URL=https://…/psst-web.tar.gz scripts/fetch-web.sh   z URL (.tar.gz / .tgz / .zip)
+#   scripts/fetch-web.sh                       najnovší release: github.com/georgonr/psst/releases/latest (curl)
+#   PSST_WEB_DIST_URL=https://…/psst-web.tar.gz scripts/fetch-web.sh   z inej URL (.tar.gz / .tgz / .zip)
+#   PSST_WEB_FROM_CI=1 [PSST_WEB_RUN_ID=123] scripts/fetch-web.sh      artefakt "psst-web-dist" z CI (gh CLI)
 #
 # Po stiahnutí netreba reštart — nginx servíruje súbory priamo z app/.
 . "$(dirname "$0")/lib.sh"
@@ -14,6 +14,9 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 mkdir -p "$TMP/dl" "$TMP/x"
 
+if [ -z "${PSST_WEB_FROM_CI:-}" ]; then
+  PSST_WEB_DIST_URL="${PSST_WEB_DIST_URL:-https://github.com/${REPO}/releases/latest/download/psst-web.tar.gz}"
+fi
 if [ -n "${PSST_WEB_DIST_URL:-}" ]; then
   require_cmd curl
   log "sťahujem $PSST_WEB_DIST_URL"

@@ -1,181 +1,339 @@
 #!/usr/bin/env bash
-# PSST server — nasadenie jedným príkazom.
+# PSST server — nasadenie jedným príkazom (idempotentné: prvé nasadenie aj aktualizácia).
 #
-#   ./deploy.sh                  prvé nasadenie aj aktualizácia (idempotentné)
-#   ./deploy.sh --staging        certifikáty z Let's Encrypt staging (test)
-#   ./deploy.sh --no-letsencrypt bez Let's Encrypt (ostane self-signed certifikát; CI/lokálny test)
-#   ./deploy.sh --no-pull        nesťahovať nové image
+#   sudo ./deploy.sh <IP_SERVERA> <EMAIL_PRE_LETS_ENCRYPT> [voľby]
 #
-# Čo robí:
-#   1. vytvorí server/.env s náhodnými tajomstvami (len prvýkrát; existujúce hodnoty nemení)
-#   2. vyrenderuje konfigurácie z templates/ do data/config/
-#   3. pripraví adresáre a dočasný self-signed certifikát (aby nginx vedel naštartovať)
-#   4. docker compose pull + up -d, počká na healthchecky
-#   5. ak certifikát ešte nie je od Let's Encrypt: certbot --webroot → reload nginx
+#   Voľby:
+#     --apple-team-id <ID>  Apple Developer Team ID (iOS push cez Sygnal, universal links)
+#     --staging             certifikát z Let's Encrypt staging (skúška, nie dôveryhodný)
+#     --skip-harden         nemeniť systém (SSH, UFW, fail2ban, aktualizácie, cron)
+#     --skip-preflight      preskočiť pre-flight kontrolu (neodporúča sa)
+#     --no-pull             nesťahovať nové image
+#     --local-test          lokálny test (CI/vývoj): bez Let's Encrypt, bez DNS/hardeningu,
+#                           self-signed certifikát, compose.test.yml; IP = 127.0.0.1
+#
+# Čo robí (každý krok je bezpečné spustiť znova):
+#   0. pre-flight: Docker (doinštaluje na Debian/Ubuntu), DNS všetkých subdomén → IP, voľné porty, miesto
+#   1. hardening systému (scripts/harden.sh): SSH len kľúčom, bez root loginu, UFW, fail2ban, auto-updates
+#   2. server/.env + secrets/ (náhodné tajomstvá len prvýkrát; existujúce hodnoty nemení)
+#   3. vyrenderuje konfigurácie z templates/ do data/config/
+#   4. stiahne PSST web (ak app/ je prázdne)
+#   5. docker compose up, databáza pre MAS, čakanie na healthchecky
+#   6. certifikát Let's Encrypt pre všetky subdomény
+#   7. denné šifrované zálohy (cron) + healthcheck
+#
+# iOS push: nahrajte AuthKey_<KEY_ID>.p8 do server/secrets/apns/ a spustite deploy.sh znova.
 set -euo pipefail
 . "$(dirname "$0")/scripts/lib.sh"
 
-LETSENCRYPT="${PSST_LETSENCRYPT:-1}"
-PULL=1
-for arg in "$@"; do
-  case "$arg" in
-    --staging) export LETSENCRYPT_STAGING=1 ;;
-    --no-letsencrypt) LETSENCRYPT=0 ;;
+usage() { sed -n '2,25p' "$0"; exit "${1:-0}"; }
+
+SERVER_IP=""; LE_EMAIL=""; TEAM_ID=""
+LETSENCRYPT=1; PULL=1; HARDEN=1; PREFLIGHT=1; LOCAL_TEST=0; STAGING=0
+POSITIONAL=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --apple-team-id) TEAM_ID="${2:?chýba hodnota pre --apple-team-id}"; shift ;;
+    --staging) STAGING=1 ;;
+    --skip-harden) HARDEN=0 ;;
+    --skip-preflight) PREFLIGHT=0 ;;
     --no-pull) PULL=0 ;;
-    -h|--help) sed -n '2,16p' "$0"; exit 0 ;;
-    *) die "neznámy prepínač: $arg" ;;
+    --local-test) LOCAL_TEST=1; LETSENCRYPT=0; HARDEN=0; PREFLIGHT=0 ;;
+    -h|--help) usage 0 ;;
+    -*) die "neznámy prepínač: $1 (./deploy.sh --help)" ;;
+    *) POSITIONAL+=("$1") ;;
   esac
+  shift
 done
+SERVER_IP="${POSITIONAL[0]:-}"; LE_EMAIL="${POSITIONAL[1]:-}"
 
-require_cmd docker openssl sed
-docker compose version >/dev/null 2>&1 || die "potrebný je Docker Compose v2 (docker compose)"
+if [ "$LOCAL_TEST" = 1 ]; then
+  SERVER_IP="${SERVER_IP:-127.0.0.1}"
+  export COMPOSE_FILE="compose.yml:compose.test.yml"
+else
+  [ -n "$SERVER_IP" ] && [ -n "$LE_EMAIL" ] || { warn "chýba IP servera alebo e-mail"; usage 1; }
+  [[ "$SERVER_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || die "IP servera musí byť IPv4 adresa (napr. 203.0.113.10)"
+  [[ "$LE_EMAIL" == *@*.* ]] || die "neplatný e-mail: $LE_EMAIL"
+fi
 
-# ------------------------------------------------------------------ 1. .env
-ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN LETSENCRYPT_EMAIL LETSENCRYPT_STAGING LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_REGISTRATION_SHARED_SECRET SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN ANDROID_CERT_SHA256 APPLE_TEAM_ID"
+# ----------------------------------------------------------------- domény
+MATRIX_DOMAIN="${MATRIX_DOMAIN:-chat.macet.eu}"
+DOMAIN_BASE="${MATRIX_DOMAIN#*.}"
+APP_DOMAIN="${APP_DOMAIN:-app.${DOMAIN_BASE}}"
+CALL_DOMAIN="${CALL_DOMAIN:-call.${DOMAIN_BASE}}"
+AUTH_DOMAIN="${AUTH_DOMAIN:-auth.${DOMAIN_BASE}}"
+NTFY_DOMAIN="${NTFY_DOMAIN:-ntfy.${DOMAIN_BASE}}"
+TURN_DOMAIN="${TURN_DOMAIN:-turn.${DOMAIN_BASE}}"
+ALL_DOMAINS="$MATRIX_DOMAIN $APP_DOMAIN $CALL_DOMAIN $AUTH_DOMAIN $NTFY_DOMAIN $TURN_DOMAIN"
+NGINX_IP=172.30.0.10
 
+# ----------------------------------------------------------------- 0. pre-flight
+if [ "$PREFLIGHT" = 1 ]; then
+  log "pre-flight kontrola"
+  [ "$(uname -s)" = Linux ] || die "nasadenie je určené pre Linux server (Debian 12/13 alebo Ubuntu 22.04/24.04)"
+  [ "$(id -u)" = 0 ] || die "spustite cez sudo (hardening a inštalácia Dockeru potrebujú root)"
+  export DEBIAN_FRONTEND=noninteractive
+  if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+    [ -f /etc/debian_version ] || die "Docker chýba a automatická inštalácia podporuje len Debian/Ubuntu"
+    log "inštalujem Docker Engine + compose plugin (oficiálny repozitár docker.com)"
+    apt-get update -qq && apt-get install -y -qq ca-certificates curl >/dev/null
+    curl -fsSL https://get.docker.com | sh >/dev/null
+    systemctl enable --now docker >/dev/null
+  fi
+  docker info >/dev/null 2>&1 || die "Docker daemon nebeží"
+  for c in openssl curl dig ss; do
+    command -v "$c" >/dev/null || apt-get install -y -qq openssl curl dnsutils iproute2 >/dev/null 2>&1 || true
+  done
+
+  FAIL=0
+  for d in $ALL_DOMAINS; do
+    got="$(dig +short A "$d" @1.1.1.1 2>/dev/null | grep -E '^[0-9.]+$' | sort -u | tr '\n' ' ' || true)"
+    [ -z "$got" ] && got="$(getent ahostsv4 "$d" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ' || true)"
+    got="$(echo $got)"
+    if [ "$got" = "$SERVER_IP" ]; then log "  DNS  $d → $SERVER_IP  OK"
+    else warn "  DNS  $d → '${got:-nič}' (očakávané $SERVER_IP)"; FAIL=1; fi
+  done
+  if ip -4 addr 2>/dev/null | grep -q "inet ${SERVER_IP}/"; then log "  IP   $SERVER_IP je na tomto serveri  OK"
+  else warn "  IP   $SERVER_IP nie je na sieťovom rozhraní (NAT v cloude?) — pokračujem, LiveKit ju ohlási ako node_ip"; fi
+  # porty: obsadené smú byť len naším stackom (docker-proxy)
+  for p in 80/tcp 443/tcp 7881/tcp 7882/udp 3478/udp; do
+    proto="${p#*/}"; port="${p%/*}"; flag=-ltnpH; [ "$proto" = udp ] && flag=-lunpH
+    owner="$(ss $flag "sport = :$port" 2>/dev/null | awk '{print $NF}' | head -1)"
+    if [ -z "$owner" ] || echo "$owner" | grep -q docker-proxy; then log "  port $p voľný/náš  OK"
+    else warn "  port $p obsadený: $owner"; FAIL=1; fi
+  done
+  free_gb=$(df -BG --output=avail . | tail -1 | tr -dc 0-9)
+  if [ "$free_gb" -ge 20 ]; then log "  disk ${free_gb} GB voľných  OK"
+  else warn "  disk len ${free_gb} GB voľných (minimum 20 GB)"; FAIL=1; fi
+  mem_mb=$(awk '/MemTotal/{print int($2/1024)}' /proc/meminfo)
+  if [ "$mem_mb" -ge 3500 ]; then log "  RAM ${mem_mb} MB  OK"; else warn "  RAM ${mem_mb} MB (odporúčané 4 GB+)"; fi
+  [ "$FAIL" = 0 ] || die "pre-flight zlyhal — opravte DNS/porty/miesto podľa server/DEPLOY-CHECKLIST.md a spustite znova"
+else
+  require_cmd docker openssl sed
+  docker compose version >/dev/null 2>&1 || die "potrebný je Docker Compose v2 (docker compose)"
+fi
+
+# ----------------------------------------------------------------- 1. hardening
+if [ "$HARDEN" = 1 ]; then
+  log "hardening systému"
+  bash scripts/harden.sh
+fi
+
+# ----------------------------------------------------------------- 2. .env + secrets
+ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN ANDROID_CERT_SHA256 APPLE_TEAM_ID"
 default_for() {
   case "$1" in
-    MATRIX_DOMAIN) echo "${MATRIX_DOMAIN:-chat.macet.eu}" ;;
-    APP_DOMAIN) echo "${APP_DOMAIN:-app.macet.eu}" ;;
-    CALL_DOMAIN) echo "${CALL_DOMAIN:-call.macet.eu}" ;;
-    LETSENCRYPT_EMAIL) echo "${LETSENCRYPT_EMAIL:-}" ;;
-    LETSENCRYPT_STAGING) echo "${LETSENCRYPT_STAGING:-0}" ;;
-    LIVEKIT_USE_EXTERNAL_IP) echo "${LIVEKIT_USE_EXTERNAL_IP:-true}" ;;
-    LIVEKIT_NODE_IP) echo "${LIVEKIT_NODE_IP:-}" ;;
+    MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|NTFY_DOMAIN|TURN_DOMAIN) eval "echo \$$1" ;;
+    SERVER_IP|LIVEKIT_NODE_IP) echo "$SERVER_IP" ;;
+    LETSENCRYPT_EMAIL) echo "$LE_EMAIL" ;;
+    LIVEKIT_USE_EXTERNAL_IP) echo false ;;   # node_ip = IP servera (zadaná pri nasadení)
     LIVEKIT_API_KEY) echo "psst$(gen_secret 6)" ;;
-    LIVEKIT_API_SECRET) gen_secret 32 ;;
     POSTGRES_PASSWORD) gen_secret 24 ;;
-    # odtlačok release certifikátu z ~/psst-keys (verejný údaj) — pre Android App Links
-    ANDROID_CERT_SHA256) echo "${ANDROID_CERT_SHA256:-3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99}" ;;
-    # Apple Team ID (10 znakov) — doplniť po založení Apple Developer účtu; prázdne = iOS universal links nefungujú
-    APPLE_TEAM_ID) echo "${APPLE_TEAM_ID:-}" ;;
+    # odtlačok release certifikátu z ~/psst-keys (verejný údaj) — Android App Links
+    ANDROID_CERT_SHA256) echo "3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99" ;;
+    APPLE_TEAM_ID) echo "$TEAM_ID" ;;
     *) gen_secret 32 ;;
   esac
 }
-
+set_env() { # set_env KEY VALUE — prepíše/doplní hodnotu v .env
+  if grep -q "^$1=" .env; then
+    awk -v k="$1" -v v="$2" 'BEGIN{FS=OFS="="} $1==k{print k"="v; next} {print}' .env > .env.new && mv .env.new .env
+  else printf '%s=%s\n' "$1" "$2" >> .env; fi
+}
 umask 077
-if [ ! -f .env ]; then
-  log "vytváram server/.env s novými tajomstvami"
-  printf '# PSST server — vygenerované %s. NECOMMITOVAŤ. Zálohovať!\n' "$(date -u +%FT%TZ)" > .env
-fi
-for k in $ENV_KEYS; do
-  if ! grep -q "^${k}=" .env; then
-    printf '%s=%s\n' "$k" "$(default_for "$k")" >> .env
-  fi
-done
+mkdir -p data secrets secrets/mas secrets/apns
+[ -f .env ] || { log "vytváram server/.env s novými tajomstvami"; printf '# PSST server — vygenerované %s. NECOMMITOVAŤ. Zálohovať!\n' "$(date -u +%FT%TZ)" > .env; }
+for k in $ENV_KEYS; do grep -q "^${k}=" .env || printf '%s=%s\n' "$k" "$(default_for "$k")" >> .env; done
+# hodnoty z príkazového riadka majú prednosť (zmena IP/e-mailu/Team ID pri opakovanom nasadení)
+if [ "$LOCAL_TEST" = 0 ]; then set_env SERVER_IP "$SERVER_IP"; set_env LIVEKIT_NODE_IP "$SERVER_IP"; set_env LETSENCRYPT_EMAIL "$LE_EMAIL"; fi
+[ -n "$TEAM_ID" ] && set_env APPLE_TEAM_ID "$TEAM_ID"
+# skripty (members/backup/healthcheck) musia používať rovnaké compose súbory
+if [ "$LOCAL_TEST" = 1 ]; then set_env COMPOSE_FILE "compose.yml:compose.test.yml"; else set_env COMPOSE_FILE "compose.yml"; fi
 chmod 600 .env
-umask 022
 load_env
 
-[ -n "$MATRIX_DOMAIN" ] || die "MATRIX_DOMAIN je prázdne"
-if [ "$LETSENCRYPT" = 1 ] && [ -z "${LETSENCRYPT_EMAIL:-}" ]; then
-  die "nastavte LETSENCRYPT_EMAIL v server/.env (alebo spustite: LETSENCRYPT_EMAIL=vy@domena ./deploy.sh)"
-fi
+# MAS: šifrovací kľúč, podpisové kľúče (RSA + EC), zdieľané tajomstvo so Synapse
+[ -s secrets/mas/encryption ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/encryption
+[ -s secrets/mas/rsa.pem ] || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out secrets/mas/rsa.pem 2>/dev/null
+[ -s secrets/mas/ec.pem ] || openssl ecparam -name prime256v1 -genkey -noout -out secrets/mas/ec.pem 2>/dev/null
+[ -s secrets/mas/mas_shared_secret ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/mas_shared_secret
+# heslo pre šifrované zálohy (BEZ NEHO SA ZÁLOHA NEDÁ OBNOVIŤ — uložte ho aj mimo servera)
+NEW_BACKUP_PASS=0
+[ -s secrets/backup.pass ] || { openssl rand -base64 48 | tr -d '\n' > secrets/backup.pass; NEW_BACKUP_PASS=1; }
+# MAS beží v kontajneri ako UID 65532 (distroless nonroot)
+if [ "$(id -u)" = 0 ]; then chmod 700 secrets/mas; chmod 600 secrets/mas/*; chown -R 65532:65532 secrets/mas
+else chmod 755 secrets/mas; chmod 644 secrets/mas/*; fi   # lokálny test (colima/virtiofs)
+umask 022
 
-# ------------------------------------------------------------------ 2. render
-mkdir -p data secrets
-chmod 700 data secrets
-mkdir -p data/config/{synapse,livekit,nginx,element-call,app-default} \
-         data/synapse data/postgres data/certbot/conf data/certbot/www
-
-NODE_IP_LINE=""
-[ -n "${LIVEKIT_NODE_IP:-}" ] && NODE_IP_LINE="  node_ip: ${LIVEKIT_NODE_IP}"
+# ----------------------------------------------------------------- 3. render
+mkdir -p data/config/synapse data/config/livekit data/config/nginx data/config/nginx-main \
+         data/config/element-call data/config/app-default/legal data/config/mas data/config/ntfy \
+         data/config/sygnal data/synapse data/postgres data/certbot/conf data/certbot/www \
+         data/ntfy/cache data/ntfy/lib
+chmod 700 data
 
 render() { # render <template> <output>
-  sed -e "s|__MATRIX_DOMAIN__|${MATRIX_DOMAIN}|g" \
-      -e "s|__APP_DOMAIN__|${APP_DOMAIN}|g" \
-      -e "s|__CALL_DOMAIN__|${CALL_DOMAIN}|g" \
+  sed -e "s|__MATRIX_DOMAIN__|${MATRIX_DOMAIN}|g" -e "s|__APP_DOMAIN__|${APP_DOMAIN}|g" \
+      -e "s|__CALL_DOMAIN__|${CALL_DOMAIN}|g" -e "s|__AUTH_DOMAIN__|${AUTH_DOMAIN}|g" \
+      -e "s|__NTFY_DOMAIN__|${NTFY_DOMAIN}|g" -e "s|__TURN_DOMAIN__|${TURN_DOMAIN}|g" \
+      -e "s|__NGINX_IP__|${NGINX_IP}|g" -e "s|__SERVER_IP__|${SERVER_IP}|g" \
       -e "s|__POSTGRES_PASSWORD__|${POSTGRES_PASSWORD}|g" \
-      -e "s|__SYNAPSE_REGISTRATION_SHARED_SECRET__|${SYNAPSE_REGISTRATION_SHARED_SECRET}|g" \
       -e "s|__SYNAPSE_MACAROON_SECRET_KEY__|${SYNAPSE_MACAROON_SECRET_KEY}|g" \
       -e "s|__SYNAPSE_FORM_SECRET__|${SYNAPSE_FORM_SECRET}|g" \
-      -e "s|__LK_JWT_AS_TOKEN__|${LK_JWT_AS_TOKEN}|g" \
-      -e "s|__LK_JWT_HS_TOKEN__|${LK_JWT_HS_TOKEN}|g" \
-      -e "s|__LIVEKIT_API_KEY__|${LIVEKIT_API_KEY}|g" \
-      -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" \
-      -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
-      -e "s|__LIVEKIT_API_SECRET__|${LIVEKIT_API_SECRET}|g" \
+      -e "s|__LK_JWT_AS_TOKEN__|${LK_JWT_AS_TOKEN}|g" -e "s|__LK_JWT_HS_TOKEN__|${LK_JWT_HS_TOKEN}|g" \
+      -e "s|__LIVEKIT_API_KEY__|${LIVEKIT_API_KEY}|g" -e "s|__LIVEKIT_API_SECRET__|${LIVEKIT_API_SECRET}|g" \
       -e "s|__LIVEKIT_USE_EXTERNAL_IP__|${LIVEKIT_USE_EXTERNAL_IP}|g" \
-      -e "s|__LIVEKIT_NODE_IP_LINE__|${NODE_IP_LINE}|g" \
+      -e "s|__LIVEKIT_NODE_IP_LINE__|  node_ip: ${LIVEKIT_NODE_IP}|g" \
+      -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
       "$1" > "$2.tmp"
+  if grep -q '__[A-Z_]*__' "$2.tmp"; then die "nevyplnený placeholder v $2: $(grep -o '__[A-Z_]*__' "$2.tmp" | sort -u | tr '\n' ' ')"; fi
   mv "$2.tmp" "$2"
-  chmod 644 "$2"
 }
 log "renderujem konfigurácie do data/config/"
-render templates/synapse/homeserver.yaml      data/config/synapse/homeserver.yaml
-render templates/synapse/log.config           data/config/synapse/log.config
+render templates/synapse/homeserver.yaml        data/config/synapse/homeserver.yaml
+render templates/synapse/log.config             data/config/synapse/log.config
 render templates/synapse/lk-jwt-appservice.yaml data/config/synapse/lk-jwt-appservice.yaml
-render templates/livekit/livekit.yaml         data/config/livekit/livekit.yaml
-render templates/nginx/psst.conf              data/config/nginx/psst.conf
-render templates/element-call/config.json     data/config/element-call/config.json
-render templates/app/config.json              data/config/app-default/config.json
-render templates/app/index.html               data/config/app-default/index.html
+cat secrets/mas/mas_shared_secret > data/config/synapse/mas_shared_secret
+chmod 644 data/config/synapse/mas_shared_secret
+render templates/mas/config.yaml                data/config/mas/config.yaml
+if [ "$LOCAL_TEST" = 1 ]; then
+  # lokálne prichádzajú všetci testovací klienti z jednej IP → voľnejšie limity MAS
+  cat >> data/config/mas/config.yaml <<'YAML'
+
+# LEN lokálny test (--local-test)
+rate_limiting:
+  login:
+    per_ip: {burst: 1000, per_second: 100}
+    per_account: {burst: 1000, per_second: 100}
+  registration: {burst: 1000, per_second: 100}
+YAML
+fi
+render templates/livekit/livekit.yaml           data/config/livekit/livekit.yaml
+render templates/nginx/nginx.conf               data/config/nginx-main/nginx.conf
+render templates/nginx/psst.conf                data/config/nginx/psst.conf
+render templates/ntfy/server.yml                data/config/ntfy/server.yml
+render templates/element-call/config.json       data/config/element-call/config.json
+render templates/app/config.json                data/config/app-default/config.json
+render templates/app/index.html                 data/config/app-default/index.html
+for f in templates/app/legal/*.html; do render "$f" "data/config/app-default/legal/$(basename "$f")"; done
 mkdir -p data/config/app-default/.well-known
 render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
 render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
-if [ ! -f app/index.html ]; then
-  warn "app/ neobsahuje PSST web — dávam dočasnú stránku (stiahnite web: scripts/fetch-web.sh)"
-  cp data/config/app-default/index.html app/index.html
+
+# Sygnal (iOS push) — len ak je nahraný APNs kľúč a známe Team ID
+APNS_KEY="$(ls secrets/apns/AuthKey_*.p8 2>/dev/null | head -1 || true)"
+PROFILES=""
+if [ -n "$APNS_KEY" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+  KEY_ID="$(basename "$APNS_KEY" .p8)"; KEY_ID="${KEY_ID#AuthKey_}"
+  {
+    sed '/__SYGNAL_APPS__/,$d' templates/sygnal/sygnal.yaml
+    # app_id podľa iOS appky: eu.macet.psst.ios.prod (Release, APNs production), .dev (Debug, sandbox)
+    for app_id in ${IOS_PUSH_APP_IDS:-eu.macet.psst.ios.prod eu.macet.psst.ios.dev}; do
+      platform=production; case "$app_id" in *.dev) platform=sandbox ;; esac
+      printf '  %s:\n    type: apns\n    keyfile: /apns/%s\n    key_id: %s\n    team_id: %s\n    topic: eu.macet.psst\n    platform: %s\n' \
+        "$app_id" "$(basename "$APNS_KEY")" "$KEY_ID" "$APPLE_TEAM_ID" "$platform"
+    done
+  } > data/config/sygnal/sygnal.yaml
+  chmod 644 "$APNS_KEY"
+  PROFILES="apns"
+  log "iOS push: Sygnal zapnutý (kľúč $KEY_ID, tím $APPLE_TEAM_ID)"
+else
+  [ -n "$APNS_KEY" ] && warn "APNs kľúč je nahraný, ale chýba --apple-team-id → Sygnal sa nespustí"
+  log "iOS push: vypnutý (nahrajte secrets/apns/AuthKey_<KEY_ID>.p8 a spustite znova s --apple-team-id)"
+fi
+export COMPOSE_PROFILES="$PROFILES"
+# zapamätať profily pre ostatné skripty (members.sh, backup.sh, healthcheck.sh)
+set_env COMPOSE_PROFILES "$PROFILES"
+
+# ----------------------------------------------------------------- 4. PSST web
+if [ ! -f app/index.html ] || grep -q 'psst-placeholder' app/index.html 2>/dev/null; then
+  if bash scripts/fetch-web.sh >/dev/null 2>&1; then log "PSST web stiahnutý do app/"
+  else warn "PSST web sa nepodarilo stiahnuť — dávam dočasnú stránku (neskôr: scripts/fetch-web.sh)"
+       cp data/config/app-default/index.html app/index.html; fi
 fi
 
-# ------------------------------------------------------------------ 3. certifikát
+# ----------------------------------------------------------------- 5. certifikát (dočasný) + štart
 CERT_DIR=data/certbot/conf/live/psst
-if [ ! -f "$CERT_DIR/fullchain.pem" ]; then
-  log "vytváram dočasný self-signed certifikát (nginx potrebuje certifikát na štart)"
+SAN="$(for d in $ALL_DOMAINS; do printf 'DNS:%s,' "$d"; done)"; SAN="${SAN%,}"
+make_selfsigned() {
   mkdir -p "$CERT_DIR"
-  openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
-    -keyout "$CERT_DIR/privkey.pem" -out "$CERT_DIR/fullchain.pem" \
-    -subj "/CN=${MATRIX_DOMAIN}" \
-    -addext "subjectAltName=DNS:${MATRIX_DOMAIN},DNS:${APP_DOMAIN},DNS:${CALL_DOMAIN}" 2>/dev/null
+  openssl req -x509 -nodes -newkey rsa:2048 -days 30 -keyout "$CERT_DIR/privkey.pem" -out "$CERT_DIR/fullchain.pem" \
+    -subj "/CN=${MATRIX_DOMAIN}" -addext "subjectAltName=${SAN}" 2>/dev/null
+  chmod 644 "$CERT_DIR/fullchain.pem"
   touch "$CERT_DIR/.psst-dummy"
+}
+# dočasný certifikát aj keď pribudla subdoména (aktualizácia zo staršej verzie bez auth/ntfy/turn)
+if [ ! -f "$CERT_DIR/fullchain.pem" ] || { [ -f "$CERT_DIR/.psst-dummy" ] && ! openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -text | grep -q "DNS:${TURN_DOMAIN}"; }; then
+  log "vytváram dočasný self-signed certifikát pre: $ALL_DOMAINS"
+  make_selfsigned
 fi
 
-# ------------------------------------------------------------------ 4. štart
-if [ "$PULL" = 1 ]; then
-  log "sťahujem image"
-  compose pull --quiet --ignore-buildable 2>/dev/null || compose pull --quiet
-fi
+if [ "$PULL" = 1 ]; then log "sťahujem image"; compose pull --quiet 2>/dev/null || compose pull; fi
 
 log "štartujem PostgreSQL"
 compose up -d postgres
 wait_healthy postgres 120 || die "PostgreSQL nenaštartoval"
-
-# /data Synapse musí patriť UID 991 (používateľ v image)
-compose run --rm --no-deps -T --entrypoint sh synapse -c \
-  '[ "$(stat -c %u /data)" = 991 ] || chown -R 991:991 /data' >/dev/null
+# databáza pre MAS (idempotentne)
+if ! compose exec -T postgres psql -U synapse -d synapse -tAc "SELECT 1 FROM pg_database WHERE datname='mas'" | grep -q 1; then
+  log "vytváram databázu mas"
+  compose exec -T postgres psql -U synapse -d synapse -qc "CREATE DATABASE mas ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0" >/dev/null
+fi
+compose run --rm --no-deps -T --entrypoint sh synapse -c '[ "$(stat -c %u /data)" = 991 ] || chown -R 991:991 /data' >/dev/null
 
 log "štartujem celý stack"
 compose up -d --remove-orphans
-wait_healthy synapse 240 || { compose logs --tail=80 synapse; die "Synapse nenaštartoval"; }
-wait_healthy nginx 60 || { compose logs --tail=80 nginx; die "nginx nenaštartoval"; }
-# nová konfigurácia nginxu pri aktualizácii (kontajner nemusel byť znovu vytvorený)
+wait_healthy synapse 300 || { compose logs --tail=80 synapse mas; die "Synapse nenaštartoval"; }
+wait_healthy nginx 90 || { compose logs --tail=80 nginx; die "nginx nenaštartoval"; }
 compose exec -T nginx nginx -s reload >/dev/null 2>&1 || true
 
-# ------------------------------------------------------------------ 5. Let's Encrypt
+# ----------------------------------------------------------------- 6. Let's Encrypt
 if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
-  log "žiadam certifikát Let's Encrypt pre ${MATRIX_DOMAIN}, ${APP_DOMAIN}, ${CALL_DOMAIN}"
-  STAGING_ARG=""
-  [ "${LETSENCRYPT_STAGING:-0}" = 1 ] && STAGING_ARG="--staging"
-  # dočasný certifikát musí zmiznúť, inak certbot odmietne vytvoriť lineage "psst"
+  log "žiadam certifikát Let's Encrypt pre: $ALL_DOMAINS"
+  STAGING_ARG=""; [ "$STAGING" = 1 ] && STAGING_ARG="--staging"
+  DOMAIN_ARGS=""; for d in $ALL_DOMAINS; do DOMAIN_ARGS+=" -d $d"; done
   compose run --rm --no-deps -T --entrypoint sh certbot -c \
     'rm -rf /etc/letsencrypt/live/psst /etc/letsencrypt/archive/psst /etc/letsencrypt/renewal/psst.conf'
-  if compose run --rm --no-deps -T certbot certonly --webroot -w /var/www/certbot \
-       --cert-name psst -d "$MATRIX_DOMAIN" -d "$APP_DOMAIN" -d "$CALL_DOMAIN" \
-       --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email --non-interactive \
-       --rsa-key-size 4096 $STAGING_ARG; then
+  # shellcheck disable=SC2086
+  if compose run --rm --no-deps -T certbot certonly --webroot -w /var/www/certbot --cert-name psst $DOMAIN_ARGS \
+       --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email --non-interactive --key-type ecdsa $STAGING_ARG; then
     compose exec -T nginx nginx -s reload
     log "certifikát Let's Encrypt nainštalovaný"
   else
-    warn "certbot zlyhal (DNS záznamy? port 80?) — vraciam dočasný certifikát"
-    mkdir -p "$CERT_DIR"
-    openssl req -x509 -nodes -newkey rsa:2048 -days 30 \
-      -keyout "$CERT_DIR/privkey.pem" -out "$CERT_DIR/fullchain.pem" -subj "/CN=${MATRIX_DOMAIN}" \
-      -addext "subjectAltName=DNS:${MATRIX_DOMAIN},DNS:${APP_DOMAIN},DNS:${CALL_DOMAIN}" 2>/dev/null
-    touch "$CERT_DIR/.psst-dummy"
-    compose exec -T nginx nginx -s reload || true
-    die "Let's Encrypt certifikát sa nepodarilo získať; opravte DNS/firewall a spustite ./deploy.sh znova"
+    make_selfsigned; compose exec -T nginx nginx -s reload || true
+    die "Let's Encrypt zlyhal (DNS záznamy? port 80 v cloud firewalle?) — opravte a spustite ./deploy.sh znova"
   fi
 fi
 
+# ----------------------------------------------------------------- 7. zálohy + healthcheck
+if [ "$HARDEN" = 1 ] && [ "$(id -u)" = 0 ]; then
+  SERVER_DIR="$(pwd)"
+  cat > /etc/cron.d/psst <<CRON
+# PSST — spravuje server/deploy.sh
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# denná šifrovaná záloha 03:17 (rotácia 7 denných / 4 týždenné / 6 mesačných)
+17 3 * * * root cd ${SERVER_DIR} && scripts/backup.sh >> /var/log/psst-backup.log 2>&1
+# healthcheck každých 10 minút
+*/10 * * * * root cd ${SERVER_DIR} && scripts/healthcheck.sh --quiet >> /var/log/psst-health.log 2>&1
+CRON
+  chmod 644 /etc/cron.d/psst
+  log "cron: denné zálohy a healthcheck (/etc/cron.d/psst)"
+fi
+
+# pomalšie služby (prvý štart MAS robí migrácie DB)
+wait_healthy ntfy 90 || true; wait_healthy element-call 90 || true
+for _ in $(seq 60); do
+  compose exec -T nginx wget -q -O /dev/null http://mas:8080/.well-known/openid-configuration 2>/dev/null && break; sleep 2
+done
 compose ps
-log "hotovo. Ďalej: scripts/create-admin.sh (prvý admin), scripts/new-invite.sh (pozývací token)"
+log "spúšťam healthcheck"
+bash scripts/healthcheck.sh || warn "healthcheck hlási problém (viď vyššie)"
+echo
+log "HOTOVO. Ďalší krok: prvý admin a pozvánka"
+echo "    sudo scripts/members.sh admin <meno>          # admin účet (vypíše heslo)"
+echo "    sudo scripts/members.sh invite [počet] [dni]  # pozývací token → appka: Create account"
+if [ "$NEW_BACKUP_PASS" = 1 ]; then
+  echo
+  warn "Heslo k zálohám je v server/secrets/backup.pass — SKOPÍRUJTE SI HO mimo servera (bez neho sa záloha nedá obnoviť):"
+  echo "    sudo cat $(pwd)/secrets/backup.pass"
+fi

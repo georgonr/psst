@@ -114,12 +114,62 @@ services:
       retries: 5
     networks: [psst]
 
+  # Matrix Authentication Service — účty, prihlásenie, registrácia (len s pozývacím tokenom)
+  mas:
+    image: ghcr.io/element-hq/matrix-authentication-service:1.29.0
+    restart: unless-stopped
+    logging: *logging
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["server", "--config", "/config/config.yaml"]
+    volumes:
+      - ./data/config/mas/config.yaml:/config/config.yaml:ro
+      - ./secrets/mas:/secrets:ro
+    ports:
+      # admin API + health len na loopback hostiteľa (scripts/members.sh, healthcheck.sh)
+      - "127.0.0.1:8081:8081"
+    networks: [psst]
+
+  # ntfy — UnifiedPush distribútor + Matrix push brána pre Android (bez Google/Element)
+  ntfy:
+    image: docker.io/binwiederhier/ntfy:v2.37.2
+    restart: unless-stopped
+    logging: *logging
+    command: ["serve"]
+    volumes:
+      - ./data/config/ntfy/server.yml:/etc/ntfy/server.yml:ro
+      - ./data/ntfy/cache:/var/cache/ntfy
+      - ./data/ntfy/lib:/var/lib/ntfy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --tries=1 -O - http://localhost:80/v1/health | grep -q '\"healthy\":true'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks: [psst]
+
+  # Sygnal — Matrix push brána pre iOS (APNs). Spúšťa sa len s profilom "apns"
+  # (./deploy.sh ho zapne, keď nájde secrets/apns/AuthKey_<KEY_ID>.p8).
+  sygnal:
+    image: docker.io/matrixdotorg/sygnal:v0.15.1
+    profiles: ["apns"]
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      SYGNAL_CONF: /config/sygnal.yaml
+    volumes:
+      - ./data/config/sygnal/sygnal.yaml:/config/sygnal.yaml:ro
+      - ./secrets/apns:/apns:ro
+    networks: [psst]
+
   nginx:
     image: docker.io/library/nginx:1.30.6-alpine
     restart: unless-stopped
     logging: *logging
     depends_on:
       - synapse
+      - mas
+      - ntfy
       - lk-jwt-service
       - livekit
       - element-call
@@ -129,6 +179,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
+      - ./data/config/nginx-main/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./data/config/nginx:/etc/nginx/conf.d:ro
       - ./data/config/app-default:/srv/app-default:ro
       - ./app:/srv/app:ro
@@ -159,3 +210,6 @@ services:
 networks:
   psst:
     name: psst
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24

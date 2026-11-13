@@ -18,5 +18,17 @@ webhook:
   api_key: __LIVEKIT_API_KEY__
   urls:
     - http://lk-jwt-service:8080/sfu_webhook
+# Vstavaný TURN — pre siete, ktoré blokujú UDP (a/alebo všetko okrem 443):
+#  - TURN/UDP na 3478/udp
+#  - TURN/TLS na 443: nginx (stream, SNI __TURN_DOMAIN__) ukončí TLS a pošle nešifrované spojenie
+#    s PROXY protocol hlavičkou sem na :443 v kontajneri (external_tls). LiveKit ohlasuje
+#    turns:__TURN_DOMAIN__:443.
 turn:
-  enabled: false
+  enabled: true
+  domain: __TURN_DOMAIN__
+  tls_port: 443
+  udp_port: 3478
+  external_tls: true
+  proxy_protocol: true
+  proxy_protocol_trusted_cidrs:
+    - __NGINX_IP__/32

@@ -6,3 +6,4 @@ backups/
 # PSST web dist is downloaded by scripts/fetch-web.sh
 app/*
 !app/.gitkeep
+.old-stack-*/

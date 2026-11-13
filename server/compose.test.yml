@@ -17,3 +17,7 @@ services:
     command: ["run", "--config-path", "/config/homeserver.yaml", "--config-path", "/test/test-overrides.yaml"]
     volumes:
       - ./templates/synapse/test-overrides.yaml:/test/test-overrides.yaml:ro
+      # push brány (ntfy/Sygnal) volá Synapse cez https a overuje certifikát — v teste je self-signed
+      - ./data/certbot/conf/live/psst/fullchain.pem:/test/ca.pem:ro
+    environment:
+      SSL_CERT_FILE: /test/ca.pem

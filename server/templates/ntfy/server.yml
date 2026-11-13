@@ -1,0 +1,21 @@
+# ntfy — self-hosted UnifiedPush distribútor + Matrix push brána (./deploy.sh → data/config/ntfy/server.yml)
+# Android (psst) → UnifiedPush endpoint https://__NTFY_DOMAIN__/up… ; Synapse posiela na
+# https://__NTFY_DOMAIN__/_matrix/push/v1/notify (ntfy implementuje Matrix push gateway).
+base-url: https://__NTFY_DOMAIN__
+listen-http: ":80"
+behind-proxy: true
+cache-file: /var/cache/ntfy/cache.db
+cache-duration: 12h
+auth-file: /var/lib/ntfy/user.db
+# Súkromný server: všetko zakázané…
+auth-default-access: deny-all
+# …okrem náhodných UnifiedPush tém (up + 12+ náhodných znakov). Synapse do nich zapisuje,
+# ntfy appka v telefóne z nich číta — bez účtov, téma je tajomstvo.
+auth-access:
+  - "*:up*:read-write"
+enable-signup: false
+enable-login: false
+enable-reservations: false
+web-root: disable
+visitor-subscriber-rate-limiting: true
+log-level: info
