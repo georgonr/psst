@@ -20,3 +20,4 @@ __pycache__/
 .local-test-accounts.json
 .sign-in-*/
 .signed-*/
+tests/server/results.json
