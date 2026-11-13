@@ -1,0 +1,8 @@
+# LEN pre lokálny test (compose.test.yml). V produkcii sa nepoužíva.
+# Lokálne cez colima/Docker prichádzajú všetky požiadavky z IP brány Dockeru, takže
+# testovacie klienty (nio, prehliadač, emulátor, desktop) zdieľajú jeden limit prihlásení podľa IP.
+rc_login:
+  address: {per_second: 10, burst_count: 100}
+  account: {per_second: 10, burst_count: 100}
+  failed_attempts: {per_second: 1, burst_count: 20}
+rc_registration: {per_second: 10, burst_count: 100}

@@ -12,3 +12,8 @@ services:
     environment:
       LIVEKIT_INSECURE_SKIP_VERIFY_TLS: YES_I_KNOW_WHAT_I_AM_DOING
       LIVEKIT_LOG_LEVEL: debug
+  synapse:
+    # voľnejšie rate limity pre prihlásenia — všetci testovací klienti majú lokálne rovnakú IP
+    command: ["run", "--config-path", "/config/homeserver.yaml", "--config-path", "/test/test-overrides.yaml"]
+    volumes:
+      - ./templates/synapse/test-overrides.yaml:/test/test-overrides.yaml:ro
