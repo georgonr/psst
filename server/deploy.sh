@@ -66,6 +66,7 @@ NTFY_DOMAIN="${NTFY_DOMAIN:-ntfy.${DOMAIN_BASE}}"
 TURN_DOMAIN="${TURN_DOMAIN:-turn.${DOMAIN_BASE}}"
 ALL_DOMAINS="$MATRIX_DOMAIN $APP_DOMAIN $CALL_DOMAIN $AUTH_DOMAIN $NTFY_DOMAIN $TURN_DOMAIN"
 NGINX_IP=172.30.0.10
+DOCKER_GW=172.30.0.1   # brána Docker siete "psst" (coturn v host sieti počúva aj tu pre nginx)
 
 # ----------------------------------------------------------------- 0. pre-flight
 if [ "$PREFLIGHT" = 1 ]; then
@@ -81,8 +82,8 @@ if [ "$PREFLIGHT" = 1 ]; then
     systemctl enable --now docker >/dev/null
   fi
   docker info >/dev/null 2>&1 || die "Docker daemon nebeží"
-  for c in openssl curl dig ss; do
-    command -v "$c" >/dev/null || apt-get install -y -qq openssl curl dnsutils iproute2 >/dev/null 2>&1 || true
+  for c in openssl curl dig ss rsync; do
+    command -v "$c" >/dev/null || apt-get install -y -qq openssl curl dnsutils iproute2 rsync python3 >/dev/null 2>&1 || true
   done
 
   FAIL=0
@@ -120,7 +121,7 @@ if [ "$HARDEN" = 1 ]; then
 fi
 
 # ----------------------------------------------------------------- 2. .env + secrets
-ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN ANDROID_CERT_SHA256 APPLE_TEAM_ID"
+ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID"
 default_for() {
   case "$1" in
     MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|NTFY_DOMAIN|TURN_DOMAIN) eval "echo \$$1" ;;
@@ -166,7 +167,7 @@ else chmod 755 secrets/mas; chmod 644 secrets/mas/*; fi   # lokálny test (colim
 umask 022
 
 # ----------------------------------------------------------------- 3. render
-mkdir -p data/config/synapse data/config/livekit data/config/nginx data/config/nginx-main \
+mkdir -p data/config/coturn data/config/synapse data/config/livekit data/config/nginx data/config/nginx-main \
          data/config/element-call data/config/app-default/legal data/config/mas data/config/ntfy \
          data/config/sygnal data/synapse data/postgres data/certbot/conf data/certbot/www \
          data/ntfy/cache data/ntfy/lib
@@ -177,6 +178,7 @@ render() { # render <template> <output>
       -e "s|__CALL_DOMAIN__|${CALL_DOMAIN}|g" -e "s|__AUTH_DOMAIN__|${AUTH_DOMAIN}|g" \
       -e "s|__NTFY_DOMAIN__|${NTFY_DOMAIN}|g" -e "s|__TURN_DOMAIN__|${TURN_DOMAIN}|g" \
       -e "s|__NGINX_IP__|${NGINX_IP}|g" -e "s|__SERVER_IP__|${SERVER_IP}|g" \
+      -e "s|__DOCKER_GW__|${DOCKER_GW}|g" -e "s|__TURN_SECRET__|${TURN_SECRET}|g" \
       -e "s|__POSTGRES_PASSWORD__|${POSTGRES_PASSWORD}|g" \
       -e "s|__SYNAPSE_MACAROON_SECRET_KEY__|${SYNAPSE_MACAROON_SECRET_KEY}|g" \
       -e "s|__SYNAPSE_FORM_SECRET__|${SYNAPSE_FORM_SECRET}|g" \
@@ -209,6 +211,28 @@ rate_limiting:
 YAML
 fi
 render templates/livekit/livekit.yaml           data/config/livekit/livekit.yaml
+# coturn: na ktorých IP počúva, z ktorej robí relay a kam smie relay posielať (len na vlastnú SFU)
+if [ "$LOCAL_TEST" = 1 ]; then
+  TURN_LISTEN="listening-ip=${DOCKER_GW}\nlistening-ip=127.0.0.1\nrelay-ip=127.0.0.1"
+  TURN_PEERS="allowed-peer-ip=127.0.0.1\nallow-loopback-peers"   # SFU je lokálne na 127.0.0.1
+else
+  PRIV_IP="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}' | head -1)"
+  if [ -z "$PRIV_IP" ] || [ "$PRIV_IP" = "$SERVER_IP" ]; then
+    TURN_LISTEN="listening-ip=${SERVER_IP}\nlistening-ip=${DOCKER_GW}\nrelay-ip=${SERVER_IP}"
+    TURN_PEERS="allowed-peer-ip=${SERVER_IP}"
+  else   # cloud s 1:1 NAT (verejná IP nie je na rozhraní)
+    TURN_LISTEN="listening-ip=${PRIV_IP}\nlistening-ip=${DOCKER_GW}\nrelay-ip=${PRIV_IP}\nexternal-ip=${SERVER_IP}/${PRIV_IP}"
+    TURN_PEERS="allowed-peer-ip=${SERVER_IP}\nallowed-peer-ip=${PRIV_IP}"
+  fi
+fi
+mkdir -p data/config/coturn
+awk -v L="$TURN_LISTEN" -v P="$TURN_PEERS" '
+  /^__TURN_LISTEN_LINES__$/ { gsub(/\\n/, "\n", L); print L; next }
+  /^__TURN_ALLOWED_PEER_LINES__$/ { gsub(/\\n/, "\n", P); print P; next }
+  { print }' templates/coturn/turnserver.conf > data/config/coturn/turnserver.tpl
+render data/config/coturn/turnserver.tpl data/config/coturn/turnserver.conf
+rm -f data/config/coturn/turnserver.tpl
+chmod 644 data/config/coturn/turnserver.conf
 render templates/nginx/nginx.conf               data/config/nginx-main/nginx.conf
 render templates/nginx/psst.conf                data/config/nginx/psst.conf
 render templates/ntfy/server.yml                data/config/ntfy/server.yml

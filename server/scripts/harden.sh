@@ -75,7 +75,9 @@ ufw allow 80/tcp comment "HTTP (Let's Encrypt, presmerovanie)" >/dev/null
 ufw allow 443/tcp comment 'HTTPS + TURN/TLS' >/dev/null
 ufw allow 7881/tcp comment 'LiveKit ICE/TCP' >/dev/null
 ufw allow 7882/udp comment 'LiveKit media' >/dev/null
-ufw allow 3478/udp comment 'LiveKit TURN/UDP' >/dev/null
+ufw allow 3478/udp comment 'TURN/UDP (coturn)' >/dev/null
+# nginx (Docker sieť 172.30.0.0/24) → coturn v host sieti (TURN/TLS na 443 ukončený v nginx)
+ufw allow from 172.30.0.0/24 to any port 3478 proto tcp comment 'nginx → coturn' >/dev/null
 ufw --force enable >/dev/null
 
 # ------------------------------------------------------------------ fail2ban

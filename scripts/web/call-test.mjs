@@ -3,6 +3,7 @@
 // Dva izolované prehliadačové kontexty s falošnou kamerou/mikrofónom sa pripoja do hovoru v tej istej
 // miestnosti. Úspech = obaja v hovore vidia 2 účastníkov (dlaždice) a médiá prúdia (inbound-rtp bajty).
 import { chromium } from "playwright";
+import { HOST_RULES, loginViaMas } from "./psst-auth.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -15,7 +16,7 @@ const check = (name, ok, detail = "") => {
 };
 const browser = await chromium.launch({
     args: [
-        "--host-resolver-rules=MAP chat.macet.eu 127.0.0.1, MAP app.macet.eu 127.0.0.1, MAP call.macet.eu 127.0.0.1",
+        HOST_RULES,
         "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required",
     ],
 });
@@ -29,15 +30,11 @@ async function login(user, pass) {
     page.on("requestfailed", (r) => fs.appendFileSync(logf, `[requestfailed] ${r.url()} ${r.failure()?.errorText}\n`));
     page.on("response", (r) => { if (r.status() >= 400) fs.appendFileSync(logf, `[http ${r.status()}] ${r.url()}\n`); });
     await page.goto("https://app.macet.eu/#/login");
-    await page.waitForSelector("#mx_LoginForm_username", { timeout: 90000 });
-    await page.fill("#mx_LoginForm_username", user);
-    await page.fill("#mx_LoginForm_password", pass);
-    await page.click(".mx_Login_submit");
     try {
-        await page.waitForSelector(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel", { timeout: 120000 });
+        await loginViaMas(page, user, pass);
     } catch (e) {
         await page.screenshot({ path: path.join(out, `${label}-${user}-login-FAIL.png`) });
-        fs.writeFileSync(path.join(out, `${label}-${user}-login-FAIL.txt`), await page.locator("body").innerText().catch(() => ""));
+        fs.writeFileSync(path.join(out, `${label}-${user}-login-FAIL.txt`), page.url() + "\n" + await page.locator("body").innerText().catch(() => ""));
         throw e;
     }
     await page.waitForTimeout(5000);
@@ -85,30 +82,59 @@ async function callState(page) {
         tiles = Math.max(tiles, await f.locator('[data-testid="videoTile"]').count().catch(() => 0));
         inbound = Math.max(inbound, await f.evaluate(async () => {
             let total = 0;
+            const kinds = new Set();
             for (const pc of (globalThis.__psstPCs || [])) {
                 const st = await pc.getStats();
-                st.forEach((r) => { if (r.type === "inbound-rtp") total += r.bytesReceived || 0; });
+                const byId = {}; st.forEach((r) => { byId[r.id] = r; });
+                st.forEach((r) => {
+                    if (r.type === "inbound-rtp") total += r.bytesReceived || 0;
+                    if (r.type === "candidate-pair" && r.nominated && r.state === "succeeded") {
+                        const lc = byId[r.localCandidateId] || {};
+                        kinds.add(`${lc.candidateType}${lc.relayProtocol ? "/" + lc.relayProtocol : ""}/${lc.protocol}`);
+                    }
+                });
             }
+            globalThis.__psstKinds = [...kinds].join(",");
             return total;
         }).catch(() => 0));
     }
-    return { tiles, inbound, frameUrl };
+    let kinds = "";
+    for (const f of page.frames()) kinds += await f.evaluate(() => globalThis.__psstKinds || "").catch(() => "");
+    for (const f of page.frames()) {
+        const ice = await f.evaluate(() => (globalThis.__psstIce || []).slice(-2).join(" ")).catch(() => "");
+        if (ice && ice !== "[]") fs.appendFileSync(path.join(out, "ice-servers.log"), f.url().split("?")[0] + " " + ice + "\n");
+    }
+    return { tiles, inbound, frameUrl, kinds };
 }
 
 // zachyť RTCPeerConnection v každom ráme (aj v iframe Element Call), aby sme vedeli čítať štatistiky
-const hook = () => {
+const RELAY_ONLY = process.env.PSST_RELAY_ONLY === "1";
+const hook = (relayOnly) => {
     const Orig = globalThis.RTCPeerConnection;
     if (!Orig || Orig.__psst) return;
     globalThis.__psstPCs = [];
-    const Wrapped = function (...a) { const pc = new Orig(...a); globalThis.__psstPCs.push(pc); return pc; };
+    // simulácia siete bez UDP: len TURN cez TLS (turns:…:443), žiadne priame/UDP kandidáty
+    const relay = (cfg = {}) => !relayOnly ? cfg : { ...cfg, iceTransportPolicy: "relay",
+        iceServers: (cfg.iceServers || []).map((s) => ({ ...s, urls: [].concat(s.urls || []).filter((u) => u.startsWith("turns:")) }))
+            .filter((s) => s.urls.length) };
+    globalThis.__psstIce = [];
+    const origSet = Orig.prototype.setConfiguration;
+    Orig.prototype.setConfiguration = function (cfg) {
+        globalThis.__psstIce.push(JSON.stringify((cfg || {}).iceServers || []));
+        return origSet.call(this, relay(cfg));
+    };
+    const Wrapped = function (cfg = {}, ...a) {
+        globalThis.__psstIce.push(JSON.stringify(cfg.iceServers || []));
+        const pc = new Orig(relay(cfg), ...a); globalThis.__psstPCs.push(pc); return pc;
+    };
     Wrapped.prototype = Orig.prototype; Wrapped.__psst = true;
     globalThis.RTCPeerConnection = Wrapped;
 };
 
 const pageA = await login(u1, p1);
 const pageB = await login(u2, p2);
-await pageA.context().addInitScript(hook);
-await pageB.context().addInitScript(hook);
+await pageA.context().addInitScript(hook, RELAY_ONLY);
+await pageB.context().addInitScript(hook, RELAY_ONLY);
 check("oba účty prihlásené a v miestnosti", true);
 
 await joinCall(pageA, u1);
@@ -129,7 +155,8 @@ await pageB.screenshot({ path: path.join(out, `${label}-${u2}-incall.png`) });
 check("Element Call widget načítaný z embedded balíka (nie call.element.io)", !!a.frameUrl && !a.frameUrl.includes("element.io"), a.frameUrl);
 check(`${u1} vidí 2 účastníkov`, a.tiles >= 2, `dlaždice: ${a.tiles}`);
 check(`${u2} vidí 2 účastníkov`, b.tiles >= 2, `dlaždice: ${b.tiles}`);
-check("médiá prúdia oboma smermi (inbound-rtp bajty)", a.inbound > 0 && b.inbound > 0, `A ${a.inbound} B, B ${b.inbound} B`);
+check("médiá prúdia oboma smermi (inbound-rtp bajty)", a.inbound > 0 && b.inbound > 0, `A ${a.inbound} B, B ${b.inbound} B; ICE: ${a.kinds} | ${b.kinds}`);
+if (RELAY_ONLY) check("spojenie ide cez TURN/TLS (relayProtocol=tls)", /(relay|prflx)\/tls\//.test(a.kinds) && /(relay|prflx)\/tls\//.test(b.kinds), `${a.kinds} | ${b.kinds}`);
 fs.writeFileSync(path.join(out, `${label}-result.json`), JSON.stringify(results, null, 2));
 await browser.close();
 const fails = results.filter((r) => !r.ok).length;

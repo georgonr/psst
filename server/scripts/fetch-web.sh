@@ -20,7 +20,7 @@ fi
 if [ -n "${PSST_WEB_DIST_URL:-}" ]; then
   require_cmd curl
   log "sťahujem $PSST_WEB_DIST_URL"
-  curl -fsSL "$PSST_WEB_DIST_URL" -o "$TMP/dl/dist.${PSST_WEB_DIST_URL##*.}"
+  curl -fsSL "$PSST_WEB_DIST_URL" -o "$TMP/dl/$(basename "${PSST_WEB_DIST_URL%%\?*}")"
 else
   require_cmd gh
   log "sťahujem artefakt $ARTIFACT z $REPO ${PSST_WEB_RUN_ID:+(beh $PSST_WEB_RUN_ID)}"
@@ -42,12 +42,16 @@ INDEX="$(find "$TMP/x" -maxdepth 4 -name index.html -not -path '*/node_modules/*
 SRC="$(dirname "$INDEX")"
 log "distribúcia nájdená v ${SRC#$TMP/x}"
 
-rm -rf app.new app.old
-cp -R "$SRC" app.new
-touch app.new/.gitkeep
-chmod -R a+rX app.new
-[ -d app ] && mv app app.old
-mv app.new app
-rm -rf app.old
+# obsah sa synchronizuje DO existujúceho app/ — adresár sa nesmie nahradiť (nginx ho má pripojený
+# ako bind mount; po mv by kontajner videl starý, zmazaný adresár → 404)
+mkdir -p app
+chmod -R a+rX "$SRC"
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a --delete --exclude .gitkeep "$SRC"/ app/
+else
+  find app -mindepth 1 -maxdepth 1 ! -name .gitkeep -exec rm -rf {} +
+  cp -R "$SRC"/. app/
+fi
+touch app/.gitkeep
 log "PSST web nasadený do server/app/ ($(du -sh app | cut -f1))"
 [ -f app/config.json ] && log "používa sa config.json z distribúcie" || log "distribúcia nemá config.json → nginx servíruje serverový default"

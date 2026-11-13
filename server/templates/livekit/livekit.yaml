@@ -9,6 +9,18 @@ rtc:
   udp_port: 7882
   use_external_ip: __LIVEKIT_USE_EXTERNAL_IP__
 __LIVEKIT_NODE_IP_LINE__
+  # TURN pre siete bez UDP: TLS na 443 (cez nginx SNI) a UDP 3478 — coturn
+  turn_servers:
+    - host: __TURN_DOMAIN__
+      port: 443
+      protocol: tls
+      secret: __TURN_SECRET__
+      ttl: 14400
+    - host: __TURN_DOMAIN__
+      port: 3478
+      protocol: udp
+      secret: __TURN_SECRET__
+      ttl: 14400
 keys:
   __LIVEKIT_API_KEY__: __LIVEKIT_API_SECRET__
 room:
@@ -18,17 +30,7 @@ webhook:
   api_key: __LIVEKIT_API_KEY__
   urls:
     - http://lk-jwt-service:8080/sfu_webhook
-# Vstavaný TURN — pre siete, ktoré blokujú UDP (a/alebo všetko okrem 443):
-#  - TURN/UDP na 3478/udp
-#  - TURN/TLS na 443: nginx (stream, SNI __TURN_DOMAIN__) ukončí TLS a pošle nešifrované spojenie
-#    s PROXY protocol hlavičkou sem na :443 v kontajneri (external_tls). LiveKit ohlasuje
-#    turns:__TURN_DOMAIN__:443.
+# Vstavaný TURN LiveKit je vypnutý — TURN zabezpečuje coturn (host sieť, viď templates/coturn).
+# Klienti dostanú dočasné prihlasovacie údaje (TURN REST API, zdieľané tajomstvo s coturn).
 turn:
-  enabled: true
-  domain: __TURN_DOMAIN__
-  tls_port: 443
-  udp_port: 3478
-  external_tls: true
-  proxy_protocol: true
-  proxy_protocol_trusted_cidrs:
-    - __NGINX_IP__/32
+  enabled: false

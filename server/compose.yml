@@ -114,6 +114,19 @@ services:
       retries: 5
     networks: [psst]
 
+  # coturn — TURN pre siete bez UDP (UDP 3478 verejne; TLS 443 cez nginx). Host sieť je nutná: relay
+  # sokety musia byť na skutočnej IP servera, aby k nim mala prístup SFU (LiveKit, node_ip).
+  coturn:
+    image: docker.io/coturn/coturn:4.18.0
+    restart: unless-stopped
+    logging: *logging
+    network_mode: host
+    command: ["-c", "/etc/coturn/turnserver.conf"]
+    volumes:
+      - ./data/config/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+    depends_on:
+      - nginx
+
   # Matrix Authentication Service — účty, prihlásenie, registrácia (len s pozývacím tokenom)
   mas:
     image: ghcr.io/element-hq/matrix-authentication-service:1.29.0
@@ -192,10 +205,15 @@ services:
       retries: 10
     networks:
       psst:
-        # lk-jwt-service overuje OpenID tokeny cez https://<MATRIX_DOMAIN>:8448 a volá LiveKit API cez
-        # wss://<MATRIX_DOMAIN>/livekit/sfu — v internej sieti to vedie priamo na tento nginx.
+        # pevná IP: Synapse ju má v ip_range_whitelist (push brány ntfy/Sygnal za nginx),
+        # LiveKit jej verí PROXY protocol hlavičku (TURN/TLS)
+        ipv4_address: 172.30.0.10
+        # interní klienti volajú verejné domény priamo na tento nginx: lk-jwt-service (OpenID cez :8448,
+        # LiveKit API), Synapse (push na ntfy/Sygnal)
         aliases:
           - ${MATRIX_DOMAIN}
+          - ${NTFY_DOMAIN}
+          - ${AUTH_DOMAIN}
 
   certbot:
     image: docker.io/certbot/certbot:v5.10.0
