@@ -74,7 +74,7 @@ len cez tokeny, takže „verejná" miestnosť je viditeľná iba používateľo
 verejných miestností/priestorov (`UIFeature.allowCreatingPublicRooms/Spaces: true`), Synapse povoľuje publikovanie
 do adresára (`room_list_publication_rules: allow`) a adresár nie je dostupný bez prihlásenia.
 
-**D14 — Registrácia s tokenom prebieha na webe (app.macet.eu alebo desktop).** Element X (Android aj iOS)
+**D14 (nahradené D30) — Registrácia s tokenom prebieha na webe (app.macet.eu alebo desktop).** Element X (Android aj iOS)
 podporuje vytvorenie účtu len cez Matrix Authentication Service (OIDC); stack MAS nepoužíva (jednoduchší provoz,
 Synapse priamo vie `registration_requires_token`). Mobilné appky sa prihlasujú heslom k existujúcemu účtu.
 Pozvánka = odkaz na `https://app.macet.eu/#/register` + token z `server/scripts/new-invite.sh`.
@@ -86,7 +86,7 @@ odtlačok release certifikátu (verejný údaj) a `apple-app-site-association` �
 s iCloudom a pri ~5 GB voľného miesta macOS odkladá súbory („dataless"); `git status` potom visí na tisícoch
 súborov v `forks/web`. Zdrojom pravdy sú vetvy `psst` na GitHube.
 
-**D17 — Push notifikácie bez Element/matrix.org infraštruktúry.** Android: len UnifiedPush (verejná gateway
+**D17 (pre Android nahradené D32) — Push notifikácie bez Element/matrix.org infraštruktúry.** Android: len UnifiedPush (verejná gateway
 `matrix.gateway.unifiedpush.org` alebo gateway distribútora, napr. ntfy) — bez distribútora chodia notifikácie len
 pri otvorenej appke. iOS: push gateway nastavená na `https://chat.macet.eu`, ale Sygnal s APNs kľúčom nie je
 súčasťou stacku (vyžaduje Apple Developer účet) → na iOS zatiaľ žiadne push notifikácie.
@@ -157,3 +157,70 @@ značka bola zle čitateľná → tmavý poloprehľadný podklad `rgb(2,6,23,.72
 
 **D28 — macOS desktop universal (x64 + arm64), nepodpísaný (ad-hoc).** Postavený lokálne na Intel Macu; jedna
 appka pre Intel aj Apple Silicon. Gatekeeper pri prvom spustení vyžaduje pravý klik → Otvoriť.
+
+## Server pripravený na nasadenie, registrácia na mobile, notifikácie (2026-11-13, tretia dávka)
+
+**D29 — Projekt v `~/proj/psst`.** Presunutý z `~/psst`; v repe neboli absolútne cesty (len v dokumentácii).
+`~/Desktop/psst` je pracovný adresár relácie — zmazanie zablokovala bezpečnostná kontrola, treba ho zmazať ručne.
+
+**D30 — Matrix Authentication Service (MAS 1.29) na `auth.macet.eu`.** Element X vie vytvoriť účet len cez OIDC
+(MAS). Synapse deleguje autentifikáciu (`matrix_authentication_service`, `enable_registration: false`,
+`password_config.enabled: false`). Registrácia heslom je v MAS zapnutá, ale **vyžaduje registračný token**
+(`password_registration_token_required`), e-mail sa nevyžaduje (žiadny SMTP). Pozvánky: `members.sh invite`.
+Prihlásenie starších klientov ide cez MAS compat endpointy (`/_matrix/client/*/login|logout|refresh` → MAS).
+Nahrádza D14.
+
+**D31 — OIDC klienti: všetky appky majú `client_uri = https://app.macet.eu`, natívne redirect schémy `eu.macet.app`.**
+Politika MAS vyžaduje, aby vlastná schéma bola obrátená doména `client_uri` — `eu.macet.psst:/…` (pôvodná
+desktopová) MAS odmietol, preto desktop aj iOS používajú `eu.macet.app` ako primárnu schému (Android už mal).
+`allow_host_mismatch: true` povoľuje metadáta (tos/policy/logo) na inom hoste. Overuje `tests/server/oidc_clients_test.py`.
+
+**D32 — Android notifikácie: self-hosted ntfy (`ntfy.macet.eu`), predvolená Matrix push brána vo forku.**
+ntfy povoľuje anonymne len témy `up*` (`auth-default-access: deny-all`), web UI aj registrácia sú vypnuté.
+Člen potrebuje appku ntfy s *Default server* `https://ntfy.macet.eu` a vypnutou optimalizáciou batérie
+(Android 13 inak nedovolí ntfy spustiť službu na pozadí — overené v emulátore). Synapse posiela len `event_id`
+(`push.include_content: false`). Nahrádza D17 pre Android.
+
+**D33 — iOS notifikácie: Sygnal (APNs) ako compose profil `apns`.** Zapne sa, keď deploy.sh nájde
+`secrets/apns/AuthKey_<KEY_ID>.p8` a pozná Team ID (`--apple-team-id`); app_id `eu.macet.psst.ios.prod`
+(production) a `.dev` (sandbox), topic `eu.macet.psst`. Push brána je `https://chat.macet.eu/_matrix/push/v1/notify`.
+
+**D34 — Push brány sú za nginx; Synapse má v `ip_range_whitelist` len pevnú IP nginx (172.30.0.10).** Synapse
+predvolene blokuje privátne rozsahy (ochrana pred SSRF); povolenie jedinej adresy reverznej proxy je minimálne.
+Pevná IP + aliasy domén v Docker sieti chýbali (úprava compose sa pôvodne neaplikovala) — opravené a overené.
+
+**D35 — TURN cez coturn v host sieti, nie vstavaný TURN LiveKit.** LiveKit ohlasuje relay adresu ako
+`node_ip:port`; v Docker bridge sieti sa SFU k relay soketom nedostane (porty nie sú publikované) — test to
+potvrdil (ICE páry „failed"). coturn v host sieti relayuje na IP servera, `denied-peer-ip` všetko okrem IP
+servera (nie je otvorený relay), dočasné prihlasovacie údaje generuje LiveKit (TURN REST, `turn_servers.secret`).
+**TURN/TLS na 443:** nginx `stream` rozlišuje SNI — `turn.macet.eu` ukončí TLS a pošle TURN-over-TCP na coturn
+(brána Docker siete 172.30.0.1:3478, UFW povolené len z 172.30.0.0/24); ostatné domény idú na interný HTTPS
+server 127.0.0.1:8443 s PROXY protocol (zachová IP klienta). Hovor s politikou „len relay" overený (médiá
+tečú cez `relayProtocol=tls`) v Linux kontajneri s dôverou v testovací certifikát — WebRTC overuje TLS
+certifikát TURN aj s `--ignore-certificate-errors`.
+
+**D36 — `deploy.sh <IP> <email>` robí všetko:** pre-flight (Linux/root, inštalácia Dockeru na Debian/Ubuntu,
+DNS 6 subdomén → IP cez 1.1.1.1, porty 80/443/7881/7882/3478, disk ≥ 20 GB, RAM), hardening, tajomstvá,
+konfigurácie, PSST web z GitHub Release, štart, databáza `mas`, Let's Encrypt pre 6 domén, cron (zálohy 03:17,
+healthcheck každých 10 min). `--contact`/`--hosting` vyplní právne stránky. `--local-test` = lokálny test.
+
+**D37 — Hardening (scripts/harden.sh):** admin `psst` s kľúčmi roota, `sudo` bez hesla (nemá heslo), SSH len
+kľúčom + `PermitRootLogin no` **len ak má admin kľúč** (inak varovanie, nikoho nezamkne), UFW, fail2ban (sshd),
+unattended-upgrades s reštartom o 04:30. Overené v Debian 12 kontajneri vrátane idempotencie.
+
+**D38 — Zálohy šifrované openssl AES-256-CBC + PBKDF2 (600 000 iterácií) heslovou frázou `secrets/backup.pass`.**
+openssl je všade (žiadna ďalšia závislosť). Fráza sa nezálohuje (archív by inak nebol chránený) — deploy.sh
+vyzve uložiť ju mimo servera. Rotácia 7 denných / 4 týždenné / 6 mesačných, overenie dešifrovania po každej
+záloze, voliteľný rsync mimo servera. Obnova overená lokálne aj v CI (zhoda podpisového kľúča, účty, miestnosti).
+
+**D39 — PSST web sa na server dostane cez GitHub Release** (`releases/latest/download/psst-web.tar.gz`), nie cez
+`gh` CLI (na VPS nie je). Release obsahuje len web distribúciu; podpísané APK a desktopové inštalátory sa
+nezverejňujú (zostávajú v `dist/` a CI artefaktoch). `fetch-web.sh` synchronizuje obsah do existujúceho `app/`
+— nahradenie adresára (`mv`) rozbilo bind mount nginx (404), opravené.
+
+**D40 — Právne stránky (SK + EN) servíruje nginx z `templates/app/legal/`** — nezávisle od web buildu, na
+`app.macet.eu/terms.html` a `/privacy.html`; odkazujú na ne MAS (súhlas pri registrácii), web/desktop (Help &
+About, päta prihlásenia), Android a iOS (Nastavenia → About/Legal).
+
+**D41 — Desktop build bez nx cache (`NX_SKIP_NX_CACHE=true`).** nx považoval balenie desktopu za nezmenené aj po
+výmene `webapp.asar` a vrátil starý dmg z cache (so starým webom). CI cache nepoužíva; lokálne je to nutné.
