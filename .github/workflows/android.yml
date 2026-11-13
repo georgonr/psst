@@ -1,0 +1,198 @@
+# PSST Android: builds the georgonr/psst-android fork (branch "psst") and smoke-tests it on an emulator.
+#
+# Signing policy: CI only produces UNSIGNED release APKs/AAB. The psst release key never leaves the release
+# machine; artifacts are signed locally with scripts/android/sign-release.sh. The emulator job signs the x86_64
+# APK with a throwaway key generated inside the job (never uploaded).
+name: Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      fork_ref:
+        description: Branch / tag / sha of georgonr/psst-android to build
+        default: psst
+        required: false
+  push:
+    branches: [ main ]
+    paths:
+      - .github/workflows/android.yml
+      - scripts/android/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORK_REPO: georgonr/psst-android
+  FORK_REF: ${{ inputs.fork_ref || 'psst' }}
+  # Same values as upstream element-x-android CI (release.yml)
+  GRADLE_OPTS: -Dorg.gradle.jvmargs=-Xmx8g -XX:MaxMetaspaceSize=512m -Dfile.encoding=UTF-8 -XX:+HeapDumpOnOutOfMemoryError -XX:+UseG1GC -Dkotlin.daemon.jvm.options=-Xmx4g
+  CI_GRADLE_ARG_PROPERTIES: --stacktrace --no-daemon -Dsonar.gradle.skipCompile=true --no-configuration-cache
+
+jobs:
+  apk:
+    name: Unsigned release APKs (fdroid, per ABI)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      fork_sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - name: Checkout psst-android fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.FORK_REPO }}
+          ref: ${{ env.FORK_REF }}
+          fetch-depth: 1
+          persist-credentials: false
+      - id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@3f13feab2962a87273d379ebc36ea159527e6cc9 # v1.3.2
+        with:
+          tool-cache: true
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: true
+          swap-storage: false
+      - name: Use JDK 21 (as upstream)
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Tool versions
+        run: |
+          set -x
+          java -version
+          ./gradlew --version --no-daemon
+          grep -E '^android_gradle_plugin|^kotlin =' gradle/libs.versions.toml
+          grep -E 'COMPILE_SDK =|TARGET_SDK =|MIN_SDK_FOSS =|BUILD_TOOLS_VERSION =' plugins/src/main/kotlin/Versions.kt
+          ls "$ANDROID_HOME/build-tools" "$ANDROID_HOME/ndk" 2>/dev/null || true
+      - name: Assemble unsigned fdroid release APKs
+        run: ./gradlew :app:assembleFdroidRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: List outputs
+        run: |
+          ls -la app/build/outputs/apk/fdroid/release/
+          cat app/build/outputs/apk/fdroid/release/output-metadata.json || true
+          ls "$ANDROID_HOME/ndk" 2>/dev/null || true
+      - name: Upload unsigned APKs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: psst-android-apks-unsigned
+          path: |
+            app/build/outputs/apk/fdroid/release/*.apk
+            app/build/outputs/apk/fdroid/release/output-metadata.json
+          if-no-files-found: error
+          retention-days: 30
+      - name: Upload x86_64 APK for the emulator job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: psst-android-x86_64-unsigned
+          path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned.apk
+          if-no-files-found: error
+          retention-days: 5
+
+  aab:
+    name: Unsigned release AAB (fdroid)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout psst-android fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.FORK_REPO }}
+          ref: ${{ env.FORK_REF }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Free disk space
+        uses: jlumbroso/free-disk-space@3f13feab2962a87273d379ebc36ea159527e6cc9 # v1.3.2
+        with:
+          tool-cache: true
+          android: false
+          dotnet: true
+          haskell: true
+          large-packages: false
+          docker-images: true
+          swap-storage: false
+      - name: Use JDK 21 (as upstream)
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+      - name: Bundle unsigned fdroid release AAB
+        run: ./gradlew :app:bundleFdroidRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: List outputs
+        run: ls -la app/build/outputs/bundle/fdroidRelease/
+      - name: Upload unsigned AAB
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: psst-android-aab-unsigned
+          path: app/build/outputs/bundle/fdroidRelease/*.aab
+          if-no-files-found: error
+          retention-days: 30
+
+  emulator:
+    name: Emulator smoke test (x86_64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [ apk ]
+    env:
+      API_LEVEL: 34
+      TARGET: google_apis
+      ARCH: x86_64
+      DEVICE: pixel_6
+    steps:
+      - name: Checkout psst (test scripts)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Download x86_64 APK
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: psst-android-x86_64-unsigned
+          path: apk
+      - name: Sign x86_64 APK with a throwaway debug key (generated here, never uploaded)
+        run: |
+          set -euo pipefail
+          BT="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)"
+          echo "Using build-tools $BT"
+          PASS="$(openssl rand -hex 16)"
+          keytool -genkeypair -keystore "$RUNNER_TEMP/throwaway.jks" -storepass "$PASS" -keypass "$PASS" \
+            -alias throwaway -keyalg RSA -keysize 2048 -validity 2 -dname "CN=psst CI throwaway" >/dev/null
+          "$BT/zipalign" -p -f 4 apk/app-fdroid-x86_64-release-unsigned.apk apk/aligned.apk
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/throwaway.jks" --ks-pass "pass:$PASS" --ks-key-alias throwaway \
+            --out apk/psst-x86_64-ci.apk apk/aligned.apk
+          "$BT/apksigner" verify apk/psst-x86_64-ci.apk
+          rm -f "$RUNNER_TEMP/throwaway.jks"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run emulator test
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          target: ${{ env.TARGET }}
+          arch: ${{ env.ARCH }}
+          profile: ${{ env.DEVICE }}
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          disk-size: 3G
+          script: bash scripts/android/emulator-test.sh apk/psst-x86_64-ci.apk emulator-results
+      - name: Upload screenshots and UI dumps
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: psst-android-emulator-results
+          path: emulator-results/
+          if-no-files-found: warn
+          retention-days: 30

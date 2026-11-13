@@ -19,3 +19,4 @@ __pycache__/
 .build-*.log
 .local-test-accounts.json
 .sign-in-*/
+.signed-*/

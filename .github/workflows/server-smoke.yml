@@ -1,0 +1,93 @@
+name: server-smoke
+
+# Lokálne overenie serverového stacku (bod 7) na efemérnom runneri — NIE nasadenie.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "server/**"
+      - "tests/server/**"
+      - ".github/workflows/server-smoke.yml"
+
+concurrency:
+  group: server-smoke-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      COMPOSE_FILE: compose.yml:compose.test.yml
+      LIVEKIT_USE_EXTERNAL_IP: "false"
+      SMOKE_RESULTS: ${{ github.workspace }}/smoke-artifacts/results.json
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate production compose (docker compose config)
+        working-directory: server
+        run: |
+          docker compose version
+          COMPOSE_FILE=compose.yml docker compose --env-file .env.example config --quiet
+          COMPOSE_FILE=compose.yml docker compose --env-file .env.example config --images
+          docker compose --env-file .env.example config --quiet
+          bash -n deploy.sh scripts/*.sh
+
+      - name: Map PSST domains to localhost
+        run: echo "127.0.0.1 chat.macet.eu app.macet.eu call.macet.eu" | sudo tee -a /etc/hosts
+
+      - name: Deploy stack (./deploy.sh --no-letsencrypt)
+        working-directory: server
+        run: ./deploy.sh --no-letsencrypt
+
+      - name: Validate rendered nginx config
+        working-directory: server
+        run: docker compose exec -T nginx nginx -t
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install E2EE test client (matrix-nio[e2e] — vodozemac Olm/Megolm)
+        run: pip install "matrix-nio[e2e]==0.26.0" "requests>=2.32"
+
+      - name: Smoke test
+        run: |
+          mkdir -p smoke-artifacts
+          python tests/server/smoke_test.py
+
+      - name: Backup script works (scripts/backup.sh)
+        if: success()
+        working-directory: server
+        run: |
+          f=$(./scripts/backup.sh /tmp/psst-backups | tail -1)
+          tar -tzf "$f" | tee /dev/stderr | grep -q 'signing.key'
+          tar -tzf "$f" | grep -q 'db.dump'
+
+      - name: Collect logs
+        if: always()
+        working-directory: server
+        run: |
+          mkdir -p ../smoke-artifacts/logs
+          docker compose ps -a > ../smoke-artifacts/compose-ps.txt 2>&1 || true
+          for s in postgres synapse livekit lk-jwt-service element-call nginx; do
+            docker compose logs --no-color --timestamps "$s" > "../smoke-artifacts/logs/$s.log" 2>&1 || true
+          done
+          COMPOSE_FILE=compose.yml docker compose --env-file .env.example config > ../smoke-artifacts/compose-config.prod.yml 2>&1 || true
+          mkdir -p ../smoke-artifacts/rendered-config && cp -r data/config/nginx data/config/element-call data/config/app-default ../smoke-artifacts/rendered-config/ 2>/dev/null || true
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: server-smoke-logs
+          path: smoke-artifacts/
+          retention-days: 14
+
+      - name: Tear down
+        if: always()
+        working-directory: server
+        run: docker compose down -v --remove-orphans || true

@@ -1,0 +1,228 @@
+# PSST iOS — unsigned simulator build + smoke test of georgonr/psst-ios (branch `psst`).
+#
+# Compiles the Element X iOS fork for the iOS Simulator (no code signing), boots a simulator,
+# installs and launches the app, takes screenshots and verifies bundle id / display name.
+# See docs/build/ios.md and docs/decisions/ios.md.
+name: iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "georgonr/psst-ios ref to build"
+        default: psst
+        required: true
+      configuration:
+        description: "Xcode build configuration"
+        type: choice
+        options: [Debug, Release]
+        default: Debug
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/ios.yml
+      - scripts/ios/**
+      - assets/generated/ios/**
+      - forks/ios
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORK_REPO: georgonr/psst-ios
+  FORK_REF: ${{ inputs.ref || 'psst' }}
+  CONFIGURATION: ${{ inputs.configuration || 'Debug' }}
+  EXPECTED_BUNDLE_ID: eu.macet.psst
+  EXPECTED_DISPLAY_NAME: psst
+
+jobs:
+  simulator:
+    name: Build + simulator smoke test
+    # Upstream (element-x-ios 26.11.0) builds with Xcode 27 (ci_scripts/ci_common.sh selects
+    # /Applications/Xcode_27.app on their `xcode-27` runner). macos-26 is the GitHub-hosted arm64 image
+    # that ships Xcode 27.
+    runs-on: macos-26
+    timeout-minutes: 150
+
+    steps:
+      - name: Checkout psst-ios
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.FORK_REPO }}
+          ref: ${{ env.FORK_REF }}
+          path: ios
+          fetch-depth: 1
+          lfs: false # LFS only holds test snapshots / dev media, not needed to build
+          submodules: false # Enterprise submodule is private and unused
+          persist-credentials: false
+
+      - name: Select Xcode
+        run: |
+          echo "Installed Xcodes:"; ls -d /Applications/Xcode*.app
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1)
+          [ -n "$XCODE" ] || XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE" ]; then
+            echo "::error::Xcode 27 is not installed on this runner image — upstream 26.11.0 requires it."
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          swift --version
+          sw_vers
+
+      - name: Install tools
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
+          brew install xcodegen
+          xcodegen --version
+          # Lint is intentionally skipped: the post-build SwiftLint/SwiftFormat phases look tools up
+          # via PATH, so shadow them with no-op shims (they would otherwise run if preinstalled).
+          mkdir -p "$RUNNER_TEMP/shims"
+          for t in swiftlint swiftformat; do printf '#!/bin/sh\nexit 0\n' > "$RUNNER_TEMP/shims/$t"; chmod +x "$RUNNER_TEMP/shims/$t"; done
+          echo "$RUNNER_TEMP/shims" >> "$GITHUB_PATH"
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen
+
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/spm
+          key: spm-${{ hashFiles('ios/project.yml') }}
+          restore-keys: spm-
+
+      - name: Resolve packages
+        working-directory: ios
+        run: |
+          xcodebuild -resolvePackageDependencies -project ElementX.xcodeproj -scheme ElementX \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" | tail -40
+
+      - name: Build for iOS Simulator
+        working-directory: ios
+        run: |
+          xcodebuild build \
+            -project ElementX.xcodeproj -scheme ElementX -configuration "$CONFIGURATION" \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" \
+            -skipPackagePluginValidation -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO \
+            > "$RUNNER_TEMP/build.log" 2>&1 &
+          pid=$!
+          while kill -0 $pid 2>/dev/null; do
+            sleep 60
+            echo "[$(date +%T)] log lines: $(wc -l < "$RUNNER_TEMP/build.log") | $(tail -1 "$RUNNER_TEMP/build.log" | cut -c1-160)"
+          done
+          wait $pid && rc=0 || rc=$?
+          grep -E 'error:' "$RUNNER_TEMP/build.log" | sort -u | head -100 || true
+          tail -5 "$RUNNER_TEMP/build.log"
+          [ $rc -eq 0 ] || exit $rc
+          APP="$RUNNER_TEMP/dd/Build/Products/$CONFIGURATION-iphonesimulator/ElementX.app"
+          test -d "$APP"
+          echo "APP=$APP" >> "$GITHUB_ENV"
+
+      - name: Show build errors
+        if: failure()
+        run: grep -E -B2 -A6 'error:' "$RUNNER_TEMP/build.log" | head -300 || tail -200 "$RUNNER_TEMP/build.log"
+
+      - name: Verify Info.plist (bundle id, display name, extensions)
+        run: |
+          PB=/usr/libexec/PlistBuddy
+          ID=$($PB -c 'Print :CFBundleIdentifier' "$APP/Info.plist")
+          NAME=$($PB -c 'Print :CFBundleDisplayName' "$APP/Info.plist")
+          echo "CFBundleIdentifier=$ID  CFBundleDisplayName=$NAME"
+          [ "$ID" = "$EXPECTED_BUNDLE_ID" ] || { echo "::error::bundle id is $ID"; exit 1; }
+          [ "$NAME" = "$EXPECTED_DISPLAY_NAME" ] || { echo "::error::display name is $NAME"; exit 1; }
+          for ext in "$APP"/PlugIns/*.appex; do
+            EID=$($PB -c 'Print :CFBundleIdentifier' "$ext/Info.plist")
+            echo "$(basename "$ext"): $EID  group=$($PB -c 'Print :appGroupIdentifier' "$ext/Info.plist")"
+            case "$EID" in "$EXPECTED_BUNDLE_ID".*) ;; *) echo "::error::extension id $EID"; exit 1;; esac
+          done
+          GROUP=$($PB -c 'Print :appGroupIdentifier' "$APP/Info.plist")
+          [ "$GROUP" = "group.$EXPECTED_BUNDLE_ID" ] || { echo "::error::app group is $GROUP"; exit 1; }
+          { echo "### Built app"; echo; echo "| key | value |"; echo "|---|---|";
+            echo "| CFBundleIdentifier | $ID |"; echo "| CFBundleDisplayName | $NAME |"; echo "| appGroupIdentifier | $GROUP |";
+            echo "| CFBundleShortVersionString | $($PB -c 'Print :CFBundleShortVersionString' "$APP/Info.plist") |";
+            echo "| Xcode | $(xcodebuild -version | head -1) |"; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Boot simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys, re
+          data = json.load(sys.stdin)["devices"]
+          best = None
+          for runtime, devices in data.items():
+              m = re.search(r"iOS-(\d+)-(\d+)", runtime)
+              if not m:
+                  continue
+              version = (int(m.group(1)), int(m.group(2)))
+              for d in devices:
+                  if d["name"].startswith("iPhone") and "Pro" in d["name"] and "Max" not in d["name"]:
+                      if best is None or version > best[0]:
+                          best = (version, d["udid"], d["name"])
+          print(best[1] if best else "")
+          print(best, file=sys.stderr)
+          ')
+          [ -n "$UDID" ] || { xcrun simctl list devices available; echo "::error::no iPhone simulator"; exit 1; }
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl ui "$UDID" appearance light
+
+      - name: Install, launch and screenshot
+        run: |
+          mkdir -p "$RUNNER_TEMP/screens"
+          xcrun simctl install "$UDID" "$APP"
+          xcrun simctl launch "$UDID" "$EXPECTED_BUNDLE_ID" | tee "$RUNNER_TEMP/launch.txt"
+          sleep 30
+          xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/screens/01-launch-light.png"
+          # The process must still be alive (no crash on start-up)
+          xcrun simctl spawn "$UDID" launchctl list | grep -F "$EXPECTED_BUNDLE_ID" | tee "$RUNNER_TEMP/screens/process.txt"
+          PID=$(awk '{print $2}' "$RUNNER_TEMP/launch.txt")
+          ps -p "$PID" -o pid=,comm= | tee -a "$RUNNER_TEMP/screens/process.txt" || { echo "::error::app process $PID is not running"; exit 1; }
+          xcrun simctl ui "$UDID" appearance dark
+          sleep 5
+          xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/screens/02-launch-dark.png"
+          xcrun simctl ui "$UDID" appearance light
+          # Home screen with the installed icon
+          xcrun simctl terminate "$UDID" "$EXPECTED_BUNDLE_ID" || true
+          sleep 3
+          xcrun simctl io "$UDID" screenshot "$RUNNER_TEMP/screens/03-home-screen.png"
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact --predicate 'process == "ElementX"' > "$RUNNER_TEMP/screens/app-log.txt" 2>&1 || true
+          ls -l "$RUNNER_TEMP/screens"
+
+      - name: Package app
+        if: always()
+        run: |
+          [ -n "${APP:-}" ] && [ -d "$APP" ] && ditto -c -k --keepParent "$APP" "$RUNNER_TEMP/psst-ios-simulator.app.zip" || true
+          gzip -k "$RUNNER_TEMP/build.log" 2>/dev/null || true
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots
+          path: ${{ runner.temp }}/screens/
+          if-no-files-found: ignore
+
+      - name: Upload simulator app
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: psst-ios-simulator-app
+          path: ${{ runner.temp }}/psst-ios-simulator.app.zip
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build-log
+          path: ${{ runner.temp }}/build.log.gz
+          if-no-files-found: ignore
+          retention-days: 7
