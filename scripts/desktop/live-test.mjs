@@ -17,7 +17,7 @@ const check = (name, ok, detail = "") => {
 const profile = fs.mkdtempSync("/tmp/psst-desktop-profile-");
 const proc = spawn(path.join(app, "Contents/MacOS/psst"), [
     "--remote-debugging-port=9333",
-    "--host-resolver-rules=MAP chat.macet.eu 127.0.0.1, MAP app.macet.eu 127.0.0.1, MAP call.macet.eu 127.0.0.1",
+    "--host-resolver-rules=" + ["chat", "app", "call", "push"].map((h) => `MAP ${h}.macet.eu ${process.env.PSST_HOST_IP || "127.0.0.1"}`).join(", "),
     "--ignore-certificate-errors",
     // bez prístupu ku kľúčenke macOS (inak nový ad-hoc podpis vyvolá dialóg a zablokuje appku)
     "--use-mock-keychain",
@@ -44,7 +44,7 @@ try {
     const server = await page.locator(".mx_ServerPicker_server").innerText();
     check("login: chat.macet.eu, bez zmeny homeservera", server.includes("chat.macet.eu") && (await page.locator(".mx_ServerPicker_change").count()) === 0, server);
     const cont = await page.locator('.mx_Login_fullWidthButton, button:has-text("Continue"), button:has-text("Pokračovať"), [role=button]:has-text("Pokračovať")').count();
-    check("login ponúka prihlásenie cez MAS (Continue → auth.macet.eu v systémovom prehliadači)", cont > 0, `tlačidlá: ${cont}`);
+    check("login ponúka prihlásenie cez MAS (Continue → MAS v systémovom prehliadači)", cont > 0, `tlačidlá: ${cont}`);
     await page.screenshot({ path: path.join(out, "1-login.png") });
     // Create account (registrácia s pozvánkou) — tiež cez MAS
     await page.goto(page.url().split("#")[0] + "#/register");

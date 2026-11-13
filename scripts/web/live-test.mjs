@@ -37,7 +37,7 @@ try {
     await page.screenshot({ path: path.join(out, "2-after-login-FAIL.png") });
     throw e;
 }
-check("prihlásenie cez MAS (auth.macet.eu) → späť v appke", true, page.url());
+check("prihlásenie cez MAS → späť v appke", true, page.url());
 await page.waitForTimeout(6000);
 // zavri prípadné uvítacie/obnovovacie dialógy
 for (let i = 0; i < 3; i++) {

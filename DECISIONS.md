@@ -257,3 +257,8 @@ prísnejší hardening (`AllowUsers deploy`, sysctl, AIDE, ClamAV, auditd, noexe
 
 **D45 — Žiadne externé notifikácie zo servera.** AIDE (denne), ClamAV (týždenne), healthcheck (systém denne +
 stack každých 10 min) píšu len do `/var/log/psst/*.log` a `/var/log/psst-*.log` (logrotate týždenne, 12×).
+
+**D46 — TLS: Mozilla intermediate.** nginx bez `ssl_ciphers` ponúkal v TLS 1.2 aj CBC/CAMELLIA/ARIA (testssl: LUCKY13).
+Teraz len ECDHE + AES-GCM/ChaCha20 (HTTPS aj TURN/TLS listener), krivky X25519/P-256/P-384, TLS 1.2+1.3, HSTS.
+SSL Labs: chat/app/push A+, call A (klient bez ALPN dostane TURN/TLS listener bez HSTS — dôsledok D42).
+`deploy.sh` renderuje konfigurácie na mieste (bind mount jedného súboru) a reštartuje služby so zmenenou konfiguráciou.

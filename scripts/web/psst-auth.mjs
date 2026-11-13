@@ -1,7 +1,9 @@
-// PSST — spoločné kroky pre Playwright testy: prihlásenie a registrácia cez MAS (auth.macet.eu).
+// PSST — spoločné kroky pre Playwright testy: prihlásenie a registrácia cez MAS (chat.macet.eu/auth/, alebo auth.macet.eu).
 // Element Web → "Continue"/"Create account" → stránka MAS → (súhlas) → späť do appky.
 // PSST_HOST_IP: kam mapovať domény (127.0.0.1 na Macu, 172.30.0.10 = nginx v Docker sieti "psst")
 const IP = (typeof process !== "undefined" && process.env.PSST_HOST_IP) || "127.0.0.1";
+// MAS beží na https://chat.macet.eu/auth/ (D42) alebo na vlastnej subdoméne auth.macet.eu
+export const MAS_URL_RE = /(auth\.macet\.eu|macet\.eu\/auth\/)/;
 export const HOST_RULES = "--host-resolver-rules=" +
     ["chat", "app", "call", "auth", "ntfy", "turn"].map((h) => `MAP ${h}.macet.eu ${IP}`).join(", ");
 
@@ -34,7 +36,7 @@ export async function loginViaMas(page, user, password) {
     await page.waitForSelector('.mx_Login_fullWidthButton, .mx_SSOButton, button:has-text("Continue"), .mx_Login_submit', { timeout: 90000 });
     // Element Web s MAS: jediné tlačidlo "Continue" (next-gen auth)
     await clickIfVisible(page, '.mx_Login_fullWidthButton, button:has-text("Continue")', 10000);
-    await page.waitForURL(/auth\.macet\.eu/, { timeout: 60000 });
+    await page.waitForURL(MAS_URL_RE, { timeout: 60000 });
     await page.locator('input[name="username"]').fill(user);
     await page.locator('input[name="password"]').fill(password);
     await page.locator('button[type=submit]').first().click();
@@ -47,7 +49,7 @@ export async function loginViaMas(page, user, password) {
 export async function registerViaMas(page, user, password, token) {
     await page.goto("https://app.macet.eu/#/register");
     await page.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
-    await page.waitForURL(/auth\.macet\.eu/, { timeout: 60000 });
+    await page.waitForURL(MAS_URL_RE, { timeout: 60000 });
     await page.waitForSelector('input[name="username"]', { timeout: 60000 });
     await page.fill('input[name="username"]', user);
     await page.fill('input[name="password"]', password);

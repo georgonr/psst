@@ -2,23 +2,32 @@
 """Pošle E2EE textovú správu ako <user> do všetkých jeho miestností s názvom <room_name>.
 Čaká na súbor <ready> (iný klient je pripravený), potom zapíše text do <expect>.
     send_msg.py <user> <room_name> <ready_file> <expect_file> [text]
-Heslo berie z .local-test-accounts.json. Domény *.macet.eu → 127.0.0.1 len v tomto procese."""
+Heslo berie z .local-test-accounts.json. Domény *.macet.eu → 127.0.0.1 len v tomto procese.
+PSST_PROD=1: produkcia (skutočné DNS a certifikát), heslá z PSST_ACCOUNTS ({"a": [user, heslo], …}, mimo repa)."""
 import asyncio, json, os, secrets, socket, sys, tempfile, time
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
-_o = socket.getaddrinfo
-socket.getaddrinfo = lambda h, *a, **k: _o("127.0.0.1" if str(h).endswith("macet.eu") else h, *a, **k)
+PROD = os.environ.get("PSST_PROD") == "1"
+if not PROD:
+    _o = socket.getaddrinfo
+    socket.getaddrinfo = lambda h, *a, **k: _o("127.0.0.1" if str(h).endswith("macet.eu") else h, *a, **k)
 
 async def main(user, room_name, ready, expect, text=None):
     from nio import AsyncClient, AsyncClientConfig
-    pw = json.loads((ROOT / ".local-test-accounts.json").read_text())[user]
+    if PROD:
+        import ssl, certifi
+        pw = {u: p for u, p in json.loads(Path(os.environ["PSST_ACCOUNTS"]).read_text()).values()}[user]
+        tls = ssl.create_default_context(cafile=certifi.where())
+    else:
+        pw = json.loads((ROOT / ".local-test-accounts.json").read_text())[user]
+        tls = False
     text = text or f"PSST live test {secrets.token_hex(4)} 🔒"
     for _ in range(600):
         if Path(ready).exists():
             break
         time.sleep(1)
     c = AsyncClient("https://chat.macet.eu", f"@{user}:chat.macet.eu", store_path=tempfile.mkdtemp(),
-                    config=AsyncClientConfig(encryption_enabled=True), ssl=False)
+                    config=AsyncClientConfig(encryption_enabled=True), ssl=tls)
     await c.login(pw, device_name=f"send-{user}")
     await c.sync(timeout=3000, full_state=True)
     if c.should_upload_keys:
