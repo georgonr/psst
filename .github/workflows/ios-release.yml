@@ -42,7 +42,7 @@ env:
 jobs:
   release:
     name: Archive + export IPA
-    runs-on: macos-26 # same image / Xcode 27 as ios.yml
+    runs-on: xcode-27 # same image / Xcode 27 as ios.yml
     timeout-minutes: 180
 
     steps:

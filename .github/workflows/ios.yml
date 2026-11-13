@@ -45,7 +45,7 @@ jobs:
     # Upstream (element-x-ios 26.11.0) builds with Xcode 27 (ci_scripts/ci_common.sh selects
     # /Applications/Xcode_27.app on their `xcode-27` runner). macos-26 is the GitHub-hosted arm64 image
     # that ships Xcode 27.
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 150
 
     steps:
