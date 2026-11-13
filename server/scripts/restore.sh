@@ -30,6 +30,8 @@ umask 077
 cp "$B/env" .env
 mkdir -p secrets; cp -R "$B/secrets/." secrets/
 load_env
+# konfigurácie a dáta čítajú kontajnery pod inými UID (Synapse 991, ntfy, nginx) → bežné práva 644/755
+umask 022
 mkdir -p data/synapse data/postgres data/certbot data/ntfy
 chmod 700 data
 tar -C data -xzf "$B/config.tar.gz"
