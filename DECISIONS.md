@@ -113,3 +113,47 @@ Plné znenie s dôvodmi: [web + desktop](docs/decisions/web-desktop.md) · [andr
   (bez listenera, nginx 404, bez 8448 navonok) s jedinou internou výnimkou pre OpenID userinfo (lk-jwt-service);
   E2EE predvolene vo všetkých miestnostiach; LiveKit `7881/tcp` + `7882/udp`, bez TURN; Element Call na
   `call.macet.eu`; admin API len na `127.0.0.1:8008` (SSH tunel).
+
+## Build a overenie naostro (2026-11-13, druhá dávka)
+
+**D18 — Repo presunuté do `~/psst` čistým klonom z GitHubu.** Proces stratil prístup k `~/Desktop` (TCC),
+všetko bolo pushnuté, takže klon je ekvivalent presunu. Privátne vnorené submoduly Elementu
+(`element-ios-enterprise`, `element-android-enterprise`) majú vo forkoch `update = none`, inak
+`git clone --recurse-submodules` padá. Starú kópiu `~/Desktop/psst` treba zmazať ručne.
+
+**D19 — Android emulátor s x86_64 image (API 33), nie arm64.** Intel Mac (HVF) arm64 system image nespustí.
+API 33, lebo od API 34 sú systémové CA v APEX module a testovací self-signed certifikát sa nedá pridať do
+`/system/etc/security/cacerts`. Testuje sa x86_64 split podpísaný rovnakým release kľúčom.
+
+**D20 — JDK a Node mimo Homebrew.** Homebrew pre Intel Mac už nedodáva bottles (openjdk@21 by sa kompiloval
+zo zdrojov aj s ~12 závislosťami). Temurin 21 a Node 24.22.0 sú oficiálne tarbally s overeným SHA-256 v `~/.local`.
+
+**D21 — Lokálne overenie bez `/etc/hosts`.** Domény `*.macet.eu` sa mapujú na 127.0.0.1 len v testovacom
+procese: Python (`socket.getaddrinfo`), Chromium/Electron (`--host-resolver-rules`), emulátor (`/system/etc/hosts`).
+Systém ani produkčné domény sa tým nemenia; heslo správcu nebolo treba.
+
+**D22 — Test-only limity prihlásení v Synapse.** Lokálne cez colima prichádzajú všetky požiadavky z IP brány
+Dockeru, takže testovacie klienty zdieľajú `rc_login.address` (→ `M_LIMIT_EXCEEDED`). `compose.test.yml` pridáva
+druhý config `templates/synapse/test-overrides.yaml`; produkcia ho nepoužíva (tam `x_forwarded` + reálne IP).
+
+**D23 — `/widgets/` v nginx bez SPA fallbacku.** Embedded Element Call si pýta voliteľný
+`widgets/element-call/config.json`; SPA fallback vracal `index.html` → JSON chyba → hovor visel na „Loading…".
+Teraz 404 → Element Call použije predvolenú konfiguráciu. Skutočná produkčná chyba nájdená živým testom.
+
+**D24 — Serverový default: každý člen sa môže pripojiť do hovoru.** `default_power_level_content_override`
+(všetky presety) zachováva Synapse defaulty a nastavuje `org.matrix.msc3401.call.member` a `m.rtc.member` na 0.
+Element Web to robí vo svojich miestnostiach sám, miestnosti od iných klientov/botov by inak hovor
+nepovolili („You do not have permission to start video calls").
+
+**D25 — Android: `ndk.abiFilters` len pre AAB.** Kombinácia s `splits.abi` zhadzovala konfiguráciu pri samostatnom
+APK builde. APK = 3 splity (arm64-v8a, armeabi-v7a, x86_64), AAB obsahuje tie isté 3 ABI.
+
+**D26 — iOS CI na runneri `xcode-27`, simulátor len arm64.** GitHub `macos-26` má najviac Xcode 26.6, upstream
+26.11.0 vyžaduje Xcode 27 (GitHub ho ponúka ako public preview pod labelom `xcode-27`, rovnako ako upstream).
+matrix-rust-sdk nemá x86_64 simulátorový slice → `ARCHS=arm64`.
+
+**D27 — Kontrast prihlasovacej stránky.** Ľavý stĺpec s logom bol len rozmazané pozadie (sivý), biela slovná
+značka bola zle čitateľná → tmavý poloprehľadný podklad `rgb(2,6,23,.72)` (`_AuthHeader.pcss`, `PSST:`).
+
+**D28 — macOS desktop universal (x64 + arm64), nepodpísaný (ad-hoc).** Postavený lokálne na Intel Macu; jedna
+appka pre Intel aj Apple Silicon. Gatekeeper pri prvom spustení vyžaduje pravý klik → Otvoriť.
