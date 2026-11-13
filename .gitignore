@@ -1,0 +1,17 @@
+# secrets / keys — never commit
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+psst-keys/
+server/.env
+server/data/
+server/secrets/
+# build outputs
+dist/
+build/
+out/
+node_modules/
+.DS_Store
+*.log
