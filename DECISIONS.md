@@ -50,3 +50,11 @@ Notifikačná a monochromatická ikona = plné biele stĺpce bez pozadia.
 
 **D10 — Slovná značka** (`assets/psst-wordmark.svg`) má text „psst" ako geometrické ťahy (nie font), aby
 nezávisela od písma; hrúbka ťahu 12 ladí so stĺpcami šírky 13.
+
+## Podpisovanie
+
+**D11 — Android release kľúč nikdy neopustí lokálny stroj.** Keystore je v `~/psst-keys` (mimo repa,
+ignorovaný). CI stavia **nepodpísané** release APK/AAB a podpisujú sa lokálne skriptom
+`scripts/android/sign-release.sh` (zipalign + apksigner, jarsigner pre AAB). Kľúč ani heslá sa nenahrávajú
+do GitHub secrets — únik kľúča by znamenal stratu možnosti aktualizovať appku; lokálne podpisovanie je
+jednoduchšia a bezpečnejšia hranica dôvery. Emulátorový test v CI používa jednorazový debug kľúč.
