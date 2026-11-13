@@ -22,6 +22,13 @@ FORBIDDEN = [
     (re.compile(r"element\.io", re.I), "element.io host shown"),
     (re.compile(r"homeserver url|server url|enter.*server", re.I), "server address input"),
 ]
+# Informational / error texts that mention "account provider" but offer no way to pick another server
+# (seen live: CI has no reachable chat.macet.eu, and the QR-login screen explains a server capability).
+INFO_ALLOW = re.compile(
+    r"couldn.t reach this account provider|only available if your account provider supports it|"
+    r"about to sign in to chat\.macet\.eu",
+    re.I,
+)
 # Not a lock violation, but reported for branding review.
 BRANDING_WARN = re.compile(r"\belement\b", re.I)
 DOMAIN = re.compile(r"^(https?://)?[a-z0-9-]+(\.[a-z0-9-]+)+/?$", re.I)
@@ -63,7 +70,7 @@ def main():
         for n in nodes(path):
             for v in label(n):
                 for rx, why in FORBIDDEN:
-                    if rx.search(v):
+                    if rx.search(v) and not INFO_ALLOW.search(v):
                         violations.append(f"{name}: {why}: {v!r}")
                 if BRANDING_WARN.search(v):
                     warnings.append(f"{name}: text mentions Element: {v!r}")
