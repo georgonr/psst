@@ -3,6 +3,7 @@
 // Chromium mapuje *.macet.eu na 127.0.0.1 (--host-resolver-rules) a akceptuje self-signed cert.
 // Po prihlásení čaká na správu s textom zo súboru <out-dir>/expect.txt (pošle ju iný klient).
 import { chromium } from "playwright";
+import { HOST_RULES, loginViaMas } from "./psst-auth.mjs";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -15,7 +16,7 @@ const check = (name, ok, detail = "") => {
 };
 
 const browser = await chromium.launch({
-    args: ["--host-resolver-rules=MAP chat.macet.eu 127.0.0.1, MAP app.macet.eu 127.0.0.1, MAP call.macet.eu 127.0.0.1",
+    args: [HOST_RULES,
            "--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
 });
 const ctx = await browser.newContext({ ignoreHTTPSErrors: true, viewport: { width: 1280, height: 860 } });
@@ -24,24 +25,20 @@ const hosts = new Set();
 page.on("request", (r) => hosts.add(new URL(r.url()).host));
 
 await page.goto("https://app.macet.eu/#/login");
-await page.waitForSelector("#mx_LoginForm_username", { timeout: 90000 });
+await page.waitForSelector(".mx_ServerPicker_server, .mx_Login_fullWidthButton, button:has-text('Continue')", { timeout: 90000 });
 const server = await page.locator(".mx_ServerPicker_server").innerText().catch(() => "");
 check("login: account provider chat.macet.eu", server.includes("chat.macet.eu"), server);
 check("login: bez tlačidla na zmenu homeservera", (await page.locator(".mx_ServerPicker_change").count()) === 0);
 check("login: homeserver dostupný (bez chyby pripojenia)", (await page.locator(".mx_Login_error").count()) === 0);
 await page.screenshot({ path: path.join(out, "1-login.png") });
-
-await page.fill("#mx_LoginForm_username", user);
-await page.fill("#mx_LoginForm_password", password);
-await page.click(".mx_Login_submit");
 try {
-    await page.waitForSelector(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel", { timeout: 120000 });
+    await loginViaMas(page, user, password);
 } catch (e) {
     await page.screenshot({ path: path.join(out, "2-after-login-FAIL.png") });
-    fs.writeFileSync(path.join(out, "after-login.txt"), await page.locator("body").innerText().catch(() => ""));
     throw e;
 }
-await page.waitForTimeout(8000);
+check("prihlásenie cez MAS (auth.macet.eu) → späť v appke", true, page.url());
+await page.waitForTimeout(6000);
 // zavri prípadné uvítacie/obnovovacie dialógy
 for (let i = 0; i < 3; i++) {
     const btn = page.locator(".mx_Dialog button:has-text('Skip'), .mx_Dialog button:has-text('Later'), .mx_Dialog button:has-text('Dismiss'), .mx_Dialog button:has-text('OK')");
@@ -49,7 +46,6 @@ for (let i = 0; i < 3; i++) {
     await page.keyboard.press("Escape").catch(() => {});
 }
 await page.screenshot({ path: path.join(out, "2-home.png") });
-check("prihlásenie do Element Web", (await page.locator("text=Kanál PSST").count()) > 0 || (await page.url()).includes("#/home") || (await page.url()).includes("#/room"), page.url());
 
 await page.locator("text=Kanál PSST").first().click({ timeout: 60000 });
 fs.writeFileSync(path.join(out, "ready"), "1");
