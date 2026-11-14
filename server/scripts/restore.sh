@@ -24,18 +24,17 @@ B="$(find "$WORK" -maxdepth 1 -type d -name 'psst-backup-*' | head -1)"
 [ -f .env ] && compose down --remove-orphans >/dev/null 2>&1 || true
 if [ "$FORCE" = "--force" ]; then
   log "--force: mažem existujúce dáta"
-  docker run --rm -v "$PWD/data:/d" docker.io/library/postgres:18.7-alpine sh -c 'rm -rf /d/postgres /d/synapse /d/ntfy /d/config /d/certbot'
+  docker run --rm -v "$PWD/data:/d" docker.io/library/postgres:18.7-alpine sh -c 'rm -rf /d/postgres /d/synapse /d/config /d/certbot'
 fi
 umask 077
 cp "$B/env" .env
 mkdir -p secrets; cp -R "$B/secrets/." secrets/
 load_env
-# konfigurácie a dáta čítajú kontajnery pod inými UID (Synapse 991, ntfy, nginx) → bežné práva 644/755
+# konfigurácie a dáta čítajú kontajnery pod inými UID (Synapse 991, Sygnal, nginx) → bežné práva 644/755
 umask 022
-mkdir -p data/synapse data/postgres data/certbot data/ntfy
+mkdir -p data/synapse data/postgres data/certbot
 chmod 700 data
 tar -C data -xzf "$B/config.tar.gz"
-[ -s "$B/ntfy.tar.gz" ] && tar -C data -xzf "$B/ntfy.tar.gz"
 [ -s "$B/letsencrypt.tar.gz" ] && tar -C data/certbot -xzf "$B/letsencrypt.tar.gz"
 if [ "$(id -u)" = 0 ]; then chown -R 65532:65532 secrets/mas; else chmod 755 secrets/mas; chmod 644 secrets/mas/*; fi
 
@@ -55,5 +54,5 @@ cmp -s "$B/signing.key" <(compose run --rm --no-deps -T --entrypoint cat synapse
 log "štartujem stack"
 compose up -d --remove-orphans
 wait_healthy synapse 300 || die "Synapse nenaštartoval"
-for svc in nginx ntfy element-call livekit lk-jwt-service; do wait_healthy "$svc" 120 || warn "$svc ešte nie je healthy"; done
+for svc in nginx element-call livekit lk-jwt-service; do wait_healthy "$svc" 120 || warn "$svc ešte nie je healthy"; done
 log "obnova hotová — overte: scripts/healthcheck.sh"

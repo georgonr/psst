@@ -12,14 +12,14 @@ note() { printf '  \033[33mWARN\033[0m  %s\n' "$*"; WARNS=$((WARNS + 1)); }
 [ "$QUIET" = 1 ] || echo "PSST healthcheck $(date -u +%FT%TZ)"
 
 # --- kontajnery
-for svc in postgres synapse mas ntfy livekit coturn lk-jwt-service element-call nginx; do
+for svc in postgres synapse mas livekit coturn lk-jwt-service element-call nginx; do
   cid="$(compose ps -q "$svc" 2>/dev/null || true)"
   if [ -z "$cid" ]; then bad "kontajner $svc nebeží"; continue; fi
   st="$(docker inspect -f '{{.State.Status}}{{if .State.Health}}/{{.State.Health.Status}}{{end}}' "$cid")"
   case "$st" in running|running/healthy) ok "kontajner $svc ($st)" ;; *) bad "kontajner $svc ($st)" ;; esac
 done
-if [ "${COMPOSE_PROFILES:-}" = apns ]; then
-  [ -n "$(compose ps -q sygnal 2>/dev/null)" ] && ok "kontajner sygnal (iOS push)" || bad "kontajner sygnal nebeží"
+if [ "${COMPOSE_PROFILES:-}" = sygnal ]; then
+  [ -n "$(compose ps -q sygnal 2>/dev/null)" ] && ok "kontajner sygnal (push brána FCM/APNs)" || bad "kontajner sygnal nebeží"
 fi
 
 # --- HTTPS cez nginx (domény → 127.0.0.1, ako keby prišli zvonka)
@@ -39,15 +39,19 @@ check "PSST web"                                    "https://$APP_DOMAIN/" "<htm
 check "Podmienky / Ochrana súkromia"                "https://$APP_DOMAIN/terms.html" "psst"
 get -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/privacy.html" | grep -q 200 && ok "privacy.html" || bad "privacy.html"
 check "Element Call"                                "https://$CALL_DOMAIN/" "<html"
-check "ntfy (UnifiedPush)"                          "https://$NTFY_DOMAIN/v1/health" '"healthy":true'
-check "ntfy Matrix push brána"                      "https://$NTFY_DOMAIN/_matrix/push/v1/notify" "unifiedpush"
+code="$(get -o /dev/null -w '%{http_code}' "https://$NTFY_DOMAIN/")"
+[ "$code" = 301 ] && ok "push doména len presmeruje (ntfy zrušený)" || bad "https://$NTFY_DOMAIN/ vrátil $code (očakávané 301)"
 get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/livekit/jwt/healthz" | grep -q 200 && ok "lk-jwt-service" || bad "lk-jwt-service (/livekit/jwt/healthz)"
 check "LiveKit SFU"                                 "https://$MATRIX_DOMAIN/livekit/sfu/" "OK"
 code="$(get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/_matrix/federation/v1/version")"
 [ "$code" = 404 ] && ok "federácia vypnutá (404)" || bad "federácia odpovedá ($code)"
-if [ "${COMPOSE_PROFILES:-}" = apns ]; then
+if [ "${COMPOSE_PROFILES:-}" = sygnal ]; then
   code="$(get -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' -d '{}' "https://$MATRIX_DOMAIN/_matrix/push/v1/notify")"
-  [ "$code" = 400 ] && ok "Sygnal odpovedá" || bad "Sygnal ($code)"
+  [ "$code" = 400 ] && ok "Sygnal odpovedá na chat…/_matrix/push/v1/notify" || bad "Sygnal ($code)"
+  if [ -s secrets/fcm/service-account.json ]; then
+    compose logs --no-log-prefix sygnal 2>/dev/null | grep -qiE "Unable to load|InvalidConfig|PushkinSetupException|service_account_file" \
+      && bad "Sygnal hlási chybu konfigurácie (compose logs sygnal)" || ok "Sygnal FCM v1 nakonfigurovaný"
+  fi
 fi
 
 # --- TURN/TLS na 443 (SNI turn.)

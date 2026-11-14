@@ -7,7 +7,6 @@
 #   synapse.dump / mas.dump   pg_dump -Fc oboch databáz (správy, miestnosti, účty, relácie)
 #   synapse-data.tar.gz       médiá (media_store) + PODPISOVÝ KĽÚČ Synapse
 #   signing.key               podpisový kľúč ešte raz samostatne
-#   ntfy.tar.gz               ntfy databázy (UnifiedPush registrácie)
 #   config.tar.gz             data/config (vyrenderované konfigurácie), letsencrypt.tar.gz (certifikáty)
 #   env, secrets/             .env a tajomstvá (MAS kľúče, APNs kľúč, admin token) — BEZ backup.pass
 # Rotácia: 7 denných, 4 týždenné (nedeľa), 6 mesačných (1. deň). Kontrolný súčet .sha256 vedľa archívu.
@@ -29,8 +28,7 @@ compose exec -T postgres pg_dump -U synapse -Fc mas > "$B/mas.dump"
 log "Synapse dáta (médiá, podpisový kľúč)"
 compose exec -T synapse tar -C /data -czf - . > "$B/synapse-data.tar.gz"
 compose exec -T synapse cat "/data/${MATRIX_DOMAIN}.signing.key" > "$B/signing.key"
-log "ntfy, konfigurácie, certifikáty, tajomstvá"
-tar -C data -czf "$B/ntfy.tar.gz" ntfy 2>/dev/null || warn "ntfy dáta sa nezálohovali"
+log "konfigurácie, certifikáty, tajomstvá (vrátane FCM/APNs kľúčov)"
 tar -C data -czf "$B/config.tar.gz" config
 tar -C data/certbot -czf "$B/letsencrypt.tar.gz" conf 2>/dev/null || warn "certifikáty sa nezálohovali"
 cp .env "$B/env"

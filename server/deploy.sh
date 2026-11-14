@@ -24,7 +24,8 @@
 #   6. certifikát Let's Encrypt pre všetky subdomény
 #   7. denné šifrované zálohy (cron) + healthcheck
 #
-# iOS push: nahrajte AuthKey_<KEY_ID>.p8 do server/secrets/apns/ a spustite deploy.sh znova.
+# Push: Android = FCM cez vlastný Sygnal → JSON kľúč service accountu Firebase do secrets/fcm/service-account.json;
+#       iOS = APNs → AuthKey_<KEY_ID>.p8 do secrets/apns/ (+ --apple-team-id). Potom deploy.sh znova.
 set -euo pipefail
 . "$(dirname "$0")/scripts/lib.sh"
 
@@ -67,7 +68,7 @@ APP_DOMAIN="${APP_DOMAIN:-app.${DOMAIN_BASE}}"
 CALL_DOMAIN="${CALL_DOMAIN:-call.${DOMAIN_BASE}}"
 # Produkcia má DNS len pre chat/app/call/push (viď DECISIONS D42):
 #  - MAS beží na ceste https://<MATRIX_DOMAIN>/auth/ (AUTH_PREFIX), nie na vlastnej subdoméne
-#  - ntfy (UnifiedPush + Matrix push brána) na push.<doména>
+#  - push.<doména>: bývalý ntfy, len presmerovanie na web (notifikácie idú cez FCM/APNs a Sygnal)
 #  - TURN/TLS zdieľa :443 s <CALL_DOMAIN> — nginx ho rozlíši podľa ALPN (TURN klient neposiela h2/http/1.1)
 # Samostatné subdomény sa dajú zapnúť cez .env (AUTH_DOMAIN=auth.… AUTH_PREFIX= TURN_DOMAIN=turn.…).
 AUTH_DOMAIN="${AUTH_DOMAIN:-${MATRIX_DOMAIN}}"
@@ -155,7 +156,7 @@ set_env() { # set_env KEY VALUE — prepíše/doplní hodnotu v .env
   else printf '%s=%s\n' "$1" "$2" >> .env; fi
 }
 umask 077
-mkdir -p data secrets secrets/mas secrets/apns
+mkdir -p data secrets secrets/mas secrets/apns secrets/fcm
 [ -f .env ] || { log "vytváram server/.env s novými tajomstvami"; printf '# PSST server — vygenerované %s. NECOMMITOVAŤ. Zálohovať!\n' "$(date -u +%FT%TZ)" > .env; }
 for k in $ENV_KEYS; do grep -q "^${k}=" .env || printf '%s=%s\n' "$k" "$(default_for "$k")" >> .env; done
 # hodnoty z príkazového riadka majú prednosť (zmena IP/e-mailu/Team ID pri opakovanom nasadení)
@@ -187,9 +188,9 @@ umask 022
 
 # ----------------------------------------------------------------- 3. render
 mkdir -p data/config/coturn data/config/synapse data/config/livekit data/config/nginx data/config/nginx-main \
-         data/config/element-call data/config/app-default/legal data/config/mas data/config/ntfy \
+         data/config/element-call data/config/app-default/legal data/config/mas \
          data/config/sygnal data/synapse data/postgres data/certbot/conf data/certbot/www \
-         data/ntfy/cache data/ntfy/lib
+
 chmod 700 data
 
 render() { # render <template> <output>
@@ -269,7 +270,6 @@ else
   sed -i.bak '/# >>> MAS_PATH/,/# <<< MAS_PATH/d' data/config/nginx/psst.conf
 fi
 rm -f data/config/nginx/psst.conf.bak
-render templates/ntfy/server.yml                data/config/ntfy/server.yml
 render templates/element-call/config.json       data/config/element-call/config.json
 render templates/app/config.json                data/config/app-default/config.json
 render templates/app/index.html                 data/config/app-default/index.html
@@ -287,26 +287,41 @@ mkdir -p data/config/app-default/.well-known
 render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
 render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
 
-# Sygnal (iOS push) — len ak je nahraný APNs kľúč a známe Team ID
+# Sygnal (vlastná push brána): Android cez FCM HTTP v1, iOS cez APNs — každé len ak je nahraný kľúč
 APNS_KEY="$(ls secrets/apns/AuthKey_*.p8 2>/dev/null | head -1 || true)"
-PROFILES=""
+FCM_KEY="secrets/fcm/service-account.json"
+PROFILES=""; SYG_APPS=""
+if [ -s "$FCM_KEY" ]; then
+  FCM_PROJECT="$(sed -n 's/.*"project_id": *"\([^"]*\)".*/\1/p' "$FCM_KEY" | head -1)"
+  [ -n "$FCM_PROJECT" ] || die "$FCM_KEY: chýba project_id (je to JSON kľúč service accountu Firebase?)"
+  # app_id = pusher app_id Android appky (BuildTimeConfig.PUSHER_APP_ID_RELEASE)
+  for app_id in ${ANDROID_PUSH_APP_IDS:-eu.macet.psst}; do
+    SYG_APPS+="$(printf '  %s:\n    type: gcm\n    api_version: v1\n    project_id: %s\n    service_account_file: /fcm/service-account.json\n ' "$app_id" "$FCM_PROJECT")"$'\n'
+  done
+  log "Android push: Sygnal → FCM HTTP v1 (Firebase projekt $FCM_PROJECT)"
+else
+  log "Android push: vypnutý (JSON kľúč service accountu Firebase do $FCM_KEY a spustite znova)"
+fi
 if [ -n "$APNS_KEY" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
   KEY_ID="$(basename "$APNS_KEY" .p8)"; KEY_ID="${KEY_ID#AuthKey_}"
-  {
-    sed '/__SYGNAL_APPS__/,$d' templates/sygnal/sygnal.yaml
-    # app_id podľa iOS appky: eu.macet.psst.ios.prod (Release, APNs production), .dev (Debug, sandbox)
-    for app_id in ${IOS_PUSH_APP_IDS:-eu.macet.psst.ios.prod eu.macet.psst.ios.dev}; do
-      platform=production; case "$app_id" in *.dev) platform=sandbox ;; esac
-      printf '  %s:\n    type: apns\n    keyfile: /apns/%s\n    key_id: %s\n    team_id: %s\n    topic: eu.macet.psst\n    platform: %s\n' \
-        "$app_id" "$(basename "$APNS_KEY")" "$KEY_ID" "$APPLE_TEAM_ID" "$platform"
-    done
-  } > data/config/sygnal/sygnal.yaml
-  chmod 644 "$APNS_KEY"
-  PROFILES="apns"
-  log "iOS push: Sygnal zapnutý (kľúč $KEY_ID, tím $APPLE_TEAM_ID)"
+  # app_id podľa iOS appky: eu.macet.psst.ios.prod (Release, APNs production), .dev (Debug, sandbox)
+  for app_id in ${IOS_PUSH_APP_IDS:-eu.macet.psst.ios.prod eu.macet.psst.ios.dev}; do
+    platform=production; case "$app_id" in *.dev) platform=sandbox ;; esac
+    SYG_APPS+="$(printf '  %s:\n    type: apns\n    keyfile: /apns/%s\n    key_id: %s\n    team_id: %s\n    topic: eu.macet.psst\n    platform: %s\n ' \
+      "$app_id" "$(basename "$APNS_KEY")" "$KEY_ID" "$APPLE_TEAM_ID" "$platform")"$'\n'
+  done
+  log "iOS push: Sygnal → APNs (kľúč $KEY_ID, tím $APPLE_TEAM_ID)"
 else
-  [ -n "$APNS_KEY" ] && warn "APNs kľúč je nahraný, ale chýba --apple-team-id → Sygnal sa nespustí"
-  log "iOS push: vypnutý (nahrajte secrets/apns/AuthKey_<KEY_ID>.p8 a spustite znova s --apple-team-id)"
+  [ -n "$APNS_KEY" ] && warn "APNs kľúč je nahraný, ale chýba --apple-team-id → iOS push vypnutý"
+  log "iOS push: vypnutý (secrets/apns/AuthKey_<KEY_ID>.p8 + --apple-team-id)"
+fi
+if [ -n "$SYG_APPS" ]; then
+  { sed '/__SYGNAL_APPS__/,$d' templates/sygnal/sygnal.yaml; printf '%s' "$SYG_APPS" | sed 's/^ $//'; } > data/config/sygnal/sygnal.tmp
+  install -m 644 data/config/sygnal/sygnal.tmp data/config/sygnal/sygnal.yaml; rm -f data/config/sygnal/sygnal.tmp
+  # Sygnal beží v kontajneri ako iný používateľ — kľúče musí vedieť čítať (adresár secrets/ ostáva 700)
+  [ -s "$FCM_KEY" ] && chmod 644 "$FCM_KEY"
+  [ -n "$APNS_KEY" ] && chmod 644 "$APNS_KEY"
+  PROFILES="sygnal"
 fi
 export COMPOSE_PROFILES="$PROFILES"
 # zapamätať profily pre ostatné skripty (members.sh, backup.sh, healthcheck.sh)
@@ -359,7 +374,7 @@ if [ -n "$CFG_BEFORE" ]; then
     case "$d" in
       nginx|nginx-main|app-default) RESTART+=" nginx" ;;
       synapse) RESTART+=" synapse lk-jwt-service" ;;
-      livekit|mas|coturn|element-call|ntfy|sygnal) RESTART+=" $d" ;;
+      livekit|mas|coturn|element-call|sygnal) RESTART+=" $d" ;;
     esac
   done
   RESTART="$(printf '%s\n' $RESTART | sort -u | tr '\n' ' ')"
@@ -408,7 +423,7 @@ CRON
 fi
 
 # pomalšie služby (prvý štart MAS robí migrácie DB)
-wait_healthy ntfy 90 || true; wait_healthy element-call 90 || true
+wait_healthy element-call 90 || true
 for _ in $(seq 60); do
   compose exec -T nginx wget -q -O /dev/null http://mas:8080/.well-known/openid-configuration 2>/dev/null && break; sleep 2
 done
