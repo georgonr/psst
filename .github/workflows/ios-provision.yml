@@ -12,12 +12,16 @@ permissions:
 
 jobs:
   provision:
-    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-26, xcode-27]
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     steps:
       - name: Select Xcode
         run: |
-          XCODE=$(ls -d /Applications/Xcode_26*.app | grep -v -i beta | sort -V | tail -1)
+          XCODE=$(ls -d /Applications/Xcode_2[67]*.app | grep -v -i beta | sort -V | tail -1)
           sudo xcode-select -s "$XCODE"; xcodebuild -version
 
       - name: Placeholder project
@@ -110,5 +114,5 @@ jobs:
           xcodebuild build -project PsstProvision.xcodeproj -scheme App -configuration Release \
             -destination 'generic/platform=iOS' -allowProvisioningUpdates \
             -authenticationKeyPath "$RUNNER_TEMP/AuthKey_$KEY_ID.p8" -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "$ISSUER_ID" 2>&1 | grep -vE '^\s*$' | tail -40
+            -authenticationKeyIssuerID "$ISSUER_ID" -verbose 2>&1 | grep -vE '^\s*$' | grep -iE 'error|warning|provision|auth|team|profile|certificate|DVT|http' | grep -v ExecuteExternalTool | tail -60
           rc=${PIPESTATUS[0]}; rm -rf "$RUNNER_TEMP"/*.p8 ~/.appstoreconnect; exit $rc
