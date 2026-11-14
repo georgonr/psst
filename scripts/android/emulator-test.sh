@@ -30,8 +30,27 @@ log() { echo "$*" | tee -a "$RESULT"; }
 fail() { log "FAIL: $*"; FAILED=1; }
 pass() { log "PASS: $*"; }
 
+dump_ui() { # dump_ui <name>: UI dump only
+  local name="$1"
+  adb shell uiautomator dump "/sdcard/${name}.xml" >/dev/null 2>&1 || adb shell uiautomator dump "/sdcard/${name}.xml" >/dev/null 2>&1
+  adb pull "/sdcard/${name}.xml" "$OUT/${name}.xml" >/dev/null 2>&1 || echo '<hierarchy/>' > "$OUT/${name}.xml"
+}
+
+dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over our app → tap "Wait"
+  local i xy
+  for i in 1 2 3; do
+    dump_ui _anr
+    $CHECK has "$OUT/_anr.xml" "isn't responding" || return 0
+    log "INFO: dismissing system ANR dialog"
+    xy="$($CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
+    # shellcheck disable=SC2086
+    adb shell input tap $xy; sleep 2
+  done
+}
+
 snap() { # snap <name>: UI dump + screenshot
   local name="$1"
+  dismiss_anr
   adb shell uiautomator dump "/sdcard/${name}.xml" >/dev/null 2>&1 || adb shell uiautomator dump "/sdcard/${name}.xml" >/dev/null 2>&1
   adb pull "/sdcard/${name}.xml" "$OUT/${name}.xml" >/dev/null 2>&1 || echo '<hierarchy/>' > "$OUT/${name}.xml"
   adb exec-out screencap -p > "$OUT/${name}.png"
