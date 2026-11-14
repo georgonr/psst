@@ -17,7 +17,7 @@ notifikácia so šifrovanou správou za 2 sekundy; prichádzajúci hovor prišie
 | 3 | Android fork | ✅ psst-android `84208b65`: variant `gplay` s FCM ako jediným providerom, brána náš Sygnal, UnifiedPush von. Podpísané APK (arm64, armv7, x86_64) + AAB tým istým kľúčom v `dist/android/`. |
 | 4 | Server | ✅ ntfy odstránený (kontajner, image, dáta, šablóna), `push.macet.eu` → 301 na app.macet.eu (staré endpointy 410). `deploy.sh`, `healthcheck.sh`, `backup.sh`, `restore.sh` upravené. Healthcheck na produkcii: OK, 0 varovaní. Stránka Ochrana súkromia prepísaná (Google FCM, čo Google vidí). |
 | 5 | Overenie | ✅ viď nižšie. Testovacie účty `qa-fcm` a `qa-sender` deaktivované. |
-| 6 | Záver | ✅ repo aj fork pushnuté, REPORT, DECISIONS, `server/README.md`, `DEPLOY-CHECKLIST.md`, `psst-server-notes.md` aktualizované. |
+| 6 | Záver | ✅ repo aj fork pushnuté, REPORT, DECISIONS, `server/README.md`, `DEPLOY-CHECKLIST.md`, `psst-server-notes.md` aktualizované. CI zelené: Android (gplay build + emulátor), Web+Desktop, server-smoke 17/17. |
 
 ## Test notifikácií (produkcia, emulátor API 33 s Google Play services 23.18, bez ntfy)
 
@@ -48,10 +48,14 @@ Poznámky k testu:
 
 Podpis: `3a6428cf51ee8f5e10e84fac5ca8a6b3c3b8c34d2674db0f2224d1d0097d3899` (rovnaký keystore).
 
+## CI opravy po pushi
+
+- server-smoke 2.1 padal (aj pred touto dávkou): test hľadal MAS na `auth.` subdoméne; teraz zistí adresu z `auth_metadata` (MAS na `/auth/`, D42).
+- Android emulátor test: systémový dialóg „Pixel Launcher isn't responding" na pomalom CI emulátore zakrýval appku; skript ho teraz zavrie.
+
 ## Čo ostáva
 
 - **Kto má APK z 13. 11., musí nainštalovať nové** — staré už notifikácie nedostane (D52). ntfy appku môže odinštalovať.
 - Neoverené na fyzickom telefóne (len emulátor); celoobrazovkové zvonenie hovoru neoverené.
-- CI workflow `android.yml` je prepnutý na `gplay`, ale po zmene ešte nebežal.
 - iOS push stále čaká na APNs kľúč (ten istý Sygnal).
 - Na serveri počúva port 25 (lokálny postfix z hardeningu) — zvonka je zatvorený firewallom.
