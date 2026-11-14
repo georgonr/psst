@@ -212,10 +212,12 @@ def c_reg_no_token():
     expect("access_token" not in r.text and r.status_code in (400, 401, 403, 404, 405), f"Synapse /register: {r.status_code} {r.text[:150]}")
     r2 = req("POST", f"{BASE}/_matrix/client/v3/register?kind=guest", json={})
     expect("access_token" not in r2.text, f"guest registrácia prešla: {r2.text[:150]}")
-    d = S.get(f"https://{os.environ.get('AUTH_DOMAIN', 'auth.macet.eu')}/.well-known/openid-configuration", timeout=10).json()
-    expect("create" in d.get("prompt_values_supported", []), f"prompt=create chýba: {d.get('prompt_values_supported')}")
+    # MAS môže byť na vlastnej subdoméne aj na ceste (chat…/auth/, D42) → adresu berieme z auth_metadata
     meta = S.get(f"{BASE}/_matrix/client/v1/auth_metadata", timeout=10).json()
-    expect(meta.get("issuer", "").startswith("https://auth."), f"auth_metadata issuer: {meta.get('issuer')}")
+    expect(meta.get("issuer", "").startswith("https://"), f"auth_metadata issuer: {meta.get('issuer')}")
+    expect("create" in meta.get("prompt_values_supported", []), f"prompt=create chýba: {meta.get('prompt_values_supported')}")
+    d = S.get(meta["issuer"].rstrip("/") + "/.well-known/openid-configuration", timeout=10).json()
+    expect(d.get("issuer") == meta["issuer"], f"discovery issuer {d.get('issuer')} != {meta['issuer']}")
     return f"Synapse /register {r.status_code}, guest {r2.status_code}, MAS issuer {meta['issuer']}, prompt=create"
 
 
