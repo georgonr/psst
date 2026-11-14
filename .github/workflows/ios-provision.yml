@@ -1,0 +1,103 @@
+# PSST iOS — one-off Apple Developer portal provisioning that the App Store Connect API cannot do itself:
+# registers the App Group group.eu.macet.psst, assigns it to eu.macet.psst(.nse/.shareextension) and enables
+# Communication Notifications. Xcode's automatic signing (with the ASC API key) does it while building a tiny
+# placeholder project with the same bundle IDs and entitlements. Nothing existing in the team is changed (D53).
+name: iOS provision (portal)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  provision:
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app | grep -v -i beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"; xcodebuild -version
+
+      - name: Placeholder project
+        run: |
+          brew install xcodegen >/dev/null
+          mkdir -p p/App p/NSE p/Share && cd p
+          echo 'import SwiftUI
+          @main struct PsstApp: App { var body: some Scene { WindowGroup { Text("psst") } } }' > App/App.swift
+          echo 'import UserNotifications
+          class NotificationService: UNNotificationServiceExtension {}' > NSE/NSE.swift
+          echo 'import UIKit
+          class ShareViewController: UIViewController {}' > Share/Share.swift
+          cat > project.yml <<'EOF'
+          name: PsstProvision
+          options: { deploymentTarget: { iOS: "17.0" } }
+          settings:
+            base:
+              DEVELOPMENT_TEAM: MHV67VMY8T
+              CODE_SIGN_STYLE: Automatic
+              GENERATE_INFOPLIST_FILE: YES
+              MARKETING_VERSION: "1.0"
+              CURRENT_PROJECT_VERSION: "1"
+          targets:
+            App:
+              type: application
+              platform: iOS
+              sources: [App]
+              dependencies: [{ target: NSE }, { target: Share }]
+              settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: eu.macet.psst } }
+              entitlements:
+                path: App/App.entitlements
+                properties:
+                  aps-environment: development
+                  com.apple.developer.associated-domains: [applinks:app.macet.eu]
+                  com.apple.developer.usernotifications.communication: true
+                  com.apple.security.application-groups: [group.eu.macet.psst]
+                  keychain-access-groups: [$(AppIdentifierPrefix)eu.macet.psst]
+            NSE:
+              type: app-extension
+              platform: iOS
+              sources: [NSE]
+              info:
+                path: NSE/Info.plist
+                properties:
+                  CFBundleDisplayName: NSE
+                  NSExtension: { NSExtensionPointIdentifier: com.apple.usernotifications.service, NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).NotificationService" }
+              settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: eu.macet.psst.nse } }
+              entitlements:
+                path: NSE/NSE.entitlements
+                properties:
+                  com.apple.security.application-groups: [group.eu.macet.psst]
+                  keychain-access-groups: [$(AppIdentifierPrefix)eu.macet.psst]
+            Share:
+              type: app-extension
+              platform: iOS
+              sources: [Share]
+              info:
+                path: Share/Info.plist
+                properties:
+                  CFBundleDisplayName: Share
+                  NSExtension: { NSExtensionPointIdentifier: com.apple.share-services, NSExtensionPrincipalClass: "$(PRODUCT_MODULE_NAME).ShareViewController", NSExtensionAttributes: { NSExtensionActivationRule: TRUEPREDICATE } }
+              settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: eu.macet.psst.shareextension } }
+              entitlements:
+                path: Share/Share.entitlements
+                properties:
+                  com.apple.security.application-groups: [group.eu.macet.psst]
+                  keychain-access-groups: [$(AppIdentifierPrefix)eu.macet.psst]
+          EOF
+          xcodegen
+
+      - name: Build with automatic signing (registers app group + capabilities)
+        working-directory: p
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          echo "$KEY_BASE64" | base64 --decode > "$RUNNER_TEMP/key.p8"
+          xcodebuild build -project PsstProvision.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/key.p8" -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" 2>&1 | grep -vE '^\s*$' | tail -40
+          rc=${PIPESTATUS[0]}; rm -f "$RUNNER_TEMP/key.p8"; exit $rc
