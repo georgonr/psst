@@ -295,3 +295,14 @@ port 5000 je iba v Docker sieti. Zálohy už neobsahujú ntfy, obsahujú FCM kľ
 
 **D52 — Dôsledok pre existujúce inštalácie:** APK z 13. 11. (UnifiedPush) po tejto zmene nedostáva notifikácie —
 treba nainštalovať nové APK (rovnaký podpis, dá sa nainštalovať cez staré). `versionCode` zostal 202611004.
+
+**D53 — Notifikácie na fyzických telefónoch (2026-11-14): server bol v poriadku, chyba bola v správaní appky.**
+Diagnostika: Synapse doručil každý push (Android → náš Sygnal → FCM, iPhone → brána Elementu na matrix.org), obe
+brány vrátili 200 bez odmietnutia a telefón sa po každom pushi do sekundy ozval na server. Firewall ani egress nič
+neblokuje, push pravidlá sú predvolené. Android do 08:13 nemal žiadny funkčný pusher (starý ntfy zanikol s ntfy, D52).
+V psst-android (fork) dve zmeny voči upstream Element X 26.11:
+- kanál pre správy má `IMPORTANCE_HIGH` (upstream `DEFAULT` = zvuk, ale žiadne vyskakovacie okno) a nové ID
+  `PSST_NOISY_NOTIFICATION_CHANNEL_ID_V3` — starý kanál sa zmaže, čím sa vynulujú aj stlmené nastavenia z inštalácie,
+- prichádzajúci hovor zvoní, ak appka do 12 s (upstream 3 s) zistí aktívny hovor v miestnosti; ak to nestihne,
+  zvoní, kým samotné zvonenie neexpiruje (max. 30 s). Na lacných telefónoch appka spustená pushom 3 s nestihla
+  a hovor sa zobrazil len ako bežná notifikácia „📹 Incoming call".

@@ -1,35 +1,36 @@
 #!/usr/bin/env python3
 """Produkcia: qa-sender vytvorí E2EE DM s príjemcom a pošle správu (test push notifikácií).
    prod_push_send.py <recipient-localpart> [invite|message <room_id>|call <room_id>]"""
-import asyncio, json, secrets, sys, tempfile, time
+import asyncio, json, os, secrets, sys, tempfile, time
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HS = "https://chat.macet.eu"
+SENDER = os.environ.get("PSST_SENDER", "qa-ring")
 
 async def main(rcpt, mode="invite", room=None):
     from nio import AsyncClient, AsyncClientConfig, RoomPreset
-    pw = json.loads((ROOT / ".prod-test-accounts.json").read_text())["qa-sender"]
+    pw = json.loads((ROOT / ".prod-test-accounts.json").read_text())[SENDER]
     store = ROOT / ".prod-nio-store"; store.mkdir(exist_ok=True)
-    c = AsyncClient(HS, "@qa-sender:chat.macet.eu", store_path=str(store), config=AsyncClientConfig(encryption_enabled=True),
+    c = AsyncClient(HS, "@" + SENDER + ":chat.macet.eu", store_path=str(store), config=AsyncClientConfig(encryption_enabled=True),
                     ssl=__import__("ssl").create_default_context(cafile=__import__("certifi").where()))
     sess = store / "session.json"
     if sess.exists():
         s = json.loads(sess.read_text()); c.restore_login(s["user_id"], s["device_id"], s["access_token"])
     else:
         import requests  # nio pri 429 ticho čaká; prihlásenie spravíme priamo a výsledok uložíme
-        r = requests.post(HS + "/_matrix/client/v3/login", json={"type": "m.login.password", "identifier": {"type": "m.id.user", "user": "qa-sender"}, "password": pw, "initial_device_display_name": "push-test"}, timeout=30)
+        r = requests.post(HS + "/_matrix/client/v3/login", json={"type": "m.login.password", "identifier": {"type": "m.id.user", "user": SENDER}, "password": pw, "initial_device_display_name": "push-test"}, timeout=30)
         print("login", r.status_code, r.text[:120] if r.status_code != 200 else "", file=sys.stderr); r.raise_for_status()
         j = r.json(); sess.write_text(json.dumps(j)); c.restore_login(j["user_id"], j["device_id"], j["access_token"])
     print('logged in', file=sys.stderr)
     r = await c.sync(timeout=3000, full_state=True); print('synced', type(r).__name__, file=sys.stderr)
     if c.should_upload_keys: await c.keys_upload()
     if mode == "invite":
-        r = await c.room_create(is_direct=True, invite=[f"@{rcpt}:chat.macet.eu"], preset=RoomPreset.trusted_private_chat, name="FCM test")
+        r = await c.room_create(is_direct=True, invite=[f"@{rcpt}:chat.macet.eu"], preset=RoomPreset.trusted_private_chat, name="PSST test")
         print("ROOM", r.room_id)
     elif mode == "message":
         await c.sync(timeout=3000)
         if c.should_query_keys: await c.keys_query()
-        text = "FCM test " + secrets.token_hex(3)
+        text = "PSST test " + secrets.token_hex(3)
         await c.room_send(room, "m.room.message", {"msgtype": "m.text", "body": text}, ignore_unverified_devices=True)
         print("SENT", text)
     elif mode == "call":
