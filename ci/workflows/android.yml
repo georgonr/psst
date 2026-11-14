@@ -34,7 +34,7 @@ env:
 
 jobs:
   apk:
-    name: Unsigned release APKs (fdroid, per ABI)
+    name: Unsigned release APKs (gplay = FCM, per ABI)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     outputs:
@@ -74,32 +74,32 @@ jobs:
           grep -E '^android_gradle_plugin|^kotlin =' gradle/libs.versions.toml
           grep -E 'COMPILE_SDK =|TARGET_SDK =|MIN_SDK_FOSS =|BUILD_TOOLS_VERSION =' plugins/src/main/kotlin/Versions.kt
           ls "$ANDROID_HOME/build-tools" "$ANDROID_HOME/ndk" 2>/dev/null || true
-      - name: Assemble unsigned fdroid release APKs
-        run: ./gradlew :app:assembleFdroidRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: Assemble unsigned gplay release APKs
+        run: ./gradlew :app:assembleGplayRelease $CI_GRADLE_ARG_PROPERTIES
       - name: List outputs
         run: |
-          ls -la app/build/outputs/apk/fdroid/release/
-          cat app/build/outputs/apk/fdroid/release/output-metadata.json || true
+          ls -la app/build/outputs/apk/gplay/release/
+          cat app/build/outputs/apk/gplay/release/output-metadata.json || true
           ls "$ANDROID_HOME/ndk" 2>/dev/null || true
       - name: Upload unsigned APKs
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: psst-android-apks-unsigned
           path: |
-            app/build/outputs/apk/fdroid/release/*.apk
-            app/build/outputs/apk/fdroid/release/output-metadata.json
+            app/build/outputs/apk/gplay/release/*.apk
+            app/build/outputs/apk/gplay/release/output-metadata.json
           if-no-files-found: error
           retention-days: 30
       - name: Upload x86_64 APK for the emulator job
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: psst-android-x86_64-unsigned
-          path: app/build/outputs/apk/fdroid/release/app-fdroid-x86_64-release-unsigned.apk
+          path: app/build/outputs/apk/gplay/release/app-gplay-x86_64-release-unsigned.apk
           if-no-files-found: error
           retention-days: 5
 
   aab:
-    name: Unsigned release AAB (fdroid)
+    name: Unsigned release AAB (gplay = FCM)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -127,15 +127,15 @@ jobs:
           java-version: '21'
       - name: Configure Gradle
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
-      - name: Bundle unsigned fdroid release AAB
-        run: ./gradlew :app:bundleFdroidRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: Bundle unsigned gplay release AAB
+        run: ./gradlew :app:bundleGplayRelease $CI_GRADLE_ARG_PROPERTIES
       - name: List outputs
-        run: ls -la app/build/outputs/bundle/fdroidRelease/
+        run: ls -la app/build/outputs/bundle/gplayRelease/
       - name: Upload unsigned AAB
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: psst-android-aab-unsigned
-          path: app/build/outputs/bundle/fdroidRelease/*.aab
+          path: app/build/outputs/bundle/gplayRelease/*.aab
           if-no-files-found: error
           retention-days: 30
 
@@ -167,7 +167,7 @@ jobs:
           PASS="$(openssl rand -hex 16)"
           keytool -genkeypair -keystore "$RUNNER_TEMP/throwaway.jks" -storepass "$PASS" -keypass "$PASS" \
             -alias throwaway -keyalg RSA -keysize 2048 -validity 2 -dname "CN=psst CI throwaway" >/dev/null
-          "$BT/zipalign" -p -f 4 apk/app-fdroid-x86_64-release-unsigned.apk apk/aligned.apk
+          "$BT/zipalign" -p -f 4 apk/app-gplay-x86_64-release-unsigned.apk apk/aligned.apk
           "$BT/apksigner" sign --ks "$RUNNER_TEMP/throwaway.jks" --ks-pass "pass:$PASS" --ks-key-alias throwaway \
             --out apk/psst-x86_64-ci.apk apk/aligned.apk
           "$BT/apksigner" verify apk/psst-x86_64-ci.apk

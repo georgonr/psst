@@ -1,99 +1,57 @@
-# PSST — report (2026-11-13/14, štvrtá dávka: produkcia na PSST serveri)
+# PSST — report (2026-11-14, piata dávka: Android notifikácie cez Google FCM)
 
-Predchádzajúce reporty sú v git histórii. Detaily servera: `~/proj/psst-server-notes.md`.
-Rozhodnutia tejto dávky: DECISIONS D42–D46.
+Predchádzajúce reporty sú v git histórii. Rozhodnutia tejto dávky: DECISIONS D47–D52. Server: `~/proj/psst-server-notes.md`.
 
 ## Verdikt
 
-**Áno — ráno sa môžete pripojiť.** Celý stack beží naostro na `chat.macet.eu` (Hetzner CX33, Helsinki)
-s platnými Let's Encrypt certifikátmi. Všetko z bodu 7 je overené na produkcii: web s brandingom
-a prihlásenie admina, registrácia pozvánkovým tokenom (web aj Android), šifrované správy, skupina, kanál,
-súbor, Android notifikácia cez push.macet.eu, macOS desktop, hovory 1:1 aj skupinové, aj len cez TURN/TLS
-na 443. Federácia a verejná registrácia sú zvonka zamietnuté, TLS má A+/A. Testovacie účty sú
-deaktivované, admin `geo` a jeden pozvánkový token pre člena zostali.
+**Hotovo: Android appka dostáva notifikácie cez Google FCM a náš vlastný Sygnal, bez akejkoľvek druhej appky.**
+Overené na produkcii v emulátore s Google Play services: pri ukončenej appke a vypnutej obrazovke prišla
+notifikácia so šifrovanou správou za 2 sekundy; prichádzajúci hovor prišiel ako notifikácia. ntfy je zo servera preč.
 
 ## Stav po bodoch
 
 | # | Bod | Stav |
 |---|---|---|
-| 0 | Druhá session | ✅ Čakal som, kým nebola hotová (DEPLOY-CHECKLIST.md, `~/psst` preč, posledný commit 20:35, kontrola o 20:54). Body 1–2 som robil počas čakania. |
-| 1 | Spevnenie servera | ✅ swap 4 GB (swappiness 10), sysctl (rp_filter, redirecty, syncookies, kptr/dmesg_restrict, fs.protected_*), odstránené snapd/apport/lxd/multipath/iscsi/open-vm-tools/pollinate (+ atd, motd-news, cloud-init hotplug), AIDE (denne), ClamAV (týždenne), auditd (20 pravidiel), systémový healthcheck (denne) + healthcheck stacku (každých 10 min), logrotate, žiadne externé notifikácie. **Docker neobchádza UFW**: `daemon.json` (`ip 127.0.0.1`, no-new-privileges, live-restore, logy 20m×5) + reťazec `DOCKER-USER`. |
-| 2 | DNS | ✅ chat/app/call/push.macet.eu → 204.168.160.131 cez 1.1.1.1 aj 8.8.8.8 (už o 18:28). |
-| 3 | Push doména | ✅ Druhá session použila `ntfy.macet.eu` → **všade zmenené na `push.macet.eu`** (server stack, Android fork `73d2171d`, dokumentácia). Repo potrebovalo aj `auth.` a `turn.macet.eu`, ktoré v DNS nie sú → MAS na `chat.macet.eu/auth/`, TURN/TLS na `call.macet.eu:443` podľa ALPN (D42). |
-| 4 | Nasadenie | ✅ `deploy.sh` → Synapse, Postgres, MAS, LiveKit + lk-jwt, Element Call, Element Web, ntfy, coturn, nginx, Let's Encrypt (4 domény, ECDSA), zálohy (cron 03:17), healthcheck. Sygnal sa spustí až s APNs kľúčom. Federácia vypnutá, registrácia len tokenom. Tajomstvá vygenerované na serveri. **Šifrovaná záloha a obnova otestované naostro** (zhodný podpisový kľúč aj účty, healthcheck OK). |
-| 5 | Účty | ✅ admin `geo` (jediný MAS admin) + 1 pozvánkový token (1 použitie, platný do 13. 12. 2026) → `~/proj/psst-admin.txt` (600). |
-| 6 | Appky | ✅ Push doména sa zmenila → **Android prebuildovaný** (arm64, armv7, x86_64 + AAB, podpísané, v dexe overené `push.macet.eu`). Web/desktop/Windows netreba: homeserver je rovnaký a MAS sa zisťuje dynamicky → existujúce buildy ponechané. |
-| 7 | Overenie naostro | ✅ všetko — viď tabuľku nižšie. |
-| 8 | Záver | ✅ commit + push repa a Android forku, aktualizované `psst-server-notes.md`, tento report. |
+| 1 | Firebase | ✅ firebase-tools 15.36 + gcloud 593 (v `~/.local`). Projekt `psst-macet` (č. 5949287930), Android appka `eu.macet.psst` (`1:5949287930:android:1866646413fdbb5d908843`), `google-services.json` v `~/psst-keys`. Service account `sygnal-fcm@psst-macet.iam.gserviceaccount.com` (len FCM), kľúč: server `/opt/psst/server/secrets/fcm/service-account.json` (600 root) + `~/psst-keys/sygnal-fcm-sa.json` (600). Analytics/Crashlytics nezapnuté; ~30 automaticky zapnutých API vypnutých; API kľúč obmedzený (D48). |
+| 2 | Sygnal | ✅ FCM HTTP v1 (`type: gcm, api_version: v1`), `https://chat.macet.eu/_matrix/push/v1/notify` (GET 405, POST {} 400 = Sygnal odpovedá). Pusher `event_id_only`. Žiadny nový port: zvonka 22, 80, 443, 7881 otvorené; 3478, 5000, 5432, 7880, 8008, 8081, 8448, 25 zatvorené. |
+| 3 | Android fork | ✅ psst-android `84208b65`: variant `gplay` s FCM ako jediným providerom, brána náš Sygnal, UnifiedPush von. Podpísané APK (arm64, armv7, x86_64) + AAB tým istým kľúčom v `dist/android/`. |
+| 4 | Server | ✅ ntfy odstránený (kontajner, image, dáta, šablóna), `push.macet.eu` → 301 na app.macet.eu (staré endpointy 410). `deploy.sh`, `healthcheck.sh`, `backup.sh`, `restore.sh` upravené. Healthcheck na produkcii: OK, 0 varovaní. Stránka Ochrana súkromia prepísaná (Google FCM, čo Google vidí). |
+| 5 | Overenie | ✅ viď nižšie. Testovacie účty `qa-fcm` a `qa-sender` deaktivované. |
+| 6 | Záver | ✅ repo aj fork pushnuté, REPORT, DECISIONS, `server/README.md`, `DEPLOY-CHECKLIST.md`, `psst-server-notes.md` aktualizované. |
 
-## Výsledky testov (produkcia, skutočné DNS a certifikáty)
+## Test notifikácií (produkcia, emulátor API 33 s Google Play services 23.18, bez ntfy)
 
-| Test | Výsledok |
+| Krok | Výsledok |
 |---|---|
-| `tests/server/prod_test.py`: TLS, federácia (3 endpointy 404 + port 8448 zavretý), admin API zvonka 404, Synapse `/register` 403, hosť 403, MAS issuer, MAS registrácia vyžaduje token, zlé heslo 403, 2× login, **E2EE DM** (na serveri len `m.room.encrypted`), **skupina**, **verejný kanál** (adresár bez prihlásenia 401, pripojenie cez alias), **šifrovaný súbor** (na serveri len blob, SHA-256 zhoda) | **24/24** |
-| Web: app.macet.eu — titulok psst, PSST logo, prihlásenie **admina geo** cez MAS (`@geo:chat.macet.eu`) | **4/4** |
-| Web: registrácia tokenom (platný jednorazový ✓, znova ✗, neplatný ✗, viacnásobný ✓) | **4/4** |
-| Web: login cez MAS, zamknutý homeserver, prijatá E2EE správa z iného klienta, žiadne požiadavky mimo *.macet.eu | **7/7** |
-| **Android APK v emulátore**: prihlásenie na chat.macet.eu (MAS v Custom Tab), pusher `https://push.macet.eu/_matrix/push/v1/notify`, notifikácia pozvánky, **notifikácia so šifrovanou správou (dešifrovaný text)**, správa v miestnosti | ✅ |
-| **Android registrácia** tokenom: Create account → formulár → token → meno → súhlas → späť v appke | ✅ |
-| **macOS desktop** (psst.app z dist): štart, chat.macet.eu, Pokračovať → MAS, prihlásenie + súhlas → callback → prihlásený `@qa-hana` | **6/6** |
-| **Hovor 1:1** (DM, Element Call cez LiveKit) | **5/5** (médiá UDP) |
-| **Skupinový hovor** (miestnosť s 3 členmi) | **5/5** |
-| **Hovor len cez TURN/TLS na 443** (relay-only) — 2× (pred aj po sprísnení šifier) | **6/6**, `relayProtocol=tls`, coturn potvrdil spojenia z nginx |
-| Federácia zvonka / verejná registrácia | zamietnuté (viď prod_test) |
-| SSL Labs (`publish=off`, pred aj po sprísnení šifier) | chat **A+**, app **A+**, push **A+**, call **A** (bez varovaní) |
-| testssl.sh 3.2 | chat.macet.eu **A+** (96) pred sprísnením šifier; po sprísnení CBC odmietnuté (LUCKY13 varovanie zmizne) |
-| Sken portov IPv4 — všetkých 65 535 TCP (TCP connect z Macu + nmap 7.98) | otvorené **len 22, 80, 443, 7881**; 8448 a ostatné filtrované. UDP: 3478, 5349, 53, 123, 19302, 49160+ neodpovedajú; 7882/udp prenáša médiá hovorov (`prflx/udp`) |
-| Sken portov IPv6 (TCP connect, všetkých 65 535 portov z Macu) | otvorený **len 22** |
-| Záloha → obnova `--force` na produkcii | ✅ podpisový kľúč (SHA-256) zhodný, účty aj tokeny zhodné, healthcheck 0 varovaní |
-| `scripts/healthcheck.sh` | OK, 0 varovaní |
+| Inštalácia nového APK, prihlásenie `qa-fcm` cez MAS | ✅ appka sa nepýtala na žiadnu ďalšiu appku ani distribútora |
+| Pusher v Synapse | `eu.macet.psst`, `https://chat.macet.eu/_matrix/push/v1/notify`, `event_id_only` |
+| Appka ukončená (žiadny proces), obrazovka vypnutá → šifrovaná správa z `qa-sender` | ✅ notifikácia **za 2 s**, „FCM test: qa-sender — FCM test 06b107" (dešifrované v zariadení) |
+| Cesta | Synapse → Sygnal 200 → FCM (message id) → Google Play services → appka |
+| Prichádzajúci hovor (qa-sender zavolal z app.macet.eu, appka ukončená) | ✅ notifikácia „📹 Incoming call" |
+| Obsah APK | FCM áno; `org/unifiedpush` 0; analytics/measurement/crashlytics SDK 0; `push.macet.eu` 0; matrix.org brána 0 |
 
-Testovacie účty (qa-*, reg*) sú **deaktivované** a testovacie tokeny zrušené. Pri testoch som dočasne uvoľnil
-rate-limit prihlásení v MAS (testy idú z jednej IP), potom vrátil. Produkčný limit funguje (429 / „too many
-requests" som videl naživo).
+Poznámky k testu:
+- Emulátor nemá nastavený PIN, „zamknutá" = vypnutá obrazovka so swipe zámkom.
+- Hovor prišiel ako bežná notifikácia, **nie ako celoobrazovkové zvonenie** — to som nevidel a neoveroval ďalej.
+- Prvý pokus nedorazil: spojenie Google Play services s FCM v emulátore bolo po noci mŕtve; po obnovení siete
+  dorazili aj čakajúce správy. Na strane servera a Googlu bolo doručenie v poriadku od začiatku.
+- Pri teste sa odhalila chyba v mojom nasadzovacom príkaze (`rsync --exclude app` vynechal aj `templates/app`) — opravené.
 
-## Chyby nájdené a opravené pri nasadení
+## Artefakty (`~/proj/psst/dist/android/`)
 
-| # | Chyba | Oprava |
-|---|---|---|
-| 1 | `deploy.sh`: certbot `certonly` sa nikdy nespustil (služba má entrypoint s renew slučkou → visel 12 h) | `--entrypoint certbot` |
-| 2 | `backup.sh`: každá záloha na Linuxe skončila „overenie zlyhalo" (`tar | grep -q` + pipefail → SIGPIPE) | zoznam najprv do premennej |
-| 3 | `deploy.sh`: zmena konfigurácie sa neprejavila (render cez `mv` → bind mount jedného súboru drží starý inode) | zápis na mieste + reštart služieb so zmenenou konfiguráciou (overené) |
-| 4 | pre-flight hlásil obsadené porty (s `userland-proxy: false` ich drží `dockerd`, nie `docker-proxy`) | akceptuje dockerd/coturn |
-| 5 | Repo očakávalo 6 subdomén (auth/ntfy/turn) — DNS má 4 | MAS na `/auth/`, ntfy → push, TURN podľa ALPN na call (D42) |
-| 6 | Docker by verejne publikoval aj omylom pridané porty (obchádza UFW) | `daemon.json ip=127.0.0.1` + `DOCKER-USER` + explicitné `0.0.0.0:` len pre 4 porty |
-| 7 | UFW by zablokoval nginx → coturn (host sieť) | interné pravidlo 172.30.0.0/24 → 172.30.0.1:3478/tcp |
-| 8 | TLS 1.2 ponúkal CBC/CAMELLIA/ARIA (nginx default) | Mozilla intermediate (ECDHE + AEAD) pre HTTPS aj TURN/TLS |
-| 9 | Testy predpokladali `auth.macet.eu` a lokálny stack; nio bez CA bundle (macOS Python) | `MAS_URL_RE`, `PSST_HOST_IP`, `PSST_PROD=1`, certifi; nové `prod_test.py`, `admin-login-test.mjs`, `desktop/prod-login-test.mjs` |
+| Súbor | SHA-256 |
+|---|---|
+| `psst-26.11.0-arm64-v8a.apk` (telefóny) | `3426a6d7e45465a77b5b0eb35d78c817d988589ea04e1f0404c92dc68c82506e` |
+| `psst-26.11.0-armeabi-v7a.apk` | `83290d8e667738bd65e5067b22aa7bb6ad39f6fd21f4db1e93ca6c55556ed776` |
+| `psst-26.11.0-x86_64.apk` | `bcafca757a486346ce447747db04b069723d50ec682a8aea5da3dbd9a5d0c86f` |
+| `psst-26.11.0.aab` | `e0d4ad94abe3c958c1e4c3d614f9e2a058c6357a75d0c67aba503c95e1dc9f1a` |
 
-## Appky na stiahnutie (`~/proj/psst/dist/`)
+Podpis: `3a6428cf51ee8f5e10e84fac5ca8a6b3c3b8c34d2674db0f2224d1d0097d3899` (rovnaký keystore).
 
-| Platforma | Súbor | SHA-256 |
-|---|---|---|
-| **Android** (väčšina telefónov) | `dist/android/psst-26.11.0-arm64-v8a.apk` | `0c9bfb4c45e9f5cf36933b50188801dbc94fd628f3eecefe7226f4a61ae8b605` |
-| Android (staré 32-bit) | `dist/android/psst-26.11.0-armeabi-v7a.apk` | `141382659c6ddd2fe7afba4935f73490aecab49cdce80fd2a0ee872b2bfbdb0e` |
-| **Windows** | `dist/desktop/psst-1.12.35-windows.msi` (alebo `…-windows-setup.exe`) | `fef410a647ac25f1cfa6208bbcb3638ed483b82dfe34fbe2fb586d2c6632cc4b` |
-| **macOS** (Intel + Apple Silicon) | `dist/desktop/psst-1.12.35-universal.dmg` | `ee143d552a653b3567945cb31ec23a419183c76c80d8519d7c47a341e85ef33f` |
+## Čo ostáva
 
-Ďalšie: `psst-26.11.0-x86_64.apk` (emulátor), `psst-26.11.0.aab` (Play), `psst-1.12.35-universal-mac.zip`,
-`psst-web.tar.gz`; všetko v `dist/SHA256SUMS.txt`. Android podpis `3a6428cf…7d3899`. Desktop nie je podpísaný
-Apple/Windows certifikátom → macOS: pravý klik → Otvoriť; Windows: SmartScreen „Viac informácií → Spustiť".
-
-**Android notifikácie:** nainštalovať aj appku **ntfy** (F-Droid/GitHub), v nej *Settings → Default server*
-= `https://push.macet.eu`, vypnúť optimalizáciu batérie pre ntfy.
-
-## Prihlasovacie údaje
-
-`~/proj/psst-admin.txt` (chmod 600, mimo repa): admin **geo** + heslo, pozvánkový token pre ďalšieho člena.
-Heslo k zálohám je len na serveri: `ssh psst sudo cat /opt/psst/server/secrets/backup.pass`.
-
-## Čo ostáva otvorené
-
-- **Zálohy sú len na tom istom serveri** — nastaviť kópiu mimo (`BACKUP_RSYNC_TARGET`) a uložiť heslovú frázu mimo servera.
-- iOS: Apple Developer účet (podpis, TestFlight, APNs → Sygnal). Podpis desktopu (Developer ID, Windows cert).
-- Voliteľne DNS: CAA `0 issue "letsencrypt.org"`; samostatné `auth.`/`turn.macet.eu` nie sú potrebné.
-- call.macet.eu má v SSL Labs A (nie A+): klient bez ALPN dostane TURN/TLS listener (bez HSTS hlavičky) — dôsledok D42.
-- Pri teste desktopu sa na Macu mohli v predvolenom prehliadači otvoriť karty s prihlásením MAS (appka volá
-  `shell.openExternal`) — môžete ich zavrieť.
-- Emulátor `psst33`: zo `/system/etc/hosts` som odstránil staré mapovanie *.macet.eu → 10.0.2.2 (lokálny stack);
-  pre lokálne testy ho treba vrátiť.
+- **Kto má APK z 13. 11., musí nainštalovať nové** — staré už notifikácie nedostane (D52). ntfy appku môže odinštalovať.
+- Neoverené na fyzickom telefóne (len emulátor); celoobrazovkové zvonenie hovoru neoverené.
+- CI workflow `android.yml` je prepnutý na `gplay`, ale po zmene ešte nebežal.
+- iOS push stále čaká na APNs kľúč (ten istý Sygnal).
+- Na serveri počúva port 25 (lokálny postfix z hardeningu) — zvonka je zatvorený firewallom.

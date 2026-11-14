@@ -1,7 +1,7 @@
 # PSST server
 
 > Produkcia (od 2026-11-13): DNS len pre `chat`, `app`, `call`, `push`.macet.eu — MAS na `https://chat.macet.eu/auth/`,
-> ntfy na `push.macet.eu`, TURN/TLS zdieľa :443 s `call.macet.eu` (DECISIONS D42–D45).
+> `push.macet.eu` len presmeruje na web (ntfy zrušený, D47), TURN/TLS zdieľa :443 s `call.macet.eu` (DECISIONS D42–D45).
 
 Súkromný Matrix server pre PSST — jeden `docker compose` projekt, nasadenie jedným príkazom.
 **Deň nasadenia krok za krokom: [DEPLOY-CHECKLIST.md](DEPLOY-CHECKLIST.md).**
@@ -21,8 +21,7 @@ sudo ./deploy.sh <IP_SERVERA> <EMAIL> [--contact "…"] [--hosting "…"] [--app
 | lk-jwt-service | `ghcr.io/element-hq/lk-jwt-service:0.10.0` | chat.macet.eu/livekit/jwt | MatrixRTC autorizácia |
 | coturn | `coturn/coturn:4.18.0` (host sieť) | call.macet.eu:443 (TLS cez nginx, rozlíšené podľa ALPN) | TURN pre siete bez UDP; relay len na vlastnú SFU; 3478/udp sa nepublikuje |
 | Element Call | `ghcr.io/element-hq/element-call:v0.28.2` | call.macet.eu | samostatná web appka hovorov |
-| ntfy | `binwiederhier/ntfy:v2.37.2` | push.macet.eu | Android notifikácie (UnifiedPush + Matrix push brána) |
-| Sygnal | `matrixdotorg/sygnal:v0.15.1` (profil `apns`) | chat.macet.eu/_matrix/push/v1/notify | iOS notifikácie (APNs) — po nahraní kľúča |
+| Sygnal | `matrixdotorg/sygnal:v0.15.1` (profil `sygnal`) | chat.macet.eu/_matrix/push/v1/notify (len cez nginx) | vlastná push brána: Android → FCM HTTP v1, iOS → APNs |
 | nginx | `nginx:1.30.6-alpine` | 80, 443 | TLS, SNI smerovanie (stream), reverzná proxy, PSST web, právne stránky |
 | certbot | `certbot/certbot:v5.10.0` | — | Let's Encrypt (obnova 2× denne) |
 
@@ -37,8 +36,8 @@ Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets
 | `deploy.sh <IP> <email>` | pre-flight (Docker, DNS 6 subdomén, porty, disk, RAM) → hardening → tajomstvá → konfigurácie → štart → Let's Encrypt → cron |
 | `scripts/harden.sh` | admin používateľ `psst` so SSH kľúčom, SSH len kľúčom, root login vypnutý (len ak kľúč existuje), UFW, fail2ban, unattended-upgrades |
 | `scripts/members.sh` | `invite [počet] [dni]`, `list`, `block <meno> [--deactivate]`, `unblock`, `admin <meno>`, `password <meno>` |
-| `scripts/healthcheck.sh` | kontajnery, všetky HTTPS endpointy, MAS, ntfy, Sygnal, TURN/TLS handshake, certifikát, disk, vek zálohy |
-| `scripts/backup.sh` | šifrovaná záloha (AES-256, PBKDF2) — DB synapse + mas, médiá, **podpisový kľúč**, ntfy, konfigurácie, certifikáty, tajomstvá; rotácia 7/4/6; cron denne 03:17 |
+| `scripts/healthcheck.sh` | kontajnery, všetky HTTPS endpointy, MAS, Sygnal (FCM/APNs), TURN/TLS handshake, certifikát, disk, vek zálohy |
+| `scripts/backup.sh` | šifrovaná záloha (AES-256, PBKDF2) — DB synapse + mas, médiá, **podpisový kľúč**, konfigurácie, certifikáty, tajomstvá; rotácia 7/4/6; cron denne 03:17 |
 | `scripts/restore.sh <archív.enc> [--force]` | obnova (aj na nový server); overí zhodu podpisového kľúča |
 | `scripts/fetch-web.sh` | stiahne PSST web (posledný GitHub release) do `app/` za chodu |
 
@@ -50,10 +49,10 @@ psst (Android, iOS, web, desktop) ťukne **Create account** → stránka MAS →
 
 ## Notifikácie
 
-- **Android:** UnifiedPush cez vlastný ntfy. Člen si nainštaluje appku ntfy (F-Droid/GitHub), nastaví
-  *Default server* `https://push.macet.eu` a vypne optimalizáciu batérie. Žiadny Google ani Element.
-  ntfy povoľuje anonymne len náhodné témy `up*` (ostatné `deny-all`). Obsah správ sa do push neposiela
-  (`push.include_content: false`), len ID udalosti.
+- **Android:** Firebase Cloud Messaging (Firebase projekt `psst-macet`, zapnutý len messaging) cez **vlastný Sygnal**
+  (FCM HTTP v1). Kľúč service accountu: `secrets/fcm/service-account.json` (600 root) — `deploy.sh` potom Sygnal
+  zapne sám (app_id `eu.macet.psst`). Appka nepotrebuje žiadnu ďalšiu appku. Cez Google ide len ID udalosti,
+  ID miestnosti a počet neprečítaných (`event_id_only`, `push.include_content: false`) — nie obsah, ani šifrovaný.
 - **iOS:** Sygnal → APNs. Nahrajte `AuthKey_<KEY_ID>.p8` do `secrets/apns/` a spustite
   `deploy.sh … --apple-team-id <TEAM_ID>` — Sygnal sa zapne sám (app_id `eu.macet.psst.ios.prod` / `.dev`).
 

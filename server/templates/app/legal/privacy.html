@@ -13,7 +13,7 @@ ul{padding-left:22px}li{margin:4px 0}code{background:#1E293B;padding:1px 5px;bor
 
 <section id="sk" lang="sk">
 <h1>Ochrana súkromia</h1>
-<p class="muted">Platí od 13. 11. 2026 · služba psst (<code>__MATRIX_DOMAIN__</code>) · prevádzkovateľ: [DOPLNIT_KONTAKT]</p>
+<p class="muted">Platí od 14. 11. 2026 · služba psst (<code>__MATRIX_DOMAIN__</code>) · prevádzkovateľ: [DOPLNIT_KONTAKT]</p>
 
 <h2>Stručne</h2>
 <ul>
@@ -36,10 +36,10 @@ ul{padding-left:22px}li{margin:4px 0}code{background:#1E293B;padding:1px 5px;bor
 </ul>
 
 <h2>Notifikácie</h2>
-<p>Notifikácie neobsahujú text správy — len identifikátor udalosti, appka si správu stiahne a dešifruje sama. Android používa vlastný server <code>__NTFY_DOMAIN__</code> (UnifiedPush), nie Google. Na iPhone notifikácie doručuje Apple (APNs): Apple vidí identifikátor zariadenia a čas notifikácie, nie obsah.</p>
+<p>Notifikácie neobsahujú text správy ani jej zašifrovaný obsah. Náš server (vlastná push brána Sygnal) pošle doručovacej službe len <strong>identifikátor udalosti a miestnosti a počet neprečítaných</strong>; appka si správu potom sama stiahne z nášho servera a dešifruje ju v zariadení. Na Androide notifikácie doručuje <strong>Google (Firebase Cloud Messaging)</strong>, na iPhone <strong>Apple (APNs)</strong>. Google, resp. Apple tak vidí identifikátor vášho zariadenia (push token), čas notifikácie a spomenuté identifikátory — nie obsah, odosielateľa ani názov miestnosti. Iné služby Google (analytika, hlásenia o pádoch) appka nepoužíva.</p>
 
 <h2>Kde sú dáta</h2>
-<p>Na serveri prevádzkovateľa: [DOPLNIT_POSKYTOVATEL_A_KRAJINA_SERVERA]. Denné zálohy sú šifrované (AES-256) a uchovávajú sa najviac 6 mesiacov. Dáta neposielame tretím stranám okrem Apple pri iOS notifikáciách (viď vyššie) a okrem povinnosti vyplývajúcej zo zákona.</p>
+<p>Na serveri prevádzkovateľa: [DOPLNIT_POSKYTOVATEL_A_KRAJINA_SERVERA]. Denné zálohy sú šifrované (AES-256) a uchovávajú sa najviac 6 mesiacov. Dáta neposielame tretím stranám okrem Google a Apple pri doručovaní notifikácií (viď vyššie) a okrem povinnosti vyplývajúcej zo zákona.</p>
 
 <h2>Ako dlho</h2>
 <p>Správy a súbory zostávajú na serveri (šifrované), kým existuje miestnosť alebo kým ich nevymažete. Účet môžete kedykoľvek deaktivovať v nastaveniach účtu (<code>https://__AUTH_DOMAIN__/account</code>); po deaktivácii sa už neprihlásite, správy poslané iným však zostanú u nich.</p>
@@ -55,7 +55,7 @@ ul{padding-left:22px}li{margin:4px 0}code{background:#1E293B;padding:1px 5px;bor
 
 <section id="en" lang="en">
 <h1>Privacy policy</h1>
-<p class="muted">Effective 13 Nov 2026 · psst service (<code>__MATRIX_DOMAIN__</code>) · operator: [DOPLNIT_KONTAKT]</p>
+<p class="muted">Effective 14 Nov 2026 · psst service (<code>__MATRIX_DOMAIN__</code>) · operator: [DOPLNIT_KONTAKT]</p>
 
 <h2>In short</h2>
 <ul>
@@ -78,10 +78,10 @@ ul{padding-left:22px}li{margin:4px 0}code{background:#1E293B;padding:1px 5px;bor
 </ul>
 
 <h2>Notifications</h2>
-<p>Notifications do not contain message text — only an event identifier; the app fetches and decrypts the message itself. Android uses our own server <code>__NTFY_DOMAIN__</code> (UnifiedPush), not Google. On iPhone, notifications are delivered by Apple (APNs): Apple sees a device identifier and the time of the notification, not the content.</p>
+<p>Notifications contain neither message text nor its encrypted content. Our server (our own Sygnal push gateway) sends the delivery service only the <strong>event and room identifiers and the unread count</strong>; the app then fetches the message from our server and decrypts it on the device. On Android, notifications are delivered by <strong>Google (Firebase Cloud Messaging)</strong>, on iPhone by <strong>Apple (APNs)</strong>. Google or Apple therefore see your device identifier (push token), the time of the notification and those identifiers — not the content, the sender or the room name. The app uses no other Google services (no analytics, no crash reporting).</p>
 
 <h2>Where the data is</h2>
-<p>On the operator's server: [DOPLNIT_POSKYTOVATEL_A_KRAJINA_SERVERA]. Daily backups are encrypted (AES-256) and kept for at most 6 months. We do not send data to third parties except Apple for iOS notifications (see above) and where required by law.</p>
+<p>On the operator's server: [DOPLNIT_POSKYTOVATEL_A_KRAJINA_SERVERA]. Daily backups are encrypted (AES-256) and kept for at most 6 months. We do not send data to third parties except Google and Apple for delivering notifications (see above) and where required by law.</p>
 
 <h2>Retention</h2>
 <p>Messages and files stay on the server (encrypted) as long as the room exists or until you delete them. You can deactivate your account at any time in your account settings (<code>https://__AUTH_DOMAIN__/account</code>); afterwards you cannot sign in, but messages you sent to others remain with them.</p>

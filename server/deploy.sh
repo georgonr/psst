@@ -318,9 +318,14 @@ fi
 if [ -n "$SYG_APPS" ]; then
   { sed '/__SYGNAL_APPS__/,$d' templates/sygnal/sygnal.yaml; printf '%s' "$SYG_APPS" | sed 's/^ $//'; } > data/config/sygnal/sygnal.tmp
   install -m 644 data/config/sygnal/sygnal.tmp data/config/sygnal/sygnal.yaml; rm -f data/config/sygnal/sygnal.tmp
-  # Sygnal beží v kontajneri ako iný používateľ — kľúče musí vedieť čítať (adresár secrets/ ostáva 700)
-  [ -s "$FCM_KEY" ] && chmod 644 "$FCM_KEY"
-  [ -n "$APNS_KEY" ] && chmod 644 "$APNS_KEY"
+  # Sygnal beží v kontajneri ako root → na serveri ostávajú kľúče 600 root; len lokálny test (Mac) potrebuje 644
+  if [ "$(id -u)" = 0 ]; then
+    [ -s "$FCM_KEY" ] && { chown root:root "$FCM_KEY"; chmod 600 "$FCM_KEY"; }
+    [ -n "$APNS_KEY" ] && { chown root:root "$APNS_KEY"; chmod 600 "$APNS_KEY"; }
+  else
+    [ -s "$FCM_KEY" ] && chmod 644 "$FCM_KEY"
+    [ -n "$APNS_KEY" ] && chmod 644 "$APNS_KEY"
+  fi
   PROFILES="sygnal"
 fi
 export COMPOSE_PROFILES="$PROFILES"

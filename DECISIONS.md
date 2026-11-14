@@ -262,3 +262,36 @@ stack každých 10 min) píšu len do `/var/log/psst/*.log` a `/var/log/psst-*.l
 Teraz len ECDHE + AES-GCM/ChaCha20 (HTTPS aj TURN/TLS listener), krivky X25519/P-256/P-384, TLS 1.2+1.3, HSTS.
 SSL Labs: chat/app/push A+, call A (klient bez ALPN dostane TURN/TLS listener bez HSTS — dôsledok D42).
 `deploy.sh` renderuje konfigurácie na mieste (bind mount jedného súboru) a reštartuje služby so zmenenou konfiguráciou.
+
+## Android notifikácie cez Google FCM (2026-11-14, piata dávka)
+
+**D47 — Android: FCM namiesto UnifiedPush/ntfy (nahrádza D32).** Zadanie: má stačiť jedna appka. UnifiedPush
+vyžadoval druhú appku (ntfy) a vypnutú optimalizáciu batérie. Push brána zostáva **náš Sygnal**
+(`https://chat.macet.eu/_matrix/push/v1/notify`, FCM HTTP v1), nie Element/matrix.org. Cena: Google vidí push token
+zariadenia, čas notifikácie, ID udalosti a miestnosti a počet neprečítaných — obsah (ani šifrovaný) cez Google nejde
+(pusher `event_id_only` je vo forku napevno + `push.include_content: false`). Stránka Ochrana súkromia to uvádza.
+
+**D48 — Firebase projekt `psst-macet` je minimálny.** Vytvorený cez gcloud + Firebase Management API (účet
+muckajur@gmail.com, bez Google Analytics). Po `addFirebase` Google zapol ~40 API — vypnuté všetko okrem
+`fcm`, `fcmregistrations`, `firebaseinstallations`, `firebase` a správy projektu (IAM, serviceusage, logging…).
+„Browser key" zmazaný; Android API kľúč obmedzený na balík `eu.macet.psst` + SHA-1 release certifikátu a len na
+API `fcmregistrations` + `firebaseinstallations`. Service account `sygnal-fcm@…` má jedinú rolu
+`roles/firebasecloudmessaging.admin` (najužšia predpripravená rola na odosielanie).
+
+**D49 — Hodnoty Firebase sú vo forku ako `firebase.xml`, bez google-services pluginu.** Rovnako to robí upstream;
+`google-services.json` je len v `~/psst-keys`. App ID, sender ID a API kľúč sú verejné údaje (sú v každom APK),
+kľúč chráni obmedzenie z D48. Kľúč service accountu je len na serveri (`secrets/fcm/service-account.json`, 600 root —
+Sygnal beží v kontajneri ako root) a v `~/psst-keys/sygnal-fcm-sa.json`; nikdy v repe.
+
+**D50 — Variant `gplay` je predvolený a jediný distribuovaný; UnifiedPush modul sa nebalí.** V APK overené:
+žiadne `org/unifiedpush`, žiadny Firebase Analytics/Crashlytics/measurement SDK (analytika bola z Firebase
+závislostí vylúčená už v upstreame, manifest má `firebase_analytics_collection_deactivated`). Variant `fdroid`
+zostáva v kóde, ale nemá žiadny push provider.
+
+**D51 — ntfy odstránený zo servera; `push.macet.eu` len presmeruje (301) na app.macet.eu**, staré UnifiedPush
+endpointy vracajú 410. Doména ostáva v certifikáte (DNS záznam existuje, netreba meniť certifikát ani DNS).
+Sygnal má compose profil `sygnal` (FCM a/alebo APNs podľa nahraných kľúčov), zvonka je dostupný len cez nginx;
+port 5000 je iba v Docker sieti. Zálohy už neobsahujú ntfy, obsahujú FCM kľúč (v `secrets/`).
+
+**D52 — Dôsledok pre existujúce inštalácie:** APK z 13. 11. (UnifiedPush) po tejto zmene nedostáva notifikácie —
+treba nainštalovať nové APK (rovnaký podpis, dá sa nainštalovať cez staré). `versionCode` zostal 202611004.

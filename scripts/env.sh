@@ -7,3 +7,4 @@ export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH"
 export NX_NO_CLOUD=true
 export NX_DEFAULT_OUTPUT_STYLE=stream-without-prefixes
+export PATH="$HOME/.local/google-cloud-sdk/bin:$PATH"

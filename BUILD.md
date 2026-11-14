@@ -98,8 +98,8 @@ NX_SKIP_NX_CACHE=true CSC_IDENTITY_AUTO_DISCOVERY=false VARIANT_PATH=psst/build.
 
 # Android — APK a AAB v SAMOSTATNÝCH príkazoch (build skript vypína ABI splity, ak je v príkaze "bundle")
 cd forks/android && echo "sdk.dir=$ANDROID_HOME" > local.properties
-./gradlew --no-daemon :app:assembleFdroidRelease      # ≈14 min s cache, prvýkrát ≈26 min
-./gradlew --no-daemon :app:bundleFdroidRelease        # ≈12 min
+./gradlew --no-daemon :app:assembleGplayRelease      # ≈14 min s cache, prvýkrát ≈26 min
+./gradlew --no-daemon :app:bundleGplayRelease        # ≈12 min
 scripts/android/sign-release.sh <adresár s *-unsigned.apk / *.aab> dist/android
 
 # Server lokálne (test režim: self-signed certifikát, compose.test.yml, voľnejšie limity)

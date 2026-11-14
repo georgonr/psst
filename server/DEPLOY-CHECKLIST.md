@@ -27,7 +27,7 @@ existujúci AAAA záznam pre tieto mená by rozbil Let's Encrypt aj klientov.
 | `chat.macet.eu` | A | `<IP>` | Matrix homeserver (Synapse), prihlásenie/registrácia (MAS na `/auth/`), LiveKit signalizácia, iOS push |
 | `app.macet.eu` | A | `<IP>` | PSST web, Podmienky, Ochrana súkromia, App Links |
 | `call.macet.eu` | A | `<IP>` | Element Call + TURN/TLS na 443 (pre siete bez UDP) |
-| `push.macet.eu` | A | `<IP>` | Android notifikácie (ntfy / UnifiedPush) |
+| `push.macet.eu` | A | `<IP>` | (bývalý ntfy) len presmerovanie na web |
 | `macet.eu` | CAA | `0 issue "letsencrypt.org"` | (voliteľné) len Let's Encrypt smie vydať certifikát |
 
 Kontrola: `dig +short chat.macet.eu` (a ďalšie) musí vrátiť `<IP>` — deploy.sh to overí sám a bez toho nepokračuje.
@@ -80,8 +80,8 @@ sudo scripts/healthcheck.sh                   # všetko OK?
 ## 6. Po nasadení
 
 - [ ] `https://app.macet.eu` sa načíta, „Create account" s pozvánkou funguje, prihlásenie funguje
-- [ ] Android: nainštalovať `psst-26.11.0-arm64-v8a.apk` + appku **ntfy** (F-Droid/GitHub), v ntfy nastaviť
-      *Default server* = `https://push.macet.eu` a vypnúť optimalizáciu batérie → notifikácie
+- [ ] Android: nainštalovať `psst-26.11.0-arm64-v8a.apk` — notifikácie fungujú hneď (Google FCM cez náš Sygnal),
+      žiadna ďalšia appka; kľúč Firebase service accountu musí byť v `secrets/fcm/service-account.json`
 - [ ] iOS: TestFlight cez `ios-release.yml` (vyžaduje Apple Developer účet a secrets)
 - [ ] skúšobný hovor 1:1 aj skupinový
 - [ ] heslo k zálohám uložené mimo servera; voliteľne kópia záloh mimo servera:
