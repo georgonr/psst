@@ -24,3 +24,6 @@ tests/server/results.json
 .local-test-tokens.json
 .prod-test-accounts.json
 .prod-nio-store/
+*.p8
+*.mobileprovision
+google-services*.json
