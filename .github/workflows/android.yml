@@ -33,10 +33,28 @@ env:
   CI_GRADLE_ARG_PROPERTIES: --stacktrace --no-daemon -Dsonar.gradle.skipCompile=true --no-configuration-cache
 
 jobs:
+  # PSST build number + date (BUILD.md "Verzovanie"): one value for the whole run, used by the APKs and the AAB.
+  meta:
+    name: Build number and date
+    runs-on: ubuntu-latest
+    outputs:
+      build: ${{ steps.m.outputs.build }}
+      date: ${{ steps.m.outputs.date }}
+    steps:
+      - id: m
+        run: |
+          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+          echo "psst Android build b${{ github.run_number }}, $(date -u +%Y-%m-%d)" >> "$GITHUB_STEP_SUMMARY"
+
   apk:
     name: Unsigned release APKs (gplay = FCM, per ABI)
+    needs: meta
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      PSST_BUILD_NUMBER: ${{ needs.meta.outputs.build }}
+      PSST_BUILD_DATE: ${{ needs.meta.outputs.date }}
     outputs:
       fork_sha: ${{ steps.sha.outputs.sha }}
     steps:
@@ -100,8 +118,12 @@ jobs:
 
   aab:
     name: Unsigned release AAB (gplay = FCM)
+    needs: meta
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      PSST_BUILD_NUMBER: ${{ needs.meta.outputs.build }}
+      PSST_BUILD_DATE: ${{ needs.meta.outputs.date }}
     steps:
       - name: Checkout psst-android fork
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

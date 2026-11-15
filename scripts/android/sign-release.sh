@@ -11,7 +11,12 @@
 #              e.g. the result of `gh run download <id> -R georgonr/psst -n psst-android-apks-unsigned`.
 #   --run ID   download the artifacts "psst-android-apks-unsigned" and "psst-android-aab-unsigned" of the
 #              GitHub Actions run ID (repo $PSST_REPO, default georgonr/psst) into a temporary directory first.
-#   output-dir default: <repo>/dist/android (gitignored).
+#   output-dir default: <repo>/dist/android (gitignored). With the default, the result is published via
+#              scripts/release/publish.py: older files -> dist/archive/android/, dist/LATEST.md updated.
+#   PSST_NOTE  one sentence "what changed" for dist/LATEST.md (required when publishing to dist/android).
+#
+# File names (BUILD.md "Verzovanie"): psst-android-<YYYYMMDD>-b<build>-<abi>.apk, psst-android-<YYYYMMDD>-b<build>.aab
+# — build number and date are read from the APK's versionName "26.11.0-b<build> (YYYY-MM-DD)".
 #
 # Environment (optional):
 #   PSST_KEYS_DIR   default ~/psst-keys   (psst-release.jks + keystore.properties, chmod 600)
@@ -50,7 +55,9 @@ else
   [ -n "${1:-}" ] || die "usage: $0 <dir-with-unsigned-artifacts>|--run <id> [output-dir]"
   IN_DIR="$1"; shift
 fi
-OUT_DIR="${1:-$REPO_ROOT/dist/android}"
+PUBLISH=0
+if [ -n "${1:-}" ]; then OUT_DIR="$1"; else OUT_DIR="$(mktemp -d)"; PUBLISH=1; fi
+[ "$PUBLISH" = 0 ] || [ -n "${PSST_NOTE:-}" ] || die "set PSST_NOTE=\"what changed\" (one sentence for dist/LATEST.md)"
 [ -d "$IN_DIR" ] || die "input directory $IN_DIR not found"
 
 # ---------- disk space ----------
@@ -99,8 +106,15 @@ SIGNED=()
 while IFS= read -r -d '' apk; do
   base="$(basename "$apk" .apk)"
   version="$("$AAPT2" dump badging "$apk" 2>/dev/null | sed -n "s/^package: .*versionName='\([^']*\)'.*/\1/p")"
+  # versionName "26.11.0-b42 (2026-11-15)" -> build 42, date 20261115
+  b="$(echo "$version" | sed -nE 's/.*-b([0-9]+) \(([0-9]{4})-([0-9]{2})-([0-9]{2})\).*/\1/p')"
+  d="$(echo "$version" | sed -nE 's/.*-b([0-9]+) \(([0-9]{4})-([0-9]{2})-([0-9]{2})\).*/\2\3\4/p')"
+  [ -n "$b" ] && [ "$b" -gt 0 ] || die "$apk: versionName '$version' has no build number (local build without PSST_BUILD_NUMBER?)"
+  [ -z "${BUILD:-}" ] || [ "$BUILD-$DATE" = "$b-$d" ] || die "mixed builds in $IN_DIR ($BUILD-$DATE vs $b-$d)"
+  BUILD="$b"; DATE="$d"
   abi="$(echo "$base" | sed -E 's/^app-[a-z]+-(.*)-release-unsigned$/\1/')"
-  out="$OUT_DIR/psst-${version:-unknown}-${abi}.apk"
+  case "$abi" in arm64-v8a) abi=arm64;; armeabi-v7a) abi=armv7;; esac
+  out="$OUT_DIR/psst-android-$DATE-b$BUILD-${abi}.apk"
   echo "==> $apk -> $out"
   aligned="$(mktemp -t psst-aligned).apk"
   "$ZIPALIGN" -P 16 -f 4 "$apk" "$aligned"
@@ -119,9 +133,8 @@ done < <(find "$IN_DIR" -type f -name '*-unsigned.apk' -print0 | sort -z)
 
 # ---------- AAB ----------
 while IFS= read -r -d '' aab; do
-  base="$(basename "$aab" .aab)"
-  out="$OUT_DIR/psst-${base#app-}.aab"
-  out="${out/-release/}"
+  [ -n "${BUILD:-}" ] || die "sign the APKs together with the AAB (build number is read from the APK)"
+  out="$OUT_DIR/psst-android-$DATE-b$BUILD.aab"
   echo "==> $aab -> $out"
   jarsigner -keystore "$KS_FILE" -storepass:env PSST_STORE_PASS -keypass:env PSST_KEY_PASS \
     -sigalg SHA256withRSA -digestalg SHA-256 -signedjar "$out" "$aab" "$KEY_ALIAS" >/dev/null
@@ -135,8 +148,14 @@ done < <(find "$IN_DIR" -type f -name '*.aab' -print0 | sort -z)
 unset PSST_STORE_PASS PSST_KEY_PASS
 [ "${#SIGNED[@]}" -gt 0 ] || die "no *-unsigned.apk or *.aab found in $IN_DIR"
 
-( cd "$OUT_DIR" && shasum -a 256 $(for f in "${SIGNED[@]}"; do basename "$f"; done) > SHA256SUMS )
+if [ "$PUBLISH" = 1 ]; then
+  python3 "$REPO_ROOT/scripts/release/publish.py" android "$BUILD" "$DATE" --note "$PSST_NOTE" "${SIGNED[@]}"
+  rmdir "$OUT_DIR" 2>/dev/null || true
+  OUT_DIR="$REPO_ROOT/dist/android"
+else
+  ( cd "$OUT_DIR" && shasum -a 256 $(for f in "${SIGNED[@]}"; do basename "$f"; done) > SHA256SUMS )
+fi
 echo
-echo "Signed artifacts in $OUT_DIR:"
+echo "Signed artifacts (build b$BUILD, $DATE) in $OUT_DIR:"
 ls -l "$OUT_DIR"
 echo "Certificate SHA-256: $EXPECTED_SHA256"
