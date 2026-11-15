@@ -361,7 +361,7 @@ if [ ! -f "$CERT_DIR/fullchain.pem" ] || { [ -f "$CERT_DIR/.psst-dummy" ] && ! o
   make_selfsigned
 fi
 
-if [ "$PULL" = 1 ]; then log "sťahujem image"; compose pull --quiet 2>/dev/null || compose pull; fi
+if [ "$PULL" = 1 ]; then log "sťahujem image"; compose pull --ignore-buildable --quiet 2>/dev/null || compose pull --ignore-buildable; fi   # psst-admin sa zostavuje lokálne
 
 log "štartujem PostgreSQL"
 compose run --rm --no-deps -T --entrypoint sh postgres -c \
