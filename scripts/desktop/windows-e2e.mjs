@@ -52,6 +52,7 @@ const mainPage = async () => {
 let page = await mainPage();
 page.on("dialog", (d) => d.accept().catch(() => {}));
 await page.waitForSelector(".mx_ServerPicker_server, .mx_Login_fullWidthButton, .mx_AuthPage", { timeout: 120000 });
+await page.locator(".mx_Login_fullWidthButton, button:has-text('Continue')").first().waitFor({ state: "visible", timeout: 90000 }).catch(() => {});
 check("1.2 hlavné okno: prihlasovacia obrazovka psst", (await page.title()).toLowerCase().includes("psst"), await page.title());
 await shot(page, "login");
 
@@ -78,6 +79,11 @@ async function desktopLogin(user) {
     await page.waitForSelector(".mx_Login_fullWidthButton, button:has-text('Continue')", { timeout: 90000 });
     let authUrl = "";
     page.on("request", (r) => { if (r.url().includes(`${HS}/auth/authorize`)) authUrl = r.url(); });
+    // navigation to MAS is intercepted by Electron (opened in the system browser) → catch it on the CDP level
+    const cdp = await page.context().newCDPSession(page); await cdp.send("Page.enable");
+    cdp.on("Page.frameRequestedNavigation", (e) => { if (e.url.includes(`${HS}/auth/`)) authUrl = e.url; });
+    await page.locator(".mx_Login_fullWidthButton, button:has-text('Continue')").first().waitFor({ state: "visible", timeout: 90000 });
+    await sleep(2000);
     await page.evaluate(() => { window.__psstUrls = []; window.open = (u) => { window.__psstUrls.push(String(u)); return null; }; });
     await page.getByText(/^(Pokračovať|Continue)$/).first().evaluate((e) => e.click());
     for (let i = 0; i < 30 && !authUrl; i++) { authUrl = (await page.evaluate(() => window.__psstUrls[0] || "").catch(() => "")) || authUrl; if (!authUrl) await sleep(1000); }
@@ -239,8 +245,10 @@ await step("4.0 notifikácie povolené", async () => {
     await page.evaluate(() => { location.hash = "#/home"; });
 });
 await step("4.1 notifikácia pri minimalizovanom okne", async () => {
-    const cdp = await page.context().newCDPSession(page);
-    const { windowId } = await cdp.send("Browser.getWindowForTarget");
+    const tcdp = await page.context().newCDPSession(page);
+    const { targetInfo } = await tcdp.send("Target.getTargetInfo");
+    const cdp = await browser.newBrowserCDPSession();
+    const { windowId } = await cdp.send("Browser.getWindowForTarget", { targetId: targetInfo.targetId });
     await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "minimized" } });
     const before = await notes(); const t = "notify-min " + Date.now();
     await evalClient(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, t]);
@@ -250,7 +258,7 @@ await step("4.1 notifikácia pri minimalizovanom okne", async () => {
     await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "normal" } });
 });
 await step("4.2 notifikácia pri okne zavretom do tray", async () => {
-    await page.evaluate(() => window.close());
+    await page.evaluate(() => { window.close(); });
     await sleep(3000);
     const alive = sample().n > 0;
     const before = await notes(); const t = "notify-tray " + Date.now();
