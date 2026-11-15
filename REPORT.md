@@ -1,3 +1,29 @@
+# PSST — report (2026-11-15, dávka 9: hovor na zamknutom Androide)
+
+**Príčina:** Android 14+ zobrazí hovor cez celú zamknutú obrazovku len s povolením „Upozornenia na celú obrazovku"
+(`USE_FULL_SCREEN_INTENT`); Samsung ho appkám z APK nechá vypnuté → len notifikácia na zamknutej ploche (D57).
+
+**Zmeny (psst-android `8d5b83b8b`):** `IncomingCallActivity` `showWhenLocked`/`turnScreenOn` (manifest + API 27+);
+pri prvom spustení / po aktualizácii / po hovore bez povolenia výzva s jednou vetou a priamym otvorením nastavenia
+`ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`, potom výnimka z optimalizácie batérie; notifikácia s odkazom na
+nastavenie, keď hovor zazvonil bez povolenia. Notifikácia hovoru (CallStyle, kanál „Ringing calls" MAX + vyzváňanie,
+fullScreenIntent) bola v poriadku. ConnectionService nie (problém by nevyriešil, D57).
+
+**Test (emulátor Android 14, produkčný server, appka zatvorená):**
+
+| Situácia | Výsledok |
+|---|---|
+| povolenie vypnuté, prvé spustenie | ✅ výzva „Full-screen calls" → otvorí presne „Allow full screen notifications" pre psst |
+| po návrate z nastavení | ✅ výzva na batériu; v tej istej verzii sa znova nepýta |
+| povolenie vypnuté, displej vypnutý, hovor | ✅ reprodukuje Samsung: zvoní, displej ostane zhasnutý; + notifikácia „Full-screen calls are off"; pri ďalšom otvorení appky výzva znova |
+| povolenie zapnuté, displej vypnutý, zamknuté PINom, hovor | ✅ displej sa rozsvieti, „PSST test — Incoming Element Call", Accept / Reject cez zámku |
+| Accept bez zadania PINu | ✅ otvorí sa hovor nad zámkou |
+| CI (build + emulátor) | ✅ b13 |
+
+**APK:** `dist/android/psst-android-20261115-b13-arm64.apk` (b9 → `dist/archive/android/`).
+
+---
+
 # PSST — report (2026-11-15, dávky 7 a 8: verzovanie + iOS príprava; administračná stránka)
 
 Rozhodnutia: DECISIONS D54 (verzovanie), D55 (iOS), D56 (administrácia). Staršie dávky nižšie a v git histórii.
