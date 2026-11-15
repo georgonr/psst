@@ -1,4 +1,62 @@
-# PSST — report (2026-11-15, šiesta dávka: notifikácie a zvonenie na fyzických telefónoch)
+# PSST — report (2026-11-15, dávky 7 a 8: verzovanie + iOS príprava; administračná stránka)
+
+Rozhodnutia: DECISIONS D54 (verzovanie), D55 (iOS), D56 (administrácia). Staršie dávky nižšie a v git histórii.
+
+## Dávka 8 — administrácia https://app.macet.eu/admin
+
+**Verdikt: hotovo a nasadené.** Prihlásenie bežným účtom cez MAS, prístup len pre adminov (teraz `geo`), ostatní 403.
+Pozvánky sú priamo registračné tokeny MAS. Test na produkcii (Playwright, testovacie účty potom deaktivované):
+
+| Test | Výsledok |
+|---|---|
+| prihlásenie admina cez MAS, cookie Secure/HttpOnly/SameSite=Strict/Path=/admin/30 min, žiadny token v prehliadači | ✅ |
+| nová pozvánka → kód `XXXX-XXXX` + text „Pozvánka do psst: … Platí do 22. 11." | ✅ |
+| registrácia z **webu** kódom → stav „použitá" 1/1, zaregistrovaný účet priradený, u člena vidieť pozvánku | ✅ |
+| registrácia z **Android appky** (emulátor, psst b9) kódom z admin stránky → účet, stav „použitá" | ✅ |
+| Zablokovať → „zablokovaný", Odblokovať → „aktívny"; `geo` nemá tlačidlo | ✅ |
+| Zrušiť druhú pozvánku → „zrušená", registrácia s ňou odmietnutá | ✅ |
+| POST z cudzieho pôvodu → 403, POST bez CSRF tokenu → 403 | ✅ |
+| neadmin → 403 „Prístup zamietnutý", bez session → presmerovanie na prihlásenie | ✅ |
+| mobil 390 px: karty, bez vodorovného posúvania | ✅ |
+| server-smoke v CI (čistá inštalácia + obnova zo zálohy) s novou službou | ✅ 17/17 |
+
+Audit log: `/opt/psst/server/data/admin/audit.log` (zálohuje sa). MAS obmedzuje počet registrácií z jednej IP —
+pri opakovaných testoch dočasne zablokoval ďalšie registrácie (ochrana ponechaná).
+
+## Dávka 7 — verzovanie a iOS
+
+**Verzovanie (D54, BUILD.md):** `psst-<platforma>-<RRRRMMDD>-b<číslo>[-<abi>].<prípona>`, číslo = beh CI
+(iOS = posledný TestFlight + 1), v appkách v About. `dist/<platforma>/` = len najnovšie, staré v `dist/archive/`,
+prehľad `dist/LATEST.md`.
+
+| Platforma | Aktuálne | V appke |
+|---|---|---|
+| Android | `dist/android/psst-android-20261115-b9-arm64.apk` (+ armv7, x86_64, AAB) | `26.11.0-b9 (2026-11-15)`; versionCode 210000094 — inštaluje sa cez staré (overené) |
+| Windows / macOS | `dist/desktop/psst-windows-20261115-b9.msi`, `-setup.exe`, `psst-macos-20261115-b9.dmg`, `.zip` | `1.12.35-b9 (2026-11-15)` |
+| Web | `dist/web/psst-web-20261115-b9.tar.gz`, nasadený na app.macet.eu (release `web-b9`) | `1.12.35-b9 (2026-11-15)` |
+| iOS | ešte žiadny podpísaný build | `26.11.0 (bN, RRRR-MM-DD)` (simulátorový build v CI prešiel) |
+
+Archív: staré Android `psst-26.11.0-*` a nepodpísané F-Droid z 13. 11., desktop `psst-1.12.35-*`, web 1.12.35-psst.*,
+iOS simulátor + screenshoty z 13. 11.
+
+**iOS (D55):** bundle ID (app, NSE, share) s Push + Associated Domains + App Groups, distribučný certifikát
+`K2778R2L24`, profily generuje skript, workflow s podpisom a uploadom, Sygnal APNs na serveri (overené odpoveďou
+APNs), universal links s Team ID, `scripts/ios/release-testflight.sh` (otestované: preflight, profily, import
+certifikátu; zastaví sa na chýbajúcej App Group / zázname appky s presným návodom). Ručne zostáva (Apple to cez API
+nedovolí): **App Group + priradenie k 3 identifikátorom** a **záznam appky v App Store Connect**
+(`scripts/ios/README.md`), potom jeden príkaz. Exportná zhoda: `ITSAppUsesNonExemptEncryption = false` — žiadna
+povinnosť voči úradom pre TestFlight/EÚ; pred verejným vydaním vo Francúzsku overiť ANSSI.
+
+## Čo ostáva
+
+1. iOS: App Group + záznam appky (ručne) → `scripts/ios/release-testflight.sh`.
+2. Android telefón (jj): nainštalovať `psst-android-20261115-b9-arm64.apk`, otestovať notifikácie a zvonenie,
+   potom deaktivovať testovací účet `qa-ring`.
+3. Voľná pozvánka `vljYMyTsyyyA` z 13. 11. (platí do 13. 12.) — ak sa nepoužíva, zrušiť na admin stránke.
+
+---
+
+## Dávka 6 (2026-11-15: notifikácie a zvonenie na fyzických telefónoch)
 
 Rozhodnutie: DECISIONS D53. Predchádzajúci report (FCM, 2026-11-14) je nižšie a v git histórii.
 

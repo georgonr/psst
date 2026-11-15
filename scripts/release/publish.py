@@ -85,8 +85,9 @@ def main():
     for old in sorted(target.iterdir()):
         if old.name in ("SHA256SUMS",) or old.name.startswith("."):
             continue
-        if sub != a.platform and not old.name.startswith(f"psst-{a.platform}-"):
-            continue
+        other = re.match(r"^psst-([a-z]+)-\d{8}-b\d+", old.name)
+        if sub != a.platform and other and other.group(1) != a.platform:
+            continue   # current file of another platform in a shared dir (desktop/: macos + windows)
         if old.name in {f.name for f in files}:
             continue
         dest = archive / old.name
