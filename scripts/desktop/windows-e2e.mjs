@@ -399,8 +399,10 @@ await step("2.2 odhlásenie", async () => {
     await sleep(1500);
     await page.getByRole("tab", { name: "Account" }).first().click({ timeout: 15000 }).catch(() => {});
     await sleep(2000); await shot(page, "settings-account");
-    await page.getByRole("button", { name: "Sign out", exact: true }).first().click({ timeout: 15000 });
-    for (let i = 0; i < 3; i++) await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog button:has-text("I don\'t want my encrypted messages")').first().click({ timeout: 4000 }).catch(() => {});
+    // Element 1.12 labels sign-out in Settings → Account "Remove this device"
+    await page.getByRole("button", { name: /^(Sign out|Remove this device)$/ }).first().click({ timeout: 15000 });
+    await sleep(1500); await shot(page, "logout-dialog");
+    for (let i = 0; i < 3; i++) await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog button:has-text("Remove"), .mx_Dialog button:has-text("I don\'t want my encrypted messages"), .mx_Dialog [role=button]:has-text("Remove this device")').first().click({ timeout: 4000 }).catch(() => {});
     const out = await page.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage, .mx_Welcome", { timeout: 60000 }).then(() => true, () => false);
     await shot(page, "logged-out");
     check("2.2 odhlásenie", out);
