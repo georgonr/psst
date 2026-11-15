@@ -1,6 +1,6 @@
 # PSST Windows desktop — install the MSI and test it end-to-end against production (D60).
 # Uses the MSI of a "Web + Desktop" run (default: the latest successful one on main) and the test accounts in the
-# secret PSST_E2E_ACCOUNTS ({"qa-win1": "...", "qa-win2": "...", "qa-win3": "..."}).
+# secret PSST_E2E_ACCOUNTS — fresh accounts per run: scripts/desktop/e2e-accounts.sh create (then cleanup).
 name: Desktop Windows E2E
 on:
     workflow_dispatch:

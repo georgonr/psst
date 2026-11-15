@@ -1,6 +1,7 @@
 // PSST Windows desktop — end-to-end test of the installed MSI against production chat.macet.eu (D60).
 //   node windows-e2e.mjs <psst.exe> <out-dir> <accounts.json> <expected-build>
-// accounts.json: {"qa-win1": "...", "qa-win2": "...", "qa-win3": "..."}  (desktop, partner on web, 3rd group member)
+// accounts.json: {"desktop": {"user","password"}, "partner": {...}, "third": {...}} — fresh per run
+//   (scripts/desktop/e2e-accounts.sh create); partner = Element Web, third = 3rd group member
 //
 // The desktop app is driven over CDP (--remote-debugging-port). The partner is Element Web (app.macet.eu) in
 // headless Chromium, so E2EE runs in real clients on both sides. MAS login: the URL the app wants to open in the
@@ -13,7 +14,9 @@ import path from "node:path";
 
 const [EXE, OUT, ACC_FILE, EXPECTED_BUILD = ""] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
-const ACC = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
+const ROLES = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
+const ACC = Object.fromEntries(Object.values(ROLES).map((r) => [r.user, r.password]));
+const U_DESK = ROLES.desktop.user, U_PART = ROLES.partner.user, U_THIRD = ROLES.third.user;
 const HS = "chat.macet.eu";
 const WEB = "https://app.macet.eu";
 const res = [];
@@ -171,8 +174,8 @@ async function sendViaComposer(p, text) {
 // ================================================================== run
 let uid = null, partner = null, dm = null, group = null;
 await step("2.1 prihlásenie cez MAS", async () => {
-    uid = await desktopLogin("qa-win1");
-    check("2.1 prihlásenie cez MAS", uid === `@qa-win1:${HS}`, uid);
+    uid = await desktopLogin(U_DESK);
+    check("2.1 prihlásenie cez MAS", uid === `@${U_DESK}:${HS}`, uid);
     await shot(page, "logged-in");
 });
 await step("1.3 stabilita 3 min po štarte", async () => {
@@ -192,8 +195,8 @@ await step("6.1 About: číslo buildu", async () => {
     await page.keyboard.press("Escape");
 });
 await step("3.x partner (web) prihlásený", async () => {
-    partner = await webLogin("qa-win2");
-    check("partner qa-win2 prihlásený na webe", !!partner);
+    partner = await webLogin(U_PART);
+    check("partner prihlásený na webe", !!partner, U_PART);
 });
 await step("3.1 šifrovaná DM: príjem", async () => {
     dm = await evalClient(partner, async (who) => (await window.mxMatrixClientPeg.get().createRoom({
@@ -229,11 +232,11 @@ await step("3.4 skupina", async () => {
     group = await evalClient(partner, async (who) => (await window.mxMatrixClientPeg.get().createRoom({
         preset: "private_chat", invite: who, name: "win e2e group",
         initial_state: [{ type: "m.room.encryption", state_key: "", content: { algorithm: "m.megolm.v1.aes-sha2" } }],
-    })).room_id, [uid, `@qa-win3:${HS}`]);
+    })).room_id, [uid, `@${U_THIRD}:${HS}`]);
     await page.evaluate((r) => window.mxMatrixClientPeg.get().joinRoom(r), group);
     // 3rd member joins over plain HTTP (only to make it a group of 3)
     const tok = (await (await fetch(`https://${HS}/_matrix/client/v3/login`, { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "m.login.password", identifier: { type: "m.id.user", user: "qa-win3" }, password: ACC["qa-win3"] }) })).json()).access_token;
+        body: JSON.stringify({ type: "m.login.password", identifier: { type: "m.id.user", user: U_THIRD }, password: ACC[U_THIRD] }) })).json()).access_token;
     await fetch(`https://${HS}/_matrix/client/v3/join/${encodeURIComponent(group)}`, { method: "POST", headers: { Authorization: `Bearer ${tok}`, "Content-Type": "application/json" }, body: "{}" });
     await fetch(`https://${HS}/_matrix/client/v3/logout`, { method: "POST", headers: { Authorization: `Bearer ${tok}` } });
     await sleep(5000);
@@ -358,8 +361,8 @@ await step("2.2 odhlásenie", async () => {
     check("2.2 odhlásenie", out);
 });
 await step("2.3 opätovné prihlásenie", async () => {
-    const u = await desktopLogin("qa-win1");
-    check("2.3 opätovné prihlásenie", u === `@qa-win1:${HS}`, u);
+    const u = await desktopLogin(U_DESK);
+    check("2.3 opätovné prihlásenie", u === `@${U_DESK}:${HS}`, u);
 });
 await step("6.2 kontrola novej verzie mieri na app.macet.eu", async () => {
     const m = /psst update check: installed b(\d+), available b(\d+)/.exec(appLog);
