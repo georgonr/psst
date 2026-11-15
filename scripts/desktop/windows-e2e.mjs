@@ -74,6 +74,20 @@ async function monitor(label, seconds) {
     return metrics[label];
 }
 
+// After a 2nd login on an account with cross-signing Element shows "Confirm your identity" — a real user would
+// verify or skip; the test skips (it only needs to send/receive in new E2EE rooms).
+async function skipVerification(p) {
+    for (let i = 0; i < 6; i++) {
+        const skip = p.locator('button:has-text("Skip verification for now"), [role=button]:has-text("Skip verification for now"), button:has-text("Can\'t confirm?")').first();
+        if (await skip.count().catch(() => 0)) {
+            await skip.click().catch(() => {}); await sleep(1500);
+            await p.locator('.mx_Dialog button:has-text("I\'ll verify later"), .mx_Dialog button:has-text("Skip"), button:has-text("I\'ll verify later")').first().click({ timeout: 3000 }).catch(() => {});
+        }
+        if (await p.locator(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel").count().catch(() => 0)) return;
+        await sleep(2000);
+    }
+}
+
 // ------------------------------------------------------------------ MAS login (desktop)
 async function desktopLogin(user) {
     await page.waitForSelector(".mx_Login_fullWidthButton, button:has-text('Continue')", { timeout: 90000 });
@@ -100,7 +114,11 @@ async function desktopLogin(user) {
     // same as protocol.ts handleDeeplink: vector://vector/webapp/ + search + hash
     const cb = new URL(callback); const target = new URL("vector://vector/webapp/"); target.search = cb.search; target.hash = cb.hash;
     await page.goto(target.href).catch(() => {}); await page.reload().catch(() => {});
-    for (let i = 0; i < 90; i++) { if (await page.locator(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel").count()) break; await sleep(1000); }
+    for (let i = 0; i < 90; i++) {
+        if (await page.locator(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel").count()) break;
+        if (i % 5 === 4) await skipVerification(page);
+        await sleep(1000);
+    }
     await sleep(4000); for (let i = 0; i < 4; i++) await page.keyboard.press("Escape").catch(() => {});
     return await page.evaluate(() => window.mxMatrixClientPeg?.get()?.getUserId() ?? null);
 }
@@ -116,7 +134,15 @@ async function webLogin(user) {
     await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', ACC[user]);
     await p.locator("button[type=submit]").first().click();
     for (let i = 0; i < 20 && !p.url().startsWith(WEB); i++) { await p.locator('button[type=submit]:has-text("Continue")').first().click({ timeout: 1500 }).catch(() => {}); await sleep(1000); }
-    await p.waitForSelector(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel", { timeout: 120000 });
+    for (let i = 0; i < 60; i++) {
+        if (await p.locator(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel").count()) break;
+        if (i % 5 === 4) await skipVerification(p);
+        await sleep(2000);
+    }
+    if (!(await p.locator(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel").count())) {
+        await p.screenshot({ path: path.join(OUT, `web-login-${user}-FAIL.png`) }).catch(() => {});
+        throw new Error("web login did not reach the room list");
+    }
     await sleep(5000); for (let i = 0; i < 4; i++) await p.keyboard.press("Escape").catch(() => {});
     return p;
 }
@@ -245,17 +271,16 @@ await step("4.0 notifikácie povolené", async () => {
     await page.evaluate(() => { location.hash = "#/home"; });
 });
 await step("4.1 notifikácia pri minimalizovanom okne", async () => {
-    const tcdp = await page.context().newCDPSession(page);
-    const { targetInfo } = await tcdp.send("Target.getTargetInfo");
-    const cdp = await browser.newBrowserCDPSession();
-    const { windowId } = await cdp.send("Browser.getWindowForTarget", { targetId: targetInfo.targetId });
-    await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "minimized" } });
+    // Electron's CDP has no Browser.setWindowBounds → minimize the real window via Win32 ShowWindow(SW_MINIMIZE)
+    const win32 = (cmd) => ps(`Add-Type -Name W -Namespace P -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern bool IsIconic(System.IntPtr h);'; $h = (Get-Process psst | Where-Object MainWindowHandle -ne 0 | Select-Object -First 1).MainWindowHandle; ${cmd}`);
+    win32("[void][P.W]::ShowWindow($h, 6)"); await sleep(2000);
+    const minimized = win32("[P.W]::IsIconic($h)") === "True";
     const before = await notes(); const t = "notify-min " + Date.now();
     await evalClient(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, t]);
     let after = before; for (let i = 0; i < 40 && after <= before; i++) { await sleep(1500); after = await notes(); }
     metrics.toastHistoryAfterMinimize = toastHistory();
-    check("4.1 systémová notifikácia pri minimalizovanom okne", after > before, `notifikácie ${before}→${after}; toast história ${metrics.toastHistoryAfterMinimize}`);
-    await cdp.send("Browser.setWindowBounds", { windowId, bounds: { windowState: "normal" } });
+    check("4.1 systémová notifikácia pri minimalizovanom okne", minimized && after > before, `minimalizované ${minimized}, notifikácie ${before}→${after}; toast história ${metrics.toastHistoryAfterMinimize}`);
+    win32("[void][P.W]::ShowWindow($h, 9)"); await sleep(1500);
 });
 await step("4.2 notifikácia pri okne zavretom do tray", async () => {
     await page.evaluate(() => { window.close(); });
