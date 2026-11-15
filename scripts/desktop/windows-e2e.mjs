@@ -185,6 +185,7 @@ await step("1.3 stabilita 3 min po štarte", async () => {
         `CPU ${m.avgCpuPct} %, max ${m.maxWorkingSetMB} MB (rast ${m.wsGrowthMB} MB), odozva max ${m.maxRendererLagMs} ms`);
 });
 await step("6.1 About: číslo buildu", async () => {
+    await dismissPopovers(page);
     await page.locator('[aria-label="User menu"], .mx_UserMenu_userAvatar, .mx_UserMenu').first().click({ timeout: 15000 });
     await page.locator('[role=menuitem]:has-text("All settings"), [aria-label="All settings"]').first().click({ timeout: 15000 });
     await page.locator('[role=tab]:has-text("Help"), .mx_TabbedView_tabLabel:has-text("Help")').first().click({ timeout: 15000 });
@@ -204,6 +205,10 @@ await step("3.1 šifrovaná DM: príjem", async () => {
         initial_state: [{ type: "m.room.encryption", state_key: "", content: { algorithm: "m.megolm.v1.aes-sha2" } }],
     })).room_id, uid);
     await page.evaluate((r) => window.mxMatrixClientPeg.get().joinRoom(r), dm);
+    // mark as a direct chat on both sides (as Element does when a DM is started from the UI) — Element sends a
+    // ringing call notification ("ring") only in DMs, in other rooms just "notification"
+    await evalClient(partner, ([r, other]) => window.mxMatrixClientPeg.get().setAccountData("m.direct", { [other]: [r] }), [dm, uid]);
+    await page.evaluate(([r, other]) => window.mxMatrixClientPeg.get().setAccountData("m.direct", { [other]: [r] }), [dm, `@${U_PART}:${HS}`]);
     await sleep(6000);
     const t = "web→win " + Date.now();
     await evalClient(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, t]);
@@ -261,6 +266,10 @@ function win32(cmd) {
 }
 
 // ------------------------------------------------------------------ notifications
+async function dismissPopovers(p) {
+    for (const name of ["Not now", "Dismiss", "Close"]) await p.getByRole("button", { name, exact: true }).first().click({ timeout: 1500 }).catch(() => {});
+    for (let i = 0; i < 2; i++) await p.keyboard.press("Escape").catch(() => {});
+}
 async function hookNotifications() {
     await page.evaluate(() => {
         window.__psstNotes = window.__psstNotes || [];
@@ -333,7 +342,11 @@ async function desktopJoinFromToast(label) {
     const toast = page.locator('.mx_IncomingCallToast, .mx_Toast_toast:has-text("call"), .mx_Toast_toast:has-text("Call")').first();
     const seen = await toast.waitFor({ timeout: 60000 }).then(() => true, () => false);
     await shot(page, `${label}-incoming`);
-    const ringing = await page.evaluate(() => [...document.querySelectorAll("audio")].some((a) => !a.paused && /ring/i.test(a.src + a.id)));
+    let ringing = false;
+    for (let i = 0; i < 10 && !ringing; i++) {
+        ringing = await page.evaluate(() => { const a = document.getElementById("ringAudio"); return !!a && !a.paused; }).catch(() => false);
+        if (!ringing) await sleep(500);
+    }
     if (!seen) return { seen, ringing, joined: false };
     await toast.locator('button:has-text("Join"), button:has-text("Accept"), [aria-label="Join"]').first().click({ timeout: 10000 });
     let joined = false;
@@ -356,7 +369,7 @@ await step("5.1 hovor 1:1", async () => {
     await page.evaluate(() => { location.hash = "#/home"; });
     await partnerStartCall(dm);
     const r = await desktopJoinFromToast("call-1to1");
-    check("5.1 prichádzajúci hovor 1:1: oznámenie + okno hovoru, pripojenie", r.seen && r.joined, `toast ${r.seen}, zvonenie ${r.ringing}, v hovore ${r.joined}`);
+    check("5.1 prichádzajúci hovor 1:1: zvonenie + oznámenie, prijatie, okno hovoru", r.seen && r.ringing && r.joined, `toast ${r.seen}, zvonenie ${r.ringing}, v hovore ${r.joined}`);
     metrics.call1to1 = r; await hangUpAll();
 });
 await step("5.2 skupinový hovor", async () => {
@@ -370,6 +383,7 @@ await step("5.2 skupinový hovor", async () => {
 // ------------------------------------------------------------------ logout / login again
 await step("2.2 odhlásenie", async () => {
     await page.evaluate(() => { location.hash = "#/home"; });
+    await sleep(2000); await dismissPopovers(page);
     await page.locator('[aria-label="User menu"], .mx_UserMenu').first().click({ timeout: 15000 });
     await page.locator('[role=menuitem]:has-text("Sign out")').first().click({ timeout: 15000 });
     for (let i = 0; i < 3; i++) await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog button:has-text("I don\'t want my encrypted messages")').first().click({ timeout: 4000 }).catch(() => {});
