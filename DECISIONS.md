@@ -367,3 +367,31 @@ Notifikácia hovoru už bola správna (CallStyle, kanál „Ringing calls" `IMPO
 Android nezobrazí hovor nad zámkou inak než cez ten istý full-screen intent (vyžaduje rovnaké povolenie), pridal by
 len Bluetooth/auto integráciu za cenu veľkého zásahu do Element X (ten telecom integráciu nemá) — samotný problém
 by nevyriešil.
+
+**D58 — Prihlásenie nového zariadenia QR kódom.** Synapse `experimental_features`: `msc4108_enabled: true`
+(verzia 2024) a `msc4388_mode: open` (bezpečný kanál pre novšie klienty); MAS už podporoval device-code grant.
+„open" = rendezvous môže založiť aj ešte neprihlásené zariadenie; dáta sú krátkodobé, šifrované medzi zariadeniami
+a obmedzené rate limitom. Overené na produkcii: web „Link new device → Show QR code" → Android (nové zariadenie)
+naskenuje → 2-ciferný kód na webe → overovací kód a „Grant access" v MAS → Android prihlásený. Kontakt cez QR:
+Element X nemá vlastný skener kontaktov; QR v dialógu „Share" na webe/desktope je odkaz `https://app.macet.eu/#/user/…`
+(`permalink_prefix`), ktorý Android po naskenovaní fotoaparátom otvorí priamo v psst (App Links overené) na profile
+s tlačidlom „Message" — bez zmeny.
+
+**D59 — Stránka na stiahnutie https://app.macet.eu/download.** Statická stránka generovaná na serveri
+(`server/scripts/downloads.py`, bez JS, anglicky), súbory v `/opt/psst/server/downloads` (mimo `data/`, nezálohujú
+sa — sú v `dist/archive`). Nahráva výhradne používateľ `psst-dl` cez SSH kľúč s forced command (nič iné nespustí),
+ten istý kľúč používa lokálny podpisový skript Androidu aj CI (GitHub secret, hostiteľský kľúč pripnutý). Server
+overí SHA-256 prijatého súboru, odmietne starší build a zmaže predošlú verziu; klient potom súbor stiahne cez HTTPS
+a SHA-256 porovná — inak build zlyhá. Kontrola „stránka nie je pozadu" lokálne aj v CI (`release/latest.json`
+v gite). Na prihlasovacej obrazovke webu/desktopu odkaz „Download apps" (`branding.auth_footer_links`).
+**Aktualizácie desktopu:** Elementov updater (Squirrel/packages.element.io) je vypnutý (žiadne `update_base_url`)
+a pre MSI ani nepodpísaný macOS by nefungoval; namiesto neho appka po štarte a raz denne prečíta
+`/download/latest.json` a pri novšom builde ukáže systémovú notifikáciu s odkazom na stránku.
+
+**D60 — Windows desktop E2E na `windows-latest`.** Workflow *Desktop Windows E2E* nainštaluje MSI (msiexec /qn),
+spustí appku s CDP, prihlási sa cez MAS (URL zachytená v rendereri, callback vrátený appke), partner je Element Web
+v headless Chromiu (E2EE na oboch stranách skutočné klienty). Testovacie účty sú **nové pre každý beh**
+(`scripts/desktop/e2e-accounts.sh create|cleanup`): po druhom prihlásení Element vyžaduje potvrdenie identity
+(iné zariadenie/recovery key), čo je správne pre ľudí, ale blokuje opakované automatické behy. Nájdené a opravené:
+About na desktope ukazoval len verziu Electronu bez buildu (teraz `1.12.35-bN (dátum)`); Android `versionName`
+so zátvorkami rozbíjal User-Agent (názov zariadenia „psst on 2026-11-15) (…") → teraz `26.11.0-bN+RRRR-MM-DD`.

@@ -29,13 +29,34 @@ gh auth refresh -h github.com -s workflow       # jednorazovo — bez toho GitHu
   `psst-android-20261115-b9-arm64.apk`, `psst-android-20261115-b9.aab`, `psst-windows-20261115-b9.msi`,
   `psst-windows-20261115-b9-setup.exe`, `psst-macos-20261115-b9.dmg`, `psst-web-20261115-b9.tar.gz`,
   `psst-ios-20261115-b3.ipa`. ABI: `arm64`, `armv7`, `x86_64`.
-- **V appke** (Nastavenia → About / Help & About): Android `26.11.0-b9 (2026-11-15)`, web a desktop
+- **V appke** (Nastavenia → About / Help & About): Android `26.11.0-b9+2026-11-15` (bez medzier a zátvoriek —
+  je súčasťou User-Agent), web a desktop
   `1.12.35-b9 (2026-11-15)`, iOS `26.11.0 (b3, 2026-11-15)`.
 - Android `versionCode` = `(21 000 000 + číslo) × 10 + ABI` — vždy vyššie než pôvodné `202611xxx`, nové APK sa
   nainštaluje cez staré.
 - `dist/android`, `dist/desktop`, `dist/web`, `dist/ios` obsahujú **len najnovšiu verziu**; staršie presúva
   `scripts/release/publish.py` do `dist/archive/<platforma>/` (nič nemaže). Prehľad: **`dist/LATEST.md`**
   (súbor, build, dátum, SHA-256, čo sa zmenilo).
+
+## Stránka na stiahnutie — https://app.macet.eu/download (D59)
+
+Verejná stránka s aktuálnym Android APK (arm64), Windows MSI a macOS DMG — číslo buildu, dátum, veľkosť, SHA-256,
+návod na inštaláciu. Na serveri sú vždy len aktuálne súbory (`/opt/psst/server/downloads/`), staršie len v
+`dist/archive/`. **Stránka sa aktualizuje automaticky, ručne sa na ňu nič nenahráva:**
+
+| Build | Kto nahrá | Ako |
+|---|---|---|
+| Android | `scripts/android/sign-release.sh` (lokálne, po podpise) | `scripts/release/upload-download.sh android …-arm64.apk` |
+| Windows + macOS | CI `web-desktop.yml`, job *Publish to app.macet.eu/download* | `scripts/release/upload-download.sh windows|macos …` |
+
+`upload-download.sh` nahrá súbor cez SSH ako `psst-dl` (kľúč smie len `server/scripts/downloads.py`: overí SHA-256
+prijatého súboru, odmietne starší build, prepíše stránku a `latest.json`, zmaže predošlý súbor platformy) a potom
+súbor **stiahne cez HTTPS a porovná SHA-256** s lokálnym buildom — pri nezhode skončí chybou (a s ním aj build).
+Kľúč: `~/psst-keys/psst-dl-upload` (lokálne), GitHub secret `PSST_DL_UPLOAD_KEY` + `PSST_DL_KNOWN_HOSTS` (CI).
+
+**Kontrola, že stránka nie je pozadu:** `scripts/release/check-download-page.py` porovná `dist/latest.json`
+(= `dist/LATEST.md`) so stránkou, v CI workflow *Download page check* (denne, po každom Web + Desktop behu a po
+zmene `release/latest.json`) porovná `release/latest.json` z gitu. Zlyhá, ak má stránka starší build alebo iný SHA-256.
 
 ## 2–3. Web + Desktop
 

@@ -252,13 +252,25 @@ await step("3.4 skupina", async () => {
     check("3.4 skupina (3 členovia, šifrovaná): odoslanie aj príjem", ok1 && ok2 && members === 3, `členovia ${members}`);
 });
 
+// ------------------------------------------------------------------ Win32 helpers (real window actions, like a user)
+const W32 = `Add-Type -Name W -Namespace P -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern bool IsIconic(System.IntPtr h); [DllImport("user32.dll")] public static extern bool IsWindowVisible(System.IntPtr h); [DllImport("user32.dll")] public static extern bool PostMessage(System.IntPtr h, uint m, System.IntPtr w, System.IntPtr l); [DllImport("user32.dll")] public static extern System.IntPtr FindWindow(string c, string t);'`;
+let HWND = "";
+function win32(cmd) {
+    if (!HWND) HWND = ps(`(Get-Process psst | Where-Object MainWindowHandle -ne 0 | Select-Object -First 1).MainWindowHandle`);
+    return ps(`${W32}; $h = [System.IntPtr]${HWND}; ${cmd}`);
+}
+
 // ------------------------------------------------------------------ notifications
 async function hookNotifications() {
     await page.evaluate(() => {
         window.__psstNotes = window.__psstNotes || [];
         if (window.__psstHooked) return; window.__psstHooked = true;
         const N = window.Notification;
-        window.Notification = function (title, opts) { window.__psstNotes.push({ title, body: opts?.body }); return new N(title, opts); };
+        window.__psstClosed = 0;
+        window.Notification = function (title, opts) {
+            window.__psstNotes.push({ title, body: opts?.body, t: Date.now() });
+            const n = new N(title, opts); const c = n.close.bind(n); n.close = () => { window.__psstClosed++; c(); }; return n;
+        };
         Object.assign(window.Notification, N); window.Notification.prototype = N.prototype;
         Object.defineProperty(window.Notification, "permission", { get: () => N.permission });
     });
@@ -275,27 +287,32 @@ await step("4.0 notifikácie povolené", async () => {
 });
 await step("4.1 notifikácia pri minimalizovanom okne", async () => {
     // Electron's CDP has no Browser.setWindowBounds → minimize the real window via Win32 ShowWindow(SW_MINIMIZE)
-    const win32 = (cmd) => ps(`Add-Type -Name W -Namespace P -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern bool IsIconic(System.IntPtr h);'; $h = (Get-Process psst | Where-Object MainWindowHandle -ne 0 | Select-Object -First 1).MainWindowHandle; ${cmd}`);
     win32("[void][P.W]::ShowWindow($h, 6)"); await sleep(2000);
     const minimized = win32("[P.W]::IsIconic($h)") === "True";
     const before = await notes(); const t = "notify-min " + Date.now();
     await evalClient(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, t]);
-    let after = before; for (let i = 0; i < 40 && after <= before; i++) { await sleep(1500); after = await notes(); }
-    metrics.toastHistoryAfterMinimize = toastHistory();
+    let after = before; for (let i = 0; i < 40 && after <= before; i++) { await sleep(500); after = await notes(); }
+    metrics.toastHistoryAfterMinimize = toastHistory();   // right after the toast was raised
+    await sleep(8000); metrics.notificationsClosedByApp = await page.evaluate(() => window.__psstClosed).catch(() => -1);
     check("4.1 systémová notifikácia pri minimalizovanom okne", minimized && after > before, `minimalizované ${minimized}, notifikácie ${before}→${after}; toast história ${metrics.toastHistoryAfterMinimize}`);
     win32("[void][P.W]::ShowWindow($h, 9)"); await sleep(1500);
 });
 await step("4.2 notifikácia pri okne zavretom do tray", async () => {
-    await page.evaluate(() => { window.close(); });
-    await sleep(3000);
+    // like clicking the window's X: WM_CLOSE (0x0010) → Element hides the window to the tray on Windows
+    win32("[void][P.W]::PostMessage($h, 0x0010, [System.IntPtr]::Zero, [System.IntPtr]::Zero)");
+    await sleep(4000);
     const alive = sample().n > 0;
+    const hidden = alive && win32("[P.W]::IsWindowVisible($h)") === "False";
+    metrics.closeToTray = { alive, hidden };
     const before = await notes(); const t = "notify-tray " + Date.now();
     await evalClient(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, t]);
     let after = before; for (let i = 0; i < 40 && after <= before; i++) { await sleep(1500); after = await notes(); }
     metrics.toastHistoryAfterTray = toastHistory();
-    check("4.2 okno zavreté do tray: appka beží a notifikácia príde", alive && after > before, `beží ${alive}, notifikácie ${before}→${after}`);
-    launch(); await sleep(5000);   // second instance → shows the window again
-    page = await mainPage();
+    check("4.2 okno zavreté (X) do tray: appka beží skrytá a notifikácia príde", alive && hidden && after > before, `beží ${alive}, skryté ${hidden}, notifikácie ${before}→${after}`);
+    if (alive) { launch(); await sleep(6000); }   // second instance → shows the window again (like clicking the tray icon)
+    else { proc = launch(); await sleep(15000); browser = await chromium.connectOverCDP("http://127.0.0.1:9333"); }
+    page = await mainPage(); page.on("dialog", (d) => d.accept().catch(() => {}));
+    check("4.3 okno sa po opätovnom spustení znova zobrazí", win32("[P.W]::IsWindowVisible($h)") === "True");
 });
 
 // ------------------------------------------------------------------ calls
