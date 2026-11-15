@@ -48,3 +48,15 @@ admin_token() {
   [ -f secrets/admin_token ] || die "chýba secrets/admin_token — vytvorte admina: scripts/create-admin.sh"
   cat secrets/admin_token
 }
+
+# administrácia (D56): kontajner beží ako UID 10001 → vlastné kópie tajomstiev (400) a dátový adresár
+admin_secrets() {
+  mkdir -p secrets/admin-run data/admin
+  rm -f secrets/admin-run/*
+  cp secrets/admin/client_secret secrets/admin-run/admin_client_secret
+  cp secrets/admin/db_password secrets/admin-run/admin_db_password
+  [ -s secrets/admin_token ] && cp secrets/admin_token secrets/admin-run/admin_token
+  if [ "$(id -u)" = 0 ]; then
+    chown -R 10001:10001 secrets/admin-run data/admin; chmod 500 secrets/admin-run; chmod 400 secrets/admin-run/*; chmod 700 data/admin
+  else chmod 755 secrets/admin-run; chmod 777 data/admin; chmod 644 secrets/admin-run/*; fi   # lokálny test bez root
+}

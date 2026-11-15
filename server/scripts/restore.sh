@@ -53,6 +53,7 @@ compose exec -T postgres pg_restore -U synapse -d mas --no-owner < "$B/mas.dump"
 cmp -s "$B/signing.key" <(compose run --rm --no-deps -T --entrypoint cat synapse "/data/${MATRIX_DOMAIN}.signing.key") \
   && log "podpisový kľúč obnovený (zhoda)" || die "podpisový kľúč sa nezhoduje so zálohou!"
 log "štartujem stack"
+admin_secrets   # administrácia (D56): kópie tajomstiev pre UID 10001
 compose up -d --remove-orphans
 wait_healthy synapse 300 || die "Synapse nenaštartoval"
 for svc in nginx element-call livekit lk-jwt-service; do wait_healthy "$svc" 120 || warn "$svc ešte nie je healthy"; done
