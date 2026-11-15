@@ -46,7 +46,7 @@ dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over ou
       log "INFO: dismissing system ANR dialog"; xy="$($CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
     elif printf '%s' "$t" | grep -qE "^(Full-screen calls|Reliable calls and messages)$"; then
       log "INFO: psst prompt: $(printf '%s' "$t" | grep -E "^(Full-screen calls|Reliable calls and messages)$") → Later"
-      xy="$($CHECK tap "$OUT/_anr.xml" "Later")" || return 0
+      xy="$($CHECK tap "$OUT/_anr.xml" "Later" || $CHECK tap "$OUT/_anr.xml" "LATER")" || return 0
     else
       return 0
     fi

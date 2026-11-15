@@ -22,6 +22,8 @@ async def main(rcpt, mode="invite", room=None):
         print("login", r.status_code, r.text[:120] if r.status_code != 200 else "", file=sys.stderr); r.raise_for_status()
         j = r.json(); sess.write_text(json.dumps(j)); c.restore_login(j["user_id"], j["device_id"], j["access_token"])
     print('logged in', file=sys.stderr)
+    c.next_batch = None  # vždy úplná synchronizácia — miestna cache nemusí poznať práve vytvorené miestnosti
+    c.loaded_sync_token = None
     r = await c.sync(timeout=3000, full_state=True); print('synced', type(r).__name__, file=sys.stderr)
     if c.should_upload_keys: await c.keys_upload()
     if mode == "invite":
