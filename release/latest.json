@@ -1,0 +1,70 @@
+{
+ "web": {
+  "build": 9,
+  "date": "20261115",
+  "note": "Číslo buildu a dátum v Nastavenia → Help & About; nové pomenovanie súborov.",
+  "dir": "web",
+  "files": [
+   {
+    "name": "psst-web-20261115-b9.tar.gz",
+    "sha256": "22c95cd5122560ab36db285cc68957a8831189b713c38e1281938d7ed5f6b8a1"
+   }
+  ]
+ },
+ "macos": {
+  "build": 9,
+  "date": "20261115",
+  "note": "Číslo buildu a dátum v Nastavenia → Help & About; nové pomenovanie súborov.",
+  "dir": "desktop",
+  "files": [
+   {
+    "name": "psst-macos-20261115-b9.dmg",
+    "sha256": "835bb1a5251b8c7aee2f7a907b0515d9e6f95b5f8cd0614928bd489e9373b54a"
+   },
+   {
+    "name": "psst-macos-20261115-b9.zip",
+    "sha256": "eccd7b55221721f5913db17f63a819650d7303fd31ad94c236c4824b1c9b74ec"
+   }
+  ]
+ },
+ "windows": {
+  "build": 9,
+  "date": "20261115",
+  "note": "Číslo buildu a dátum v Nastavenia → Help & About; nové pomenovanie súborov.",
+  "dir": "desktop",
+  "files": [
+   {
+    "name": "psst-windows-20261115-b9-setup.exe",
+    "sha256": "0d97c5fe6f7ec111212daefbf1cb3c3b7d7195c5494e4ec5368de8f65b7619cf"
+   },
+   {
+    "name": "psst-windows-20261115-b9.msi",
+    "sha256": "4b33621733e94bf1fd6e2825ffe34593e7429fe151fa1d5987cdcd54d204aeb2"
+   }
+  ]
+ },
+ "android": {
+  "build": 13,
+  "date": "20261115",
+  "note": "Prichádzajúci hovor na zamknutom telefóne rozsvieti displej a ukáže sa cez celú obrazovku; appka vyžiada povolenie upozornení na celú obrazovku a výnimku z optimalizácie batérie (D57).",
+  "dir": "android",
+  "files": [
+   {
+    "name": "psst-android-20261115-b13-arm64.apk",
+    "sha256": "909ee31e073d7b207eaa6b6d733608dda25e2b2082e8955eb943660d49069b97"
+   },
+   {
+    "name": "psst-android-20261115-b13-armv7.apk",
+    "sha256": "b93b161d71ee04d821d84218bdb2a41c5ac0f3eb0a08e0f658b5ca7bb8f1bb58"
+   },
+   {
+    "name": "psst-android-20261115-b13-x86_64.apk",
+    "sha256": "aef6dcbf1f4042da89422fa7f943af2838ed451c0a0eafd9dcbb1c24e2b816c5"
+   },
+   {
+    "name": "psst-android-20261115-b13.aab",
+    "sha256": "36917c707ef22008286feca1b7b24c5d652d1fccbc6d33b253615d3f48b24032"
+   }
+  ]
+ }
+}

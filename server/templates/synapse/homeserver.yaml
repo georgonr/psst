@@ -96,6 +96,11 @@ experimental_features:
   # MSC4502 + MSC4512: lk-jwt-service ako application service (overenie členstva, proxy /rtc/livekit)
   msc4502_enabled: true
   msc4512_enabled: true
+  # Prihlásenie nového zariadenia QR kódom (D58): MSC4108 (verzia 2024) aj MSC4388 (bezpečný kanál, novšie klienty).
+  # "open" = rendezvous môže založiť aj ešte neprihlásené zariadenie (nové zariadenie ukazuje QR); dáta sú krátkodobé,
+  # šifrované medzi zariadeniami a obmedzené rate limitom Synapse. Vyžaduje MAS (device code grant).
+  msc4108_enabled: true
+  msc4388_mode: open
   # MSC3266 (room summary) a MSC4222 (state_after) sú v Synapse >= 1.165 stabilné → bez flagu.
 
 # MSC4140 delayed events (stabilná voľba)

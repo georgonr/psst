@@ -180,7 +180,7 @@ jobs:
 
             - name: Build app (unsigned)
               working-directory: apps/desktop
-              run: pnpm run build:universal --publish never -m dmg zip -c.buildVersion=${{ needs.web.outputs.build }}
+              run: pnpm run build:universal --publish never -m dmg zip -c.buildVersion=${{ needs.web.outputs.build }} -c.extraMetadata.psstBuild=${{ needs.web.outputs.build }}
               env:
                   CSC_IDENTITY_AUTO_DISCOVERY: "false"
                   VARIANT_PATH: psst/build.json
@@ -250,7 +250,7 @@ jobs:
 
             - name: Build app (unsigned)
               working-directory: apps/desktop
-              run: pnpm run build --publish never -w squirrel msi -c.buildVersion=${{ needs.web.outputs.build }}
+              run: pnpm run build --publish never -w squirrel msi -c.buildVersion=${{ needs.web.outputs.build }} -c.extraMetadata.psstBuild=${{ needs.web.outputs.build }}
               env:
                   VARIANT_PATH: psst/build.json
 
@@ -269,3 +269,43 @@ jobs:
                   path: apps/desktop/out/psst-windows-*
                   if-no-files-found: error
                   retention-days: 30
+
+    # PSST download page https://app.macet.eu/download (D59): every desktop build is uploaded right away,
+    # the previous version is removed from the server, and the file served over HTTPS must match (SHA-256).
+    publish-downloads:
+        name: Publish to app.macet.eu/download
+        needs: [web, desktop-mac, desktop-win]
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+              with:
+                  name: psst-desktop-macos
+                  path: out/macos
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+              with:
+                  name: psst-desktop-windows
+                  path: out/windows
+            - name: Upload key
+              env:
+                  KEY: ${{ secrets.PSST_DL_UPLOAD_KEY }}
+                  KNOWN: ${{ secrets.PSST_DL_KNOWN_HOSTS }}
+              run: |
+                  [ -n "$KEY" ] || { echo "::error::secret PSST_DL_UPLOAD_KEY missing"; exit 1; }
+                  install -m 600 /dev/null "$RUNNER_TEMP/dl_key"; printf '%s\n' "$KEY" > "$RUNNER_TEMP/dl_key"
+                  printf '%s\n' "$KNOWN" > "$RUNNER_TEMP/dl_known_hosts"
+            - name: Upload Windows MSI + macOS DMG and verify over HTTPS
+              env:
+                  PSST_DL_KEY: ${{ runner.temp }}/dl_key
+                  PSST_DL_KNOWN_HOSTS: ${{ runner.temp }}/dl_known_hosts
+                  NOTE: "Web/desktop build b${{ needs.web.outputs.build }} (${{ github.sha }})"
+              run: |
+                  ls -la out/*
+                  scripts/release/upload-download.sh windows "$(ls out/windows/psst-windows-*-b*.msi)" "$NOTE"
+                  scripts/release/upload-download.sh macos "$(ls out/macos/psst-macos-*-b*.dmg)" "$NOTE"
+            - name: Clean up key
+              if: always()
+              run: rm -f "$RUNNER_TEMP/dl_key"

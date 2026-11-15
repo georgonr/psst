@@ -27,3 +27,4 @@ tests/server/results.json
 *.p8
 *.mobileprovision
 google-services*.json
+server/downloads/

@@ -1,0 +1,24 @@
+# PSST: the public download page must never be behind the latest published build (D59).
+# Compares https://app.macet.eu/download/latest.json with release/latest.json (written by scripts/release/publish.py).
+name: Download page check
+on:
+    push:
+        branches: [main]
+        paths: [release/latest.json, scripts/release/check-download-page.py, .github/workflows/download-page.yml]
+    schedule:
+        - cron: "17 6 * * *"
+    workflow_dispatch:
+    workflow_run:
+        workflows: ["Web + Desktop"]
+        types: [completed]
+permissions:
+    contents: read
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+            - name: Page is not behind release/latest.json
+              run: python3 scripts/release/check-download-page.py release/latest.json

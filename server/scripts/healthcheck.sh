@@ -38,6 +38,8 @@ check "MAS compat login"                            "https://$MATRIX_DOMAIN/_mat
 check "PSST web"                                    "https://$APP_DOMAIN/" "<html"
 check "Podmienky / Ochrana súkromia"                "https://$APP_DOMAIN/terms.html" "psst"
 get -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/privacy.html" | grep -q 200 && ok "privacy.html" || bad "privacy.html"
+# stránka na stiahnutie (D59)
+check "stránka na stiahnutie /download" "https://$APP_DOMAIN/download/" "Download psst"
 # administrácia: bez prihlásenia presmeruje na MAS (D56)
 get -o /dev/null -w '%{http_code} %{redirect_url}' "https://$APP_DOMAIN/admin/login" | grep -q "^303 .*/authorize" \
   && ok "administrácia /admin (prihlásenie cez MAS)" || bad "administrácia /admin"

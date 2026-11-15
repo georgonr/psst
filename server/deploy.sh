@@ -400,6 +400,28 @@ if [ -n "$CFG_BEFORE" ]; then
 fi
 wait_healthy synapse 300 || { compose logs --tail=80 synapse mas; die "Synapse nenaštartoval"; }
 wait_healthy nginx 90 || { compose logs --tail=80 nginx; die "nginx nenaštartoval"; }
+# stránka na stiahnutie appiek https://<APP_DOMAIN>/download (D59): používateľ psst-dl smie cez SSH len
+# scripts/downloads.py (forced command) — CI a build skripty nahrávajú nové verzie, staré sa mažú
+if [ "$(id -u)" = 0 ] && [ "$LOCAL_TEST" = 0 ]; then
+  id psst-dl >/dev/null 2>&1 || useradd --system --home-dir /var/lib/psst-dl --create-home --shell /bin/sh psst-dl
+  install -d -o psst-dl -g psst-dl -m 755 downloads downloads/files
+  if [ -s secrets/download_upload.pub ]; then
+    install -d -o psst-dl -g psst-dl -m 700 /var/lib/psst-dl/.ssh
+    printf 'command="env APP_DOMAIN=%s PSST_DOWNLOADS=%s /usr/bin/python3 %s ssh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-user-rc %s\n' \
+      "$APP_DOMAIN" "$PWD/downloads" "$PWD/scripts/downloads.py" "$(cat secrets/download_upload.pub)" > /var/lib/psst-dl/.ssh/authorized_keys
+    chown psst-dl:psst-dl /var/lib/psst-dl/.ssh/authorized_keys; chmod 600 /var/lib/psst-dl/.ssh/authorized_keys
+    HC=/etc/ssh/sshd_config.d/00-hardening.conf
+    if [ -f "$HC" ] && grep -q '^AllowUsers' "$HC" && ! grep -q '^AllowUsers.*psst-dl' "$HC"; then
+      cp "$HC" "$HC.bak"; sed -i 's/^AllowUsers .*/& psst-dl/' "$HC"
+      if sshd -t; then systemctl reload ssh 2>/dev/null || systemctl reload sshd; else cp "$HC.bak" "$HC"; warn "sshd -t zlyhal, AllowUsers vrátené"; fi
+    fi
+  else
+    warn "secrets/download_upload.pub chýba → nahrávanie na stránku /download vypnuté"
+  fi
+  sudo -u psst-dl env APP_DOMAIN="$APP_DOMAIN" PSST_DOWNLOADS="$PWD/downloads" python3 scripts/downloads.py render >/dev/null
+else
+  mkdir -p downloads/files; PSST_DOWNLOADS="$PWD/downloads" APP_DOMAIN="$APP_DOMAIN" python3 scripts/downloads.py render >/dev/null || true
+fi
 # administrácia: read-only prístup k 2 tabuľkám MAS (kto sa ktorou pozvánkou zaregistroval) + Synapse admin token
 compose exec -T postgres psql -U synapse -d mas -v ON_ERROR_STOP=1 -q >/dev/null <<SQL || warn "DB rola psst_admin_ro: zlyhalo"
 DO \$\$ BEGIN

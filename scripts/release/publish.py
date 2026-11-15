@@ -106,6 +106,9 @@ def main():
 
     state[a.platform] = {"build": a.build, "date": a.date, "note": a.note, "dir": sub, "files": entries}
     STATE.write_text(json.dumps(state, indent=1, ensure_ascii=False))
+    # tracked copy for the CI check of the download page (scripts/release/check-download-page.py, D59)
+    (ROOT / "release").mkdir(exist_ok=True)
+    (ROOT / "release" / "latest.json").write_text(json.dumps(state, indent=1, ensure_ascii=False) + "\n")
     # SHA256SUMS covers every current file in the directory
     sums = []
     for plat, e in state.items():
