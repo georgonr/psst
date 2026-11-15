@@ -19,29 +19,46 @@ gh auth refresh -h github.com -s workflow       # jednorazovo — bez toho GitHu
 ./scripts/make-icons.sh            # python3 (len stdlib); na macOS iconutil pre .icns → assets/generated/
 ```
 
+## Verzovanie artefaktov (D54)
+
+- **Číslo buildu** = poradové číslo behu CI workflowu danej platformy (`github.run_number`): Android = `android.yml`,
+  web + desktop = `web-desktop.yml` (spoločné číslo), iOS = posledný build v TestFlighte + 1. Každý build má nové
+  číslo; lokálne buildy majú `b0` a nepublikujú sa (`publish.py` ich odmietne).
+- **Dátum** = dátum buildu v UTC, `RRRRMMDD`.
+- **Názvy súborov:** `psst-<platforma>-<RRRRMMDD>-b<číslo>[-<abi>].<prípona>`, napr.
+  `psst-android-20261115-b9-arm64.apk`, `psst-android-20261115-b9.aab`, `psst-windows-20261115-b9.msi`,
+  `psst-windows-20261115-b9-setup.exe`, `psst-macos-20261115-b9.dmg`, `psst-web-20261115-b9.tar.gz`,
+  `psst-ios-20261115-b3.ipa`. ABI: `arm64`, `armv7`, `x86_64`.
+- **V appke** (Nastavenia → About / Help & About): Android `26.11.0-b9 (2026-11-15)`, web a desktop
+  `1.12.35-b9 (2026-11-15)`, iOS `26.11.0 (b3, 2026-11-15)`.
+- Android `versionCode` = `(21 000 000 + číslo) × 10 + ABI` — vždy vyššie než pôvodné `202611xxx`, nové APK sa
+  nainštaluje cez staré.
+- `dist/android`, `dist/desktop`, `dist/web`, `dist/ios` obsahujú **len najnovšiu verziu**; staršie presúva
+  `scripts/release/publish.py` do `dist/archive/<platforma>/` (nič nemaže). Prehľad: **`dist/LATEST.md`**
+  (súbor, build, dátum, SHA-256, čo sa zmenilo).
+
 ## 2–3. Web + Desktop
 
 ```sh
 gh workflow run web-desktop.yml -R georgonr/psst
 gh run watch -R georgonr/psst <run-id>
-gh run download -R georgonr/psst <run-id> -n psst-web-dist        -D dist/
-gh run download -R georgonr/psst <run-id> -n psst-desktop-macos   -D dist/
-gh run download -R georgonr/psst <run-id> -n psst-desktop-windows -D dist/
+PSST_NOTE="čo sa zmenilo" scripts/release/fetch-web-desktop.sh <run-id> [--release]   # → dist/desktop, dist/web
+# --release: GitHub release web-b<N>; na serveri potom: sudo scripts/fetch-web.sh
 ```
 
 ## 4. Android
 
 ```sh
 gh workflow run android.yml -R georgonr/psst
-scripts/android/sign-release.sh --run <run-id>   # stiahne nepodpísané APK/AAB a podpíše kľúčom z ~/psst-keys
-# výstup: dist/android/*.apk, *.aab, SHA256SUMS
+PSST_NOTE="čo sa zmenilo" scripts/android/sign-release.sh --run <run-id>   # stiahne, podpíše kľúčom z ~/psst-keys
+# výstup: dist/android/psst-android-<RRRRMMDD>-b<N>-{arm64,armv7,x86_64}.apk, …-b<N>.aab, SHA256SUMS; staré → dist/archive/android/
 ```
 
 ## 5. iOS
 
 ```sh
 gh workflow run ios.yml -R georgonr/psst                 # simulátor, bez podpisu
-gh workflow run ios-release.yml -R georgonr/psst         # až po doplnení secrets (viď docs/build/ios.md)
+scripts/ios/release-testflight.sh                        # podpísaný build → TestFlight (viď scripts/ios/README.md)
 ```
 
 ## 6. Server

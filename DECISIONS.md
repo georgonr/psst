@@ -306,3 +306,30 @@ V psst-android (fork) dve zmeny voči upstream Element X 26.11:
 - prichádzajúci hovor zvoní, ak appka do 12 s (upstream 3 s) zistí aktívny hovor v miestnosti; ak to nestihne,
   zvoní, kým samotné zvonenie neexpiruje (max. 30 s). Na lacných telefónoch appka spustená pushom 3 s nestihla
   a hovor sa zobrazil len ako bežná notifikácia „📹 Incoming call".
+
+**D54 — Verzovanie artefaktov.** Číslo buildu = `github.run_number` CI workflowu danej platformy (web a desktop
+zdieľajú `web-desktop.yml`), iOS = posledný build v TestFlighte + 1 (Apple vyžaduje rastúce číslo). Dátum = deň buildu
+v UTC. Názov `psst-<platforma>-<RRRRMMDD>-b<N>[-<abi>].<prípona>`; ABI skrátené na `arm64`/`armv7`/`x86_64`.
+Číslo a dátum sú vidieť v appke (About). Android `versionCode = (21 000 000 + N) × 10 + ABI` — nad pôvodnou
+schémou Element X (`202611xxx`), aby sa každé nové APK nainštalovalo cez staré; `versionName` `26.11.0-bN (RRRR-MM-DD)`.
+Lokálny build bez CI má `b0` a `publish.py` ho odmietne, takže dve rôzne verzie s rovnakým číslom nevzniknú
+(re-run toho istého behu CI postaví rovnaký commit s rovnakým číslom). `dist/<platforma>/` = len najnovšia verzia,
+staršie v `dist/archive/<platforma>/`, prehľad `dist/LATEST.md` (generuje `scripts/release/publish.py`).
+
+**D55 — iOS: príprava TestFlightu.** Tím `MHV67VMY8T` je zdieľaný → len pridávame a meníme výhradne objekty „psst …"
+(bundle ID `eu.macet.psst`, `.nse`, `.shareextension`; distribučný certifikát `K2778R2L24`, súkromný kľúč len
+v `~/psst-keys/ios-dist`; profily „psst AppStore <bundle>"). Apple cez API nedovolí vytvoriť App Group ani záznam
+appky (`apps` nemá CREATE) a Xcode v CI odmieta API kľúč pri automatickom podpisovaní → tieto dva kroky robí človek
+raz ručne (`scripts/ios/README.md`), všetko ostatné `scripts/ios/release-testflight.sh`. Podpisovanie manuálne
+(certifikát + profily v GitHub secrets), build na runneri `xcode-27`, upload `altool` s API kľúčom.
+Entitlementy, ktoré profil nemá (NSE filtering — vyžaduje súhlas Apple; Communication Notifications — len cez portál),
+workflow pred buildom vynechá; App Group je povinná a bez nej build skončí chybou.
+**Exportná zhoda:** `ITSAppUsesNonExemptEncryption = false` (ako Element X) — appka používa len štandardné
+algoritmy (AES, Curve25519, SHA-2 v Olm/Megolm/vodozemci a TLS), nič proprietárne, a celý kryptografický kód je
+verejne dostupný open source (AGPL, GitHub). Takýto softvér podľa US EAR §734.3(b)(3)/§742.15(b) nepodlieha
+kontrole a od 2021 nevyžaduje ani oznámenie BIS/NSA; žiadny výročný self-classification report.
+Povinnosť voči úradom pre TestFlight a EÚ teda nevzniká. **Pred verejným vydaním v App Store vo Francúzsku** treba
+overiť, či netreba ohlásenie ANSSI (Apple sa pri distribúcii vo Francúzsku pýta na francúzsku deklaráciu).
+**APNs:** Sygnal `eu.macet.psst.ios.prod` (production) a `.ios.dev` (sandbox), topic `eu.macet.psst`, kľúč
+`NVM823LAXK` na serveri v `secrets/apns/` (600 root), overené odpoveďou APNs `BadDeviceToken` na falošný token.
+`apple-app-site-association` už obsahuje `MHV67VMY8T.eu.macet.psst`.
