@@ -21,7 +21,7 @@ on:
         default: psst
         required: true
       build_number:
-        description: "CFBundleVersion (empty = workflow run number)"
+        description: "CFBundleVersion = psst iOS build number (scripts/ios/release-testflight.sh passes last TestFlight build + 1; empty = workflow run number)"
         required: false
       upload_to_testflight:
         description: "Upload the IPA to App Store Connect / TestFlight"
@@ -152,6 +152,8 @@ jobs:
         env:
           BUILD_NUMBER: ${{ inputs.build_number || github.run_number }}
         run: |
+          echo "PSST_BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "PSST_BUILD_DATE=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
           profile() { awk -F'\t' -v b="$1" '$1==b {print $2}' "$RUNNER_TEMP/profiles.tsv"; }
           # Per-target manual signing, merged into the XcodeGen spec via an extra include.
           cat > psst-signing.yml <<EOF
@@ -185,6 +187,17 @@ jobs:
             echo "::warning::NSE profile lacks com.apple.developer.usernotifications.filtering - removing it from NSE entitlements"
             sed -i '' '/com.apple.developer.usernotifications.filtering: true/d' NSE/SupportingFiles/target.yml
           fi
+          # Communication Notifications (sender avatars in notifications) can only be enabled in the portal.
+          if ! /usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.developer.usernotifications.communication' \
+               "$RUNNER_TEMP/profiles/$BUNDLE_ID.plist" >/dev/null 2>&1; then
+            echo "::warning::App profile lacks Communication Notifications - removing the entitlement"
+            sed -i '' '/com.apple.developer.usernotifications.communication: true/d' ElementX/SupportingFiles/target.yml
+          fi
+          # The App Group must be in every profile (shared store app <-> NSE <-> share extension).
+          for b in "$BUNDLE_ID" "$BUNDLE_ID.nse" "$BUNDLE_ID.shareextension"; do
+            /usr/libexec/PlistBuddy -c 'Print :Entitlements:com.apple.security.application-groups' "$RUNNER_TEMP/profiles/$b.plist" \
+              | grep -q "group.$BUNDLE_ID" || { echo "::error::profile for $b has no App Group group.$BUNDLE_ID"; exit 1; }
+          done
           cat psst-signing.yml
           xcodegen
 
@@ -199,6 +212,7 @@ jobs:
             -archivePath "$RUNNER_TEMP/psst.xcarchive" \
             -skipPackagePluginValidation -skipMacroValidation \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Distribution" \
+            PSST_BUILD_DATE="${PSST_BUILD_DATE:0:4}-${PSST_BUILD_DATE:4:2}-${PSST_BUILD_DATE:6:2}" \
             OTHER_CODE_SIGN_FLAGS="--keychain $SIGNING_KEYCHAIN" COMPILER_INDEX_STORE_ENABLE=NO \
             > "$RUNNER_TEMP/archive.log" 2>&1 &
           pid=$!
@@ -235,6 +249,8 @@ jobs:
           ls -l "$RUNNER_TEMP/export"
           IPA=$(ls "$RUNNER_TEMP"/export/*.ipa | head -1)
           mv "$IPA" "$RUNNER_TEMP/export/psst.ipa"
+          cp "$RUNNER_TEMP/export/psst.ipa" "$RUNNER_TEMP/export/psst-ios-$PSST_BUILD_DATE-b$PSST_BUILD_NUMBER.ipa"
+          echo "psst iOS build b$PSST_BUILD_NUMBER, $PSST_BUILD_DATE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload to TestFlight
         if: ${{ inputs.upload_to_testflight }}
@@ -253,7 +269,7 @@ jobs:
         with:
           name: psst-ios-ipa
           path: |
-            ${{ runner.temp }}/export/psst.ipa
+            ${{ runner.temp }}/export/psst-ios-*.ipa
             ${{ runner.temp }}/export/*.plist
           retention-days: 30
 
