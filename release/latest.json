@@ -1,69 +1,69 @@
 {
  "web": {
-  "build": 9,
+  "build": 12,
   "date": "20261115",
-  "note": "Číslo buildu a dátum v Nastavenia → Help & About; nové pomenovanie súborov.",
+  "note": "Help & About shows build number and date; desktop checks app.macet.eu/download for new builds.",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261115-b9.tar.gz",
-    "sha256": "22c95cd5122560ab36db285cc68957a8831189b713c38e1281938d7ed5f6b8a1"
+    "name": "psst-web-20261115-b12.tar.gz",
+    "sha256": "222ae099336bf3f99ed83f350afd2ad09b7a8ebe4d8d35ea8d4304d7e3013337"
    }
   ]
  },
  "macos": {
-  "build": 9,
+  "build": 12,
   "date": "20261115",
-  "note": "Číslo buildu a dátum v Nastavenia → Help & About; nové pomenovanie súborov.",
+  "note": "Help & About shows build number and date; desktop checks app.macet.eu/download for new builds.",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261115-b9.dmg",
-    "sha256": "835bb1a5251b8c7aee2f7a907b0515d9e6f95b5f8cd0614928bd489e9373b54a"
+    "name": "psst-macos-20261115-b12.dmg",
+    "sha256": "a1b2906852e58e55d5303f341d5d439e1ce2c37fc107370d1a38c14eb81422ad"
    },
    {
-    "name": "psst-macos-20261115-b9.zip",
-    "sha256": "eccd7b55221721f5913db17f63a819650d7303fd31ad94c236c4824b1c9b74ec"
+    "name": "psst-macos-20261115-b12.zip",
+    "sha256": "0b84e93dca54ac976d1b8962f58f554ec25ff36360f7737dbbeb6c1760e82d4f"
    }
   ]
  },
  "windows": {
-  "build": 9,
+  "build": 12,
   "date": "20261115",
-  "note": "Číslo buildu a dátum v Nastavenia → Help & About; nové pomenovanie súborov.",
+  "note": "Help & About shows build number and date; desktop checks app.macet.eu/download for new builds.",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261115-b9-setup.exe",
-    "sha256": "0d97c5fe6f7ec111212daefbf1cb3c3b7d7195c5494e4ec5368de8f65b7619cf"
+    "name": "psst-windows-20261115-b12-setup.exe",
+    "sha256": "de387410d5bfefc154f5af810f96d194d1cb97ed5e4a1bb09212f7f71c6202e8"
    },
    {
-    "name": "psst-windows-20261115-b9.msi",
-    "sha256": "4b33621733e94bf1fd6e2825ffe34593e7429fe151fa1d5987cdcd54d204aeb2"
+    "name": "psst-windows-20261115-b12.msi",
+    "sha256": "fbde5fcf6f02d0359736bf593ebaebf19f3038935c9cee6644281e93d248e9a3"
    }
   ]
  },
  "android": {
-  "build": 13,
+  "build": 15,
   "date": "20261115",
-  "note": "Prichádzajúci hovor na zamknutom telefóne rozsvieti displej a ukáže sa cez celú obrazovku; appka vyžiada povolenie upozornení na celú obrazovku a výnimku z optimalizácie batérie (D57).",
+  "note": "Version name without parentheses (correct device name in session lists); QR sign-in supported by the server.",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261115-b13-arm64.apk",
-    "sha256": "909ee31e073d7b207eaa6b6d733608dda25e2b2082e8955eb943660d49069b97"
+    "name": "psst-android-20261115-b15-arm64.apk",
+    "sha256": "8c1681e47a35bda69e09b065637ecb019d13cf29f1548eb1214536fc9e49368b"
    },
    {
-    "name": "psst-android-20261115-b13-armv7.apk",
-    "sha256": "b93b161d71ee04d821d84218bdb2a41c5ac0f3eb0a08e0f658b5ca7bb8f1bb58"
+    "name": "psst-android-20261115-b15-armv7.apk",
+    "sha256": "e60dc9b965cc9a1ad911c6ee41a6e35aa94876bddc9635459459774e30cd9738"
    },
    {
-    "name": "psst-android-20261115-b13-x86_64.apk",
-    "sha256": "aef6dcbf1f4042da89422fa7f943af2838ed451c0a0eafd9dcbb1c24e2b816c5"
+    "name": "psst-android-20261115-b15-x86_64.apk",
+    "sha256": "7085a938ed5d2c70ccfc549ae1579757f5c28f5d6b568010108df6034405075b"
    },
    {
-    "name": "psst-android-20261115-b13.aab",
-    "sha256": "36917c707ef22008286feca1b7b24c5d652d1fccbc6d33b253615d3f48b24032"
+    "name": "psst-android-20261115-b15.aab",
+    "sha256": "ad52344bbbe74136ec18e78850eaeeeede57474f46eab230f91be4439f1a0379"
    }
   ]
  }
