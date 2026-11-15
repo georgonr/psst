@@ -119,6 +119,8 @@ async function desktopLogin(user) {
     await page.goto(target.href).catch(() => {}); await page.reload().catch(() => {});
     for (let i = 0; i < 90; i++) {
         if (await page.locator(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel").count()) break;
+        // second sign-in of an account with encryption set up: Element asks to confirm the identity first
+        if (await page.getByText("Confirm your digital identity").count().catch(() => 0)) { metrics.reloginIdentityPrompt = true; break; }
         if (i % 5 === 4) await skipVerification(page);
         await sleep(1000);
     }
@@ -402,7 +404,8 @@ await step("2.2 odhlásenie", async () => {
     // Element 1.12 labels sign-out in Settings → Account "Remove this device"
     await page.getByRole("button", { name: /^(Sign out|Remove this device)$/ }).first().click({ timeout: 15000 });
     await sleep(1500); await shot(page, "logout-dialog");
-    for (let i = 0; i < 3; i++) await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog button:has-text("Remove"), .mx_Dialog button:has-text("I don\'t want my encrypted messages"), .mx_Dialog [role=button]:has-text("Remove this device")').first().click({ timeout: 4000 }).catch(() => {});
+    // "This is your only device" → "Remove this device anyway" (the test account has no recovery key)
+    await page.getByText(/^(Remove this device anyway|Sign out anyway|I don't want my encrypted messages)$/).first().click({ timeout: 10000 }).catch(() => {});
     const out = await page.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage, .mx_Welcome", { timeout: 60000 }).then(() => true, () => false);
     await shot(page, "logged-out");
     check("2.2 odhlásenie", out);
