@@ -351,3 +351,19 @@ IP; JSON lines, zálohuje sa), poznámky „pre koho" v `data/admin/notes.sqlite
 Synapse admin token) len v `secrets/` na serveri, kontajner dostáva kópie `secrets/admin-run/` (400).
 Kódy pozvánok `XXXX-XXXX` (bez zameniteľných znakov). MAS obmedzuje počet registrácií z jednej IP (ochrana proti
 zneužitiu) — ponechané.
+
+**D57 — Prichádzajúci hovor na zamknutom telefóne ako bežný hovor.** Príčina: od Androidu 14 smie appka zobraziť
+hovor cez celú zamknutú obrazovku (rozsvietený displej, volajúci, Prijať/Odmietnuť) len s povolením „Upozornenia
+na celú obrazovku" (`USE_FULL_SCREEN_INTENT`). Samsung ho appkám nainštalovaným z APK nechá vypnuté → systém ukáže
+len notifikáciu na zamknutej ploche. Upstream Element X na to upozorní iba prehliadnuteľným bannerom v zozname
+konverzácií. Oprava v psst-android: (1) `IncomingCallActivity` má `showWhenLocked`/`turnScreenOn` v manifeste aj cez
+API 27+ (staré window flagy sú na nových Androidoch nespoľahlivé); hovor sa zobrazí a prijme bez odomknutia,
+`ElementCallActivity` už nad zámkou beží. (2) `PsstCallReadiness`: pri prvom spustení a po každej aktualizácii, ak
+povolenie chýba, jedna veta + priamo obrazovka `ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT`; potom žiadosť o výnimku
+z optimalizácie batérie (`ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`, povolenie appka už mala). (3) Keď zazvoní
+hovor bez povolenia: notifikácia s priamym odkazom na nastavenie a pri ďalšom otvorení appky výzva znova.
+Notifikácia hovoru už bola správna (CallStyle, kanál „Ringing calls" `IMPORTANCE_MAX` s vyzváňaním,
+`fullScreenIntent` na `IncomingCallActivity`) — bez zmeny. **Self-managed ConnectionService nie:** ani s ním
+Android nezobrazí hovor nad zámkou inak než cez ten istý full-screen intent (vyžaduje rovnaké povolenie), pridal by
+len Bluetooth/auto integráciu za cenu veľkého zásahu do Element X (ten telecom integráciu nemá) — samotný problém
+by nevyriešil.
