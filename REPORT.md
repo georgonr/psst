@@ -1,3 +1,52 @@
+# PSST — report (2026-11-15, dávka 10: Windows, QR prihlásenie, stránka na stiahnutie)
+
+Rozhodnutia: D58 (QR), D59 (stránka + automatika + aktualizácie desktopu), D60 (Windows E2E).
+
+## Windows desktop — E2E na `windows-latest`, produkcia, MSI b12: **20/20**
+
+Workflow *Desktop Windows E2E* (`scripts/desktop/windows-e2e.mjs`), čerstvé testové účty pre každý beh.
+
+| Oblasť | Výsledok |
+|---|---|
+| inštalácia MSI (msiexec /qn), prvé spustenie | ✅ |
+| stabilita 3 min po prihlásení + na konci | ✅ CPU 0,1 %, max ~715 MB, odozva ≤ 3 ms, bez rastu pamäte |
+| prihlásenie cez MAS, odhlásenie, opätovné prihlásenie | ✅ (po opätovnom prihlásení Element žiada potvrdiť identitu — správne) |
+| šifrovaná správa príjem / odoslanie, súbor, skupina 3 členov | ✅ (druhá strana Element Web, dešifrovanie overené) |
+| notifikácia pri minimalizovanom okne a pri okne zavretom (X) do tray | ✅ appka beží skrytá v tray, notifikácia vyvolaná |
+| prichádzajúci hovor 1:1 (zvonenie + toast + prijatie + video) | ✅ |
+| skupinový hovor (oznámenie + pripojenie) | ✅ |
+| About: číslo buildu | ✅ `1.12.35-b12 (2026-11-15)` |
+| aktualizácie | ✅ Element updater vypnutý; appka kontroluje app.macet.eu/download |
+
+Opravené: About na desktope bez čísla buildu; kontrola novej verzie cez našu stránku (namiesto Elementovho updatera);
+Android `versionName` so zátvorkami rozbíjal User-Agent (názov zariadenia v zozname relácií); presmerovanie
+`/download` ukazovalo na interný port 8443 (teraz `absolute_redirect off` pre celý nginx).
+Poznámka: Windows história notifikácií (Action Center) zostáva prázdna, hoci appka notifikáciu vyvolá a Windows
+appku registruje (AUMID `eu.macet.psst`) — skutočné zobrazenie toastu na pracovnej ploche overte na PC.
+
+## QR prihlásenie — ✅ na produkcii
+
+Synapse MSC4108 + MSC4388. Overené: web „Link new device → Show QR code" → Android (nové zariadenie) naskenoval
+(emulátor, kamera s obrázkom QR) → kód 2 číslice na webe → overovací kód + „Grant access" v MAS → Android prihlásený.
+Kontakt cez QR: QR v „Share" na webe/desktope je odkaz `app.macet.eu/#/user/…`, Android ho otvorí priamo v psst
+(App Links overené) na profile s „Message".
+
+## Stránka https://app.macet.eu/download
+
+Android **b15** (APK arm64), Windows **b12** (MSI), macOS **b12** (DMG), iOS „Coming soon"; build, dátum, veľkosť,
+SHA-256, návod. Odkaz „Download apps" na prihlasovacej obrazovke webu. Na serveri len aktuálne verzie.
+Automatika: Android = `sign-release.sh`, Windows/macOS = CI → nahratie cez obmedzený SSH kľúč → server overí SHA-256
+a zmaže starú verziu → klient stiahne cez HTTPS a porovná SHA-256 (inak build zlyhá); kontrola „stránka nie je
+pozadu" lokálne aj v CI (denne + po každom desktop builde). Postup v BUILD.md.
+
+## Čo ostáva
+
+- Skutočné zobrazenie Windows toastu a zvuk zvonenia overiť na reálnom PC (v CI bez zvuku a bez interaktívnej plochy).
+- QR prihlásenie s desktopom ako novým zariadením (desktop vie len zobraziť QR, skenuje mobil).
+- iOS: App Group + záznam appky → `scripts/ios/release-testflight.sh`.
+
+---
+
 # PSST — report (2026-11-15, dávka 9: hovor na zamknutom Androide)
 
 **Príčina:** Android 14+ zobrazí hovor cez celú zamknutú obrazovku len s povolením „Upozornenia na celú obrazovku"
