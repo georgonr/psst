@@ -35,11 +35,23 @@ async def main(rcpt, mode="invite", room=None):
         print("SENT", text)
     elif mode == "call":
         # MatrixRTC zvonenie: m.rtc.notification (ring) — klient ho zobrazí ako prichádzajúci hovor
+        # 1) členstvo v hovore (ako Element Call), 2) zvonenie odkazujúce na toto členstvo
+        dev = c.device_id
+        member = {"application": "m.call", "call_id": "", "device_id": dev, "expires": 14400000,
+                  "foci_preferred": [{"livekit_alias": room, "livekit_service_url": HS + "/livekit/jwt", "type": "livekit",
+                                      "url": "wss://chat.macet.eu/livekit/sfu"}],
+                  "focus_active": {"focus_selection": "multi_sfu", "type": "livekit"}, "m.call.intent": "video",
+                  "membershipID": f"{c.user_id}:{dev}", "scope": "m.room"}
+        r = await c.room_put_state(room, "org.matrix.msc3401.call.member", member, state_key=f"_{c.user_id}_{dev}_m.call")
+        print("MEMBER", getattr(r, "event_id", r))
         now = int(time.time() * 1000)
-        content = {"notification_type": "ring", "sender_ts": now, "lifetime": 30000,
+        content = {"notification_type": "ring", "sender_ts": now, "lifetime": 30000, "m.call.intent": "video",
                    "m.mentions": {"user_ids": [f"@{rcpt}:chat.macet.eu"], "room": True},
-                   "m.relates_to": {"rel_type": "m.reference", "event_id": "$" + secrets.token_urlsafe(32)}}
+                   "m.relates_to": {"rel_type": "m.reference", "event_id": r.event_id}}
         r = await c.room_send(room, "org.matrix.msc4075.rtc.notification", content, ignore_unverified_devices=True)
         print("RING", getattr(r, "event_id", r))
+        await asyncio.sleep(float(os.environ.get("PSST_CALL_HOLD", "25")))
+        await c.room_put_state(room, "org.matrix.msc3401.call.member", {}, state_key=f"_{c.user_id}_{dev}_m.call")
+        print("HUNG UP")
     await c.close()
 asyncio.run(asyncio.wait_for(main(*sys.argv[1:]), 90))

@@ -1,4 +1,59 @@
-# PSST — report (2026-11-14, piata dávka: Android notifikácie cez Google FCM)
+# PSST — report (2026-11-15, šiesta dávka: notifikácie a zvonenie na fyzických telefónoch)
+
+Rozhodnutie: DECISIONS D53. Predchádzajúci report (FCM, 2026-11-14) je nižšie a v git histórii.
+
+## Verdikt
+
+**iPhone (oficiálny Element X, účet geo): funguje** — správa prišla na zamknutú obrazovku so zvukom, hovor prišiel
+a dal sa prijať (test 15. 11., 08:46–09:00). **Android (psst, účet jj): oprava hotová a overená v emulátore,
+na telefóne ešte neotestovaná** — treba nainštalovať nové APK.
+
+## Príčina
+
+Server bol v poriadku: Synapse doručil každý push (Android → náš Sygnal → FCM, iPhone → brána Elementu), obe brány
+vrátili 200 a telefóny sa po každom pushi do sekundy ozvali na server. Firewall, egress ani push pravidlá nič nebrzdia.
+Chyby boli v zariadeniach a appke:
+- **Android**: do 14. 11. 08:13 žiadny funkčný pusher (starý ntfy zanikol, D52). Potom notifikácie chodili, ale
+  upstream Element X dáva správy do kanála s dôležitosťou DEFAULT (bez vyskakovacieho okna) a hovor zvoní, len ak
+  appka spustená pushom do 3 s zistí aktívny hovor — lacný telefón to nestihne → len tichá notifikácia „📹 Incoming call".
+- **iPhone**: doručenie fungovalo celý čas; pri prvých testoch bola otvorená aj webová appka s rovnakým účtom
+  (prečítala správy hneď, Element X na iPhone potom notifikáciu nezobrazí). Po zavretí webu notifikácie chodia.
+- Pozor pri testoch: Android telefón je prihlásený ako **jj**, nie geo.
+
+## Čo som opravil
+
+| Čo | Zmena |
+|---|---|
+| psst-android `c4ff18e3` | kanál pre správy `IMPORTANCE_HIGH` s novým ID (vyskakovacie okno + zvuk, starý stlmený kanál sa zmaže); hovor čaká na stav hovoru 12 s a zvoní, kým zvonenie neexpiruje |
+| `dist/android/` | nové podpísané APK + AAB (rovnaký kľúč, inštaluje sa cez staré) |
+| testy | `tests/server/prod_push_send.py` — správa a skutočné zvonenie (call.member + ring) z testovacieho účtu |
+
+Overené v emulátore s Google Play services (appka zatvorená, obrazovka zamknutá): správa = vyskakovacia notifikácia
+so zvukom (kanál importance 4); hovor = celoobrazovkové „Incoming Element Call" s Accept/Reject.
+
+## Test na telefónoch
+
+| Telefón | Správa | Hovor |
+|---|---|---|
+| iPhone, Element X, geo | ✅ zamknutá obrazovka + zvuk | ✅ prišiel, prijatý |
+| Android, psst, jj | ⏳ čaká na nové APK | ⏳ čaká na nové APK |
+
+## Čo ostáva
+
+1. **Android**: nainštalovať `dist/android/psst-26.11.0-arm64-v8a.apk`, raz otvoriť, povoliť notifikácie a
+   celoobrazovkové upozornenia, zatvoriť appku → test správy a hovoru (testovací účet `qa-ring` ostáva aktívny len
+   na tento test, potom ho deaktivovať: `sudo scripts/members.sh block qa-ring --deactivate`).
+2. iPhone má len zvuk „tut" — zvuk notifikácie v oficiálnom Element X nezmeníme; vlastný zvuk pôjde až v našej
+   iOS appke psst (TestFlight dávka — rozpracovaná, viď nižšie).
+3. Na tom istom účte nenechávať otvorený web pri teste — správy prečíta a telefón ich nezobrazí.
+4. **iOS TestFlight (prerušená dávka)**: kľúče presunuté do `~/psst-keys` a nikdy neboli v gite; Team ID `MHV67VMY8T`;
+   vytvorené bundle ID `eu.macet.psst`, `.nse`, `.shareextension` (Push, Associated Domains, App Groups), distribučný
+   certifikát `K2778R2L24`, GitHub secrets pre API kľúč. Blokuje: App Group `group.eu.macet.psst` sa nedá vytvoriť
+   cez API a Xcode v CI odmieta API kľúč („Authentication failed") — treba vyriešiť pred podpísaným buildom.
+
+---
+
+## Predchádzajúca dávka (2026-11-14, piata: Android notifikácie cez Google FCM): Android notifikácie cez Google FCM)
 
 Predchádzajúce reporty sú v git histórii. Rozhodnutia tejto dávky: DECISIONS D47–D52. Server: `~/proj/psst-server-notes.md`.
 
