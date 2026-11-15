@@ -333,3 +333,21 @@ overiť, či netreba ohlásenie ANSSI (Apple sa pri distribúcii vo Francúzsku 
 **APNs:** Sygnal `eu.macet.psst.ios.prod` (production) a `.ios.dev` (sandbox), topic `eu.macet.psst`, kľúč
 `NVM823LAXK` na serveri v `secrets/apns/` (600 root), overené odpoveďou APNs `BadDeviceToken` na falošný token.
 `apple-app-site-association` už obsahuje `MHV67VMY8T.eu.macet.psst`.
+
+**D56 — Administračná stránka https://app.macet.eu/admin.** Malá služba `server/admin` (FastAPI, server-rendered
+HTML bez externých skriptov, kontajner `admin` ako UID 10001, dostupný len cez nginx na app doméne — žiadna nová
+DNS ani port). Prihlásenie výhradne cez MAS: statický dôverný klient `01KPSSTADM1N0000000000000A`
+(authorization code + PKCE, scope `openid`); prístup len pre účty s admin právom v MAS (`can_request_admin`, teraz
+`geo`), servisný `psstadmin` vylúčený, ostatní dostanú 403; admin právo sa overuje znova každých 5 min.
+Ten istý klient má cez `policy.data.admin_clients` prístup k MAS admin API (client_credentials, `urn:mas:admin`)
+— pozvánky sú priamo **registračné tokeny MAS** (tie isté ako `members.sh invite` a registrácia v appkách).
+Kto sa ktorou pozvánkou zaregistroval: read-only rola `psst_admin_ro` s SELECT len na `user_registrations` a
+`user_registration_tokens`. Blokovanie = MAS lock/unlock + príznak `locked` v Synapse (ako `members.sh`); `geo`,
+servisný účet ani adminov zablokovať nejde. Bezpečnosť: session len na serveri (cookie = náhodné ID, Secure,
+HttpOnly, SameSite=Strict, Path=/admin, max. 30 min, 15 min nečinnosti), CSRF token vo formulároch + kontrola
+Origin (preto `Referrer-Policy: same-origin` — pri `no-referrer` posiela prehliadač `Origin: null`), rate limiting
+(120 GET / 20 POST / 10 prihlásení za minútu na IP), prísna CSP, audit log `data/admin/audit.log` (kto, čo, kedy,
+IP; JSON lines, zálohuje sa), poznámky „pre koho" v `data/admin/notes.sqlite`. Tajomstvá (klient, DB heslo,
+Synapse admin token) len v `secrets/` na serveri, kontajner dostáva kópie `secrets/admin-run/` (400).
+Kódy pozvánok `XXXX-XXXX` (bez zameniteľných znakov). MAS obmedzuje počet registrácií z jednej IP (ochrana proti
+zneužitiu) — ponechané.

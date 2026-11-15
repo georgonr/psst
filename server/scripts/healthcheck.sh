@@ -12,7 +12,7 @@ note() { printf '  \033[33mWARN\033[0m  %s\n' "$*"; WARNS=$((WARNS + 1)); }
 [ "$QUIET" = 1 ] || echo "PSST healthcheck $(date -u +%FT%TZ)"
 
 # --- kontajnery
-for svc in postgres synapse mas livekit coturn lk-jwt-service element-call nginx; do
+for svc in postgres synapse mas livekit coturn lk-jwt-service element-call admin nginx; do
   cid="$(compose ps -q "$svc" 2>/dev/null || true)"
   if [ -z "$cid" ]; then bad "kontajner $svc nebeží"; continue; fi
   st="$(docker inspect -f '{{.State.Status}}{{if .State.Health}}/{{.State.Health.Status}}{{end}}' "$cid")"
@@ -38,6 +38,9 @@ check "MAS compat login"                            "https://$MATRIX_DOMAIN/_mat
 check "PSST web"                                    "https://$APP_DOMAIN/" "<html"
 check "Podmienky / Ochrana súkromia"                "https://$APP_DOMAIN/terms.html" "psst"
 get -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/privacy.html" | grep -q 200 && ok "privacy.html" || bad "privacy.html"
+# administrácia: bez prihlásenia presmeruje na MAS (D56)
+get -o /dev/null -w '%{http_code} %{redirect_url}' "https://$APP_DOMAIN/admin/login" | grep -q "^303 .*/authorize" \
+  && ok "administrácia /admin (prihlásenie cez MAS)" || bad "administrácia /admin"
 check "Element Call"                                "https://$CALL_DOMAIN/" "<html"
 code="$(get -o /dev/null -w '%{http_code}' "https://$NTFY_DOMAIN/")"
 [ "$code" = 301 ] && ok "push doména len presmeruje (ntfy zrušený)" || bad "https://$NTFY_DOMAIN/ vrátil $code (očakávané 301)"

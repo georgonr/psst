@@ -36,6 +36,11 @@ ensure_admin_token() {
     --yes-i-want-to-grant-synapse-admin-privileges 2>&1 | grep -oE 'mct_[A-Za-z0-9_]+' | tail -1 > secrets/admin_token.new || true
   [ -s secrets/admin_token.new ] || die "nepodarilo sa vydať admin token"
   umask 077; mv secrets/admin_token.new secrets/admin_token
+  # kópia pre administračnú stránku (kontajner admin beží ako UID 10001, D56)
+  if [ -d secrets/admin-run ]; then
+    cp secrets/admin_token secrets/admin-run/admin_token
+    [ "$(id -u)" = 0 ] && { chown 10001:10001 secrets/admin-run/admin_token; chmod 400 secrets/admin-run/admin_token; }
+  fi
 }
 
 LIST_PY='

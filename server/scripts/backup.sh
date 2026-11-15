@@ -8,6 +8,7 @@
 #   synapse-data.tar.gz       médiá (media_store) + PODPISOVÝ KĽÚČ Synapse
 #   signing.key               podpisový kľúč ešte raz samostatne
 #   config.tar.gz             data/config (vyrenderované konfigurácie), letsencrypt.tar.gz (certifikáty)
+#   admin.tar.gz              data/admin (poznámky k pozvánkam, audit log administrácie)
 #   env, secrets/             .env a tajomstvá (MAS kľúče, APNs kľúč, admin token) — BEZ backup.pass
 # Rotácia: 7 denných, 4 týždenné (nedeľa), 6 mesačných (1. deň). Kontrolný súčet .sha256 vedľa archívu.
 # Kópia mimo servera: nastavte v .env BACKUP_RSYNC_TARGET=user@host:/cesta (rsync cez SSH kľúč).
@@ -30,6 +31,7 @@ compose exec -T synapse tar -C /data -czf - . > "$B/synapse-data.tar.gz"
 compose exec -T synapse cat "/data/${MATRIX_DOMAIN}.signing.key" > "$B/signing.key"
 log "konfigurácie, certifikáty, tajomstvá (vrátane FCM/APNs kľúčov)"
 tar -C data -czf "$B/config.tar.gz" config
+[ -d data/admin ] && tar -C data -czf "$B/admin.tar.gz" admin   # administrácia: poznámky k pozvánkam + audit log (D56)
 tar -C data/certbot -czf "$B/letsencrypt.tar.gz" conf 2>/dev/null || warn "certifikáty sa nezálohovali"
 cp .env "$B/env"
 mkdir -p "$B/secrets"; (cd secrets && tar --exclude=./backup.pass -cf - .) | tar -C "$B/secrets" -xf -

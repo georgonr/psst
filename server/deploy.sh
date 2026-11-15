@@ -135,7 +135,7 @@ if [ "$HARDEN" = 1 ]; then
 fi
 
 # ----------------------------------------------------------------- 2. .env + secrets
-ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID"
+ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID ADMIN_CLIENT_ID"
 default_for() {
   case "$1" in
     MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|AUTH_PREFIX|NTFY_DOMAIN|TURN_DOMAIN) eval "echo \$$1" ;;
@@ -147,6 +147,7 @@ default_for() {
     # odtlačok release certifikátu z ~/psst-keys (verejný údaj) — Android App Links
     ANDROID_CERT_SHA256) echo "3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99" ;;
     APPLE_TEAM_ID) echo "$TEAM_ID" ;;
+    ADMIN_CLIENT_ID) echo "01KPSSTADM1N0000000000000A" ;;   # ULID statického MAS klienta administrácie (D56)
     *) gen_secret 32 ;;
   esac
 }
@@ -156,7 +157,7 @@ set_env() { # set_env KEY VALUE — prepíše/doplní hodnotu v .env
   else printf '%s=%s\n' "$1" "$2" >> .env; fi
 }
 umask 077
-mkdir -p data secrets secrets/mas secrets/apns secrets/fcm
+mkdir -p data secrets secrets/mas secrets/apns secrets/fcm secrets/admin
 [ -f .env ] || { log "vytváram server/.env s novými tajomstvami"; printf '# PSST server — vygenerované %s. NECOMMITOVAŤ. Zálohovať!\n' "$(date -u +%FT%TZ)" > .env; }
 for k in $ENV_KEYS; do grep -q "^${k}=" .env || printf '%s=%s\n' "$k" "$(default_for "$k")" >> .env; done
 # hodnoty z príkazového riadka majú prednosť (zmena IP/e-mailu/Team ID pri opakovanom nasadení)
@@ -178,6 +179,10 @@ ALL_DOMAINS="$(printf "%s\n" "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUT
 [ -s secrets/mas/rsa.pem ] || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out secrets/mas/rsa.pem 2>/dev/null
 [ -s secrets/mas/ec.pem ] || openssl ecparam -name prime256v1 -genkey -noout -out secrets/mas/ec.pem 2>/dev/null
 [ -s secrets/mas/mas_shared_secret ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/mas_shared_secret
+# administrácia (D56): tajomstvo MAS klienta + heslo read-only DB roly psst_admin_ro
+[ -s secrets/admin/client_secret ] || openssl rand -hex 32 | tr -d "\n" > secrets/admin/client_secret
+[ -s secrets/admin/db_password ] || openssl rand -hex 24 | tr -d "\n" > secrets/admin/db_password
+ADMIN_CLIENT_SECRET="$(cat secrets/admin/client_secret)"
 # heslo pre šifrované zálohy (BEZ NEHO SA ZÁLOHA NEDÁ OBNOVIŤ — uložte ho aj mimo servera)
 NEW_BACKUP_PASS=0
 [ -s secrets/backup.pass ] || { openssl rand -base64 48 | tr -d '\n' > secrets/backup.pass; NEW_BACKUP_PASS=1; }
@@ -209,6 +214,7 @@ render() { # render <template> <output>
       -e "s|__LIVEKIT_USE_EXTERNAL_IP__|${LIVEKIT_USE_EXTERNAL_IP}|g" \
       -e "s|__LIVEKIT_NODE_IP_LINE__|  node_ip: ${LIVEKIT_NODE_IP}|g" \
       -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
+      -e "s|__ADMIN_CLIENT_ID__|${ADMIN_CLIENT_ID}|g" -e "s|__ADMIN_CLIENT_SECRET__|${ADMIN_CLIENT_SECRET}|g" \
       "$1" > "$2.tmp"
   if grep -q '__[A-Z_]*__' "$2.tmp"; then die "nevyplnený placeholder v $2: $(grep -o '__[A-Z_]*__' "$2.tmp" | sort -u | tr '\n' ' ')"; fi
   # zapisovať NA MIESTE (nie mv): jednotlivé súbory sú v kontajneroch bind-mountované a mv by vytvoril nový
@@ -369,6 +375,20 @@ if ! compose exec -T postgres psql -U synapse -d synapse -tAc "SELECT 1 FROM pg_
 fi
 compose run --rm --no-deps -T --entrypoint sh synapse -c '[ "$(stat -c %u /data)" = 991 ] || chown -R 991:991 /data' >/dev/null
 
+# administrácia (D56): kontajner beží ako UID 10001 → vlastné kópie tajomstiev (400) a dátový adresár
+admin_secrets() {
+  mkdir -p secrets/admin-run data/admin
+  cp secrets/admin/client_secret secrets/admin-run/admin_client_secret
+  cp secrets/admin/db_password secrets/admin-run/admin_db_password
+  [ -s secrets/admin_token ] && cp secrets/admin_token secrets/admin-run/admin_token
+  if [ "$(id -u)" = 0 ]; then
+    chown -R 10001:10001 secrets/admin-run data/admin; chmod 500 secrets/admin-run; chmod 400 secrets/admin-run/*; chmod 700 data/admin
+  else chmod 755 secrets/admin-run data/admin; chmod 644 secrets/admin-run/*; fi
+}
+admin_secrets
+log "zostavujem psst-admin"
+compose build -q admin
+
 log "štartujem celý stack"
 compose up -d --remove-orphans
 # služby, ktorých konfigurácia sa pri tomto behu zmenila, reštartovať (compose up -d zmenu obsahu nevidí)
@@ -390,6 +410,19 @@ if [ -n "$CFG_BEFORE" ]; then
 fi
 wait_healthy synapse 300 || { compose logs --tail=80 synapse mas; die "Synapse nenaštartoval"; }
 wait_healthy nginx 90 || { compose logs --tail=80 nginx; die "nginx nenaštartoval"; }
+# administrácia: read-only prístup k 2 tabuľkám MAS (kto sa ktorou pozvánkou zaregistroval) + Synapse admin token
+compose exec -T postgres psql -U synapse -d mas -v ON_ERROR_STOP=1 -q >/dev/null <<SQL || warn "DB rola psst_admin_ro: zlyhalo"
+DO \$\$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'psst_admin_ro') THEN CREATE ROLE psst_admin_ro LOGIN; END IF;
+END \$\$;
+ALTER ROLE psst_admin_ro WITH LOGIN PASSWORD '$(cat secrets/admin/db_password)' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+GRANT CONNECT ON DATABASE mas TO psst_admin_ro;
+GRANT USAGE ON SCHEMA public TO psst_admin_ro;
+GRANT SELECT ON user_registrations, user_registration_tokens TO psst_admin_ro;
+SQL
+[ -s secrets/admin_token ] || PSST_QUIET=1 scripts/members.sh list >/dev/null 2>&1 || warn "Synapse admin token sa nepodarilo vydať"
+admin_secrets
+compose up -d admin >/dev/null && compose restart admin >/dev/null
 compose exec -T nginx nginx -s reload >/dev/null 2>&1 || true
 
 # ----------------------------------------------------------------- 6. Let's Encrypt

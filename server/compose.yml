@@ -161,6 +161,25 @@ services:
       - ./secrets/fcm:/fcm:ro
     networks: [psst]
 
+  # Administrácia pozvánok a členov — https://<APP_DOMAIN>/admin (len cez nginx), DECISIONS D56
+  admin:
+    build: ./admin
+    image: psst-admin:local
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+      MATRIX_DOMAIN: ${MATRIX_DOMAIN}
+      MAS_PUBLIC_BASE: https://${AUTH_DOMAIN}${AUTH_PREFIX}
+      AUTH_PREFIX: ${AUTH_PREFIX}
+      ADMIN_CLIENT_ID: ${ADMIN_CLIENT_ID}
+    volumes:
+      - ./secrets/admin-run:/secrets:ro
+      - ./data/admin:/data
+    depends_on:
+      - mas
+    networks: [psst]
+
   nginx:
     image: docker.io/library/nginx:1.30.6-alpine
     restart: unless-stopped

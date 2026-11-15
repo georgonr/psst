@@ -70,8 +70,19 @@ email:
 captcha:
   service: ~
 
+# Administračná stránka https://__APP_DOMAIN__/admin (server/admin, DECISIONS D56):
+# prihlásenie admina (authorization code + PKCE) a prístup k admin API (client_credentials, urn:mas:admin)
+clients:
+  - client_id: __ADMIN_CLIENT_ID__
+    client_auth_method: client_secret_basic
+    client_secret: "__ADMIN_CLIENT_SECRET__"
+    redirect_uris:
+      - https://__APP_DOMAIN__/admin/callback
+
 policy:
   data:
+    admin_clients:
+      - __ADMIN_CLIENT_ID__
     client_registration:
       # Element X / Web / Desktop sa registrujú dynamicky; metadáta (client_uri, tos, policy) sú
       # na app doméne, redirect schémy eu.macet.* → povoliť rozdielny host

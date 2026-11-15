@@ -22,6 +22,7 @@ sudo ./deploy.sh <IP_SERVERA> <EMAIL> [--contact "…"] [--hosting "…"] [--app
 | coturn | `coturn/coturn:4.18.0` (host sieť) | call.macet.eu:443 (TLS cez nginx, rozlíšené podľa ALPN) | TURN pre siete bez UDP; relay len na vlastnú SFU; 3478/udp sa nepublikuje |
 | Element Call | `ghcr.io/element-hq/element-call:v0.28.2` | call.macet.eu | samostatná web appka hovorov |
 | Sygnal | `matrixdotorg/sygnal:v0.15.1` (profil `sygnal`) | chat.macet.eu/_matrix/push/v1/notify (len cez nginx) | vlastná push brána: Android → FCM HTTP v1, iOS → APNs |
+| psst-admin | lokálny build `server/admin` (Python 3.13) | app.macet.eu**/admin** (len cez nginx) | správa pozvánok a členov (D56) |
 | nginx | `nginx:1.30.6-alpine` | 80, 443 | TLS, SNI smerovanie (stream), reverzná proxy, PSST web, právne stránky |
 | certbot | `certbot/certbot:v5.10.0` | — | Let's Encrypt (obnova 2× denne) |
 
@@ -40,6 +41,15 @@ Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets
 | `scripts/backup.sh` | šifrovaná záloha (AES-256, PBKDF2) — DB synapse + mas, médiá, **podpisový kľúč**, konfigurácie, certifikáty, tajomstvá; rotácia 7/4/6; cron denne 03:17 |
 | `scripts/restore.sh <archív.enc> [--force]` | obnova (aj na nový server); overí zhodu podpisového kľúča |
 | `scripts/fetch-web.sh` | stiahne PSST web (posledný GitHub release) do `app/` za chodu |
+
+## Administrácia — https://app.macet.eu/admin
+
+Pozvánky a členovia v prehliadači (aj mobil), prihlásenie bežným účtom cez MAS; prístup len pre adminov
+(`can_request_admin` v MAS — teraz `geo`, nastaviť: `sudo scripts/members.sh admin <meno>`), ostatní 403.
+Nová pozvánka (počet použití, platnosť, „pre koho") → kód `XXXX-XXXX` + text na poslanie; zoznam pozvánok so stavom
+(voľná / použitá / prepadnutá / zrušená) a kto sa ňou zaregistroval; zrušenie; zoznam členov s pozvánkou,
+poslednou aktivitou a stavom; zablokovať / odblokovať (vratné). Audit log: `data/admin/audit.log`.
+Služba `admin` (server/admin) — DECISIONS D56.
 
 ## Registrácia a členovia
 

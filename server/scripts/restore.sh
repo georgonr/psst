@@ -35,6 +35,7 @@ umask 022
 mkdir -p data/synapse data/postgres data/certbot
 chmod 700 data
 tar -C data -xzf "$B/config.tar.gz"
+[ -f "$B/admin.tar.gz" ] && tar -C data -xzf "$B/admin.tar.gz"
 [ -s "$B/letsencrypt.tar.gz" ] && tar -C data/certbot -xzf "$B/letsencrypt.tar.gz"
 if [ "$(id -u)" = 0 ]; then chown -R 65532:65532 secrets/mas; else chmod 755 secrets/mas; chmod 644 secrets/mas/*; fi
 
