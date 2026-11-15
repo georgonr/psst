@@ -342,6 +342,12 @@ async function desktopJoinFromToast(label) {
     const toast = page.locator('.mx_IncomingCallToast, .mx_Toast_toast:has-text("call"), .mx_Toast_toast:has-text("Call")').first();
     const seen = await toast.waitFor({ timeout: 60000 }).then(() => true, () => false);
     await shot(page, `${label}-incoming`);
+    metrics[`${label}_toast`] = (await toast.innerText().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+    metrics[`${label}_audio`] = await page.evaluate(() => {
+        const a = document.getElementById("ringAudio");
+        return { exists: !!a, paused: a?.paused, src: a?.currentSrc?.slice(-40), muted: a?.muted, t: a?.currentTime,
+            audioNotif: window.mxSettingsStore?.getValue("audioNotificationsEnabled") };
+    }).catch((e) => String(e));
     let ringing = false;
     for (let i = 0; i < 10 && !ringing; i++) {
         ringing = await page.evaluate(() => { const a = document.getElementById("ringAudio"); return !!a && !a.paused; }).catch(() => false);
@@ -384,8 +390,11 @@ await step("5.2 skupinový hovor", async () => {
 await step("2.2 odhlásenie", async () => {
     await page.evaluate(() => { location.hash = "#/home"; });
     await sleep(2000); await dismissPopovers(page);
-    await page.locator('[aria-label="User menu"], .mx_UserMenu').first().click({ timeout: 15000 });
-    await page.locator('[role=menuitem]:has-text("Sign out")').first().click({ timeout: 15000 });
+    await shot(page, "before-logout");
+    await page.locator('[aria-label="User menu"]').first().click({ timeout: 15000 });
+    await sleep(1500); await shot(page, "user-menu");
+    metrics.userMenu = await page.locator('[role=menuitem], [role=menu] button').allInnerTexts().catch(() => []);
+    await page.locator('[role=menuitem]:has-text("Sign out"), [role=menu] button:has-text("Sign out")').first().click({ timeout: 15000 });
     for (let i = 0; i < 3; i++) await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog button:has-text("I don\'t want my encrypted messages")').first().click({ timeout: 4000 }).catch(() => {});
     const out = await page.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage, .mx_Welcome", { timeout: 60000 }).then(() => true, () => false);
     await shot(page, "logged-out");
