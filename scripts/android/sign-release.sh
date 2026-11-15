@@ -106,9 +106,9 @@ SIGNED=()
 while IFS= read -r -d '' apk; do
   base="$(basename "$apk" .apk)"
   version="$("$AAPT2" dump badging "$apk" 2>/dev/null | sed -n "s/^package: .*versionName='\([^']*\)'.*/\1/p")"
-  # versionName "26.11.0-b42 (2026-11-15)" -> build 42, date 20261115
-  b="$(echo "$version" | sed -nE 's/.*-b([0-9]+) \(([0-9]{4})-([0-9]{2})-([0-9]{2})\).*/\1/p')"
-  d="$(echo "$version" | sed -nE 's/.*-b([0-9]+) \(([0-9]{4})-([0-9]{2})-([0-9]{2})\).*/\2\3\4/p')"
+  # versionName "26.11.0-b42+2026-11-15" (older builds: "26.11.0-b42 (2026-11-15)") -> build 42, date 20261115
+  b="$(echo "$version" | sed -nE 's/.*-b([0-9]+)[+ (]+([0-9]{4})-([0-9]{2})-([0-9]{2}).*/\1/p')"
+  d="$(echo "$version" | sed -nE 's/.*-b([0-9]+)[+ (]+([0-9]{4})-([0-9]{2})-([0-9]{2}).*/\2\3\4/p')"
   [ -n "$b" ] && [ "$b" -gt 0 ] || die "$apk: versionName '$version' has no build number (local build without PSST_BUILD_NUMBER?)"
   [ -z "${BUILD:-}" ] || [ "$BUILD-$DATE" = "$b-$d" ] || die "mixed builds in $IN_DIR ($BUILD-$DATE vs $b-$d)"
   BUILD="$b"; DATE="$d"
