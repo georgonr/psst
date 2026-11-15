@@ -31,6 +31,8 @@ jobs:
         runs-on: ubuntu-24.04
         outputs:
             version: ${{ steps.version.outputs.version }}
+            build: ${{ steps.version.outputs.build }}
+            date: ${{ steps.version.outputs.date }}
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
               with:
@@ -50,8 +52,13 @@ jobs:
             - name: Version
               id: version
               run: |
+                  # PSST versioning (BUILD.md): build number = run number of this workflow, shared by web + desktop.
+                  # Shown in Settings → Help & About (web and desktop) as e.g. "1.12.35-b12 (2026-11-15)".
                   PKG=$(jq -r .version apps/web/package.json)
-                  echo "version=${PKG}-psst.$(git rev-parse --short=8 HEAD)" >> "$GITHUB_OUTPUT"
+                  N=${{ github.run_number }}; D=$(date -u +%Y%m%d)
+                  echo "build=$N" >> "$GITHUB_OUTPUT"; echo "date=$D" >> "$GITHUB_OUTPUT"
+                  echo "version=${PKG}-b${N} (${D:0:4}-${D:4:2}-${D:6:2})" >> "$GITHUB_OUTPUT"
+                  echo "psst web/desktop build b$N, $D, web $(git rev-parse --short=8 HEAD)" >> "$GITHUB_STEP_SUMMARY"
 
             - name: Use psst config.json
               working-directory: apps/web
@@ -67,11 +74,10 @@ jobs:
               run: |
                   test -f apps/web/webapp/config.json
                   mkdir -p out
-                  cp -r apps/web/webapp "out/psst-web-${VERSION}"
-                  tar -C out -czf "psst-web-${VERSION}.tar.gz" "psst-web-${VERSION}"
+                  NAME="psst-web-${{ steps.version.outputs.date }}-b${{ steps.version.outputs.build }}"
+                  cp -r apps/web/webapp "out/$NAME"
+                  tar -C out -czf "$NAME.tar.gz" "$NAME"
                   ls -la ./*.tar.gz
-              env:
-                  VERSION: ${{ steps.version.outputs.version }}
 
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
@@ -174,7 +180,7 @@ jobs:
 
             - name: Build app (unsigned)
               working-directory: apps/desktop
-              run: pnpm run build:universal --publish never -m dmg zip
+              run: pnpm run build:universal --publish never -m dmg zip -c.buildVersion=${{ needs.web.outputs.build }}
               env:
                   CSC_IDENTITY_AUTO_DISCOVERY: "false"
                   VARIANT_PATH: psst/build.json
@@ -187,13 +193,14 @@ jobs:
                   test -f dist/psst-*-mac.zip
                   /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" dist/mac-universal/psst.app/Contents/Info.plist
                   /usr/libexec/PlistBuddy -c "Print :CFBundleName" dist/mac-universal/psst.app/Contents/Info.plist
+                  /usr/libexec/PlistBuddy -c "Print :CFBundleVersion" dist/mac-universal/psst.app/Contents/Info.plist
+                  P="psst-macos-${{ needs.web.outputs.date }}-b${{ needs.web.outputs.build }}"
+                  mkdir -p out && cp dist/psst-*.dmg "out/$P.dmg" && cp dist/psst-*-mac.zip "out/$P.zip" && ls -la out
 
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
                   name: psst-desktop-macos
-                  path: |
-                      apps/desktop/dist/*.dmg
-                      apps/desktop/dist/*-mac.zip
+                  path: apps/desktop/out/psst-macos-*
                   if-no-files-found: error
                   retention-days: 30
 
@@ -243,7 +250,7 @@ jobs:
 
             - name: Build app (unsigned)
               working-directory: apps/desktop
-              run: pnpm run build --publish never -w squirrel msi
+              run: pnpm run build --publish never -w squirrel msi -c.buildVersion=${{ needs.web.outputs.build }}
               env:
                   VARIANT_PATH: psst/build.json
 
@@ -253,12 +260,12 @@ jobs:
                   find dist -maxdepth 2 -type f | sort
                   ls dist/squirrel-windows*/*.exe
                   ls dist/*.msi
+                  P="psst-windows-${{ needs.web.outputs.date }}-b${{ needs.web.outputs.build }}"
+                  mkdir -p out && cp dist/*.msi "out/$P.msi" && cp dist/squirrel-windows*/*.exe "out/$P-setup.exe" && ls -la out
 
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               with:
                   name: psst-desktop-windows
-                  path: |
-                      apps/desktop/dist/squirrel-windows*/*.exe
-                      apps/desktop/dist/*.msi
+                  path: apps/desktop/out/psst-windows-*
                   if-no-files-found: error
                   retention-days: 30
