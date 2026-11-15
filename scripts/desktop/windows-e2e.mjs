@@ -396,9 +396,10 @@ await step("2.2 odhlásenie", async () => {
     await sleep(1500); await shot(page, "user-menu");
     // Element 1.12: "Sign out" is in Settings → Account (the user menu has only Link new device / Security / All settings)
     await page.locator('[role=menuitem]:has-text("All settings")').first().click({ timeout: 15000 });
-    await page.locator('[role=tab]:has-text("Account")').first().click({ timeout: 15000 });
     await sleep(1500);
-    await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog [role=button]:has-text("Sign out")').first().click({ timeout: 15000 });
+    await page.getByRole("tab", { name: "Account" }).first().click({ timeout: 15000 }).catch(() => {});
+    await sleep(2000); await shot(page, "settings-account");
+    await page.getByRole("button", { name: "Sign out", exact: true }).first().click({ timeout: 15000 });
     for (let i = 0; i < 3; i++) await page.locator('.mx_Dialog button:has-text("Sign out"), .mx_Dialog button:has-text("I don\'t want my encrypted messages")').first().click({ timeout: 4000 }).catch(() => {});
     const out = await page.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage, .mx_Welcome", { timeout: 60000 }).then(() => true, () => false);
     await shot(page, "logged-out");
