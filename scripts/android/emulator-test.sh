@@ -36,13 +36,20 @@ dump_ui() { # dump_ui <name>: UI dump only
   adb pull "/sdcard/${name}.xml" "$OUT/${name}.xml" >/dev/null 2>&1 || echo '<hierarchy/>' > "$OUT/${name}.xml"
 }
 
-dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over our app → tap "Wait"
-  local i xy
-  for i in 1 2 3; do
+dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over our app → tap "Wait";
+  # psst's own first-start prompts (D57: full-screen calls, battery) → "Later"
+  local i xy t
+  for i in 1 2 3 4; do
     dump_ui _anr
-    $CHECK has "$OUT/_anr.xml" "isn't responding" || return 0
-    log "INFO: dismissing system ANR dialog"
-    xy="$($CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
+    t="$($CHECK texts "$OUT/_anr.xml")"
+    if printf '%s' "$t" | grep -q "isn't responding"; then
+      log "INFO: dismissing system ANR dialog"; xy="$($CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
+    elif printf '%s' "$t" | grep -qE "^(Full-screen calls|Reliable calls and messages)$"; then
+      log "INFO: psst prompt: $(printf '%s' "$t" | grep -E "^(Full-screen calls|Reliable calls and messages)$") → Later"
+      xy="$($CHECK tap "$OUT/_anr.xml" "Later")" || return 0
+    else
+      return 0
+    fi
     # shellcheck disable=SC2086
     adb shell input tap $xy; sleep 2
   done
