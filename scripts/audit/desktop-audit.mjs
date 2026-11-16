@@ -8,7 +8,7 @@ import { spawn, execSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { runFeatures, writeResults, sleep, cli, startCall, joinFromToast, remoteVideo, icePaths, hangUp, PC_HOOK, dismiss } from "./features.mjs";
+import { runFeatures, runAccountFlows, writeResults, sleep, cli, startCall, joinFromToast, remoteVideo, icePaths, hangUp, PC_HOOK, dismiss } from "./features.mjs";
 
 const [BIN, OUT, ACC_FILE, PLATFORM] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
@@ -110,6 +110,35 @@ try {
 } catch (e) { record("about_build", "fail", e.message); }
 
 await runFeatures({ me, partner, third, users: { me: A.a.user, partner: A.b.user, third: A.c.user }, record, out: OUT, platform: PLATFORM });
+
+// account flows: recovery key, QR, emoji verification of a new web session, logout, re-login with the recovery key
+async function webSessionState(user, password) {
+    const ctx = await pb.newContext({ viewport: { width: 1280, height: 900 } });
+    const p = await ctx.newPage();
+    await p.goto(`${WEB}/#/login`);
+    await p.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
+    await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
+    await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', password);
+    await p.locator("button[type=submit]").first().click();
+    for (let i = 0; i < 20 && !p.url().startsWith(WEB); i++) { await p.locator('button[type=submit]:has-text("Continue")').first().click({ timeout: 1500 }).catch(() => {}); await sleep(1000); }
+    for (let i = 0; i < 90; i++) {
+        if (await p.getByText("Confirm your digital identity").count()) return { page: p, state: "identity" };
+        if (await p.locator(".mx_LeftPanel, .mx_RoomListPanel").count()) return { page: p, state: "app" };
+        await sleep(1000);
+    }
+    return { page: p, state: "timeout" };
+}
+try {
+    me = await runAccountFlows({
+        me, record, platform: PLATFORM,
+        shot: (p, n) => p.screenshot({ path: path.join(OUT, `${PLATFORM}-${n}.png`) }).catch(() => {}),
+        newWebSession: () => webSessionState(A.a.user, A.a.password),
+        loginMe: () => desktopLogin(A.a.user, A.a.password),
+        getMe: mainPage,
+    });
+} catch (e) { record("relogin", "fail", "account flows: " + String(e.message).slice(0, 200)); }
+// the notification hook was installed in the previous page lifetime → install again after re-login
+await me.evaluate(() => { window.__psstNotes = window.__psstNotes || []; if (window.__psstHooked) return; window.__psstHooked = true; const N = window.Notification; window.Notification = function (t, o) { window.__psstNotes.push({ t }); return new N(t, o); }; Object.assign(window.Notification, N); window.Notification.prototype = N.prototype; Object.defineProperty(window.Notification, "permission", { get: () => N.permission }); }).catch(() => {});
 
 // notifications with the window hidden (closed to tray / dock)
 try {

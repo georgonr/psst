@@ -5,7 +5,7 @@
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
-import { runFeatures, writeResults, sleep, cli, compose, openRoom, waitEvent, startCall, joinFromToast, remoteVideo, icePaths, hangUp, PC_HOOK, dismiss } from "./features.mjs";
+import { runFeatures, runAccountFlows, writeResults, sleep, cli, compose, openRoom, waitEvent, startCall, joinFromToast, remoteVideo, icePaths, hangUp, PC_HOOK, dismiss } from "./features.mjs";
 
 const [OUT, ACC_FILE, REG_TOKEN] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
@@ -63,9 +63,16 @@ async function logout(p) {
     await p.evaluate(() => { location.hash = "#/home"; });
     await settingsTab(p, "Account");
     await p.getByRole("button", { name: /^(Sign out|Remove this device)$/ }).first().click({ timeout: 15000 });
-    await sleep(1500);
-    await p.getByText(/^(Remove this device anyway|Sign out anyway|I don't want my encrypted messages|Sign out|Remove this device)$/).last().click({ timeout: 10000 }).catch(() => {});
-    return p.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage, .mx_Welcome", { timeout: 60000 }).then(() => true, () => false);
+    await sleep(2000);
+    await shot(p, "logout-dialog");
+    // confirmation dialog (text differs with/without key backup): click its button, not the settings button again
+    for (let i = 0; i < 3; i++) {
+        const b = p.locator('.mx_Dialog').last().locator('button, [role=button]').filter({ hasText: /^(Continue to remove this device|Remove this device anyway|Sign out anyway|I don't want my encrypted messages|Sign out|Remove this device|Remove device)$/ }).first();
+        if (await b.count()) { await b.click().catch(() => {}); await sleep(2000); } else break;
+    }
+    const ok = await p.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage, .mx_Welcome", { timeout: 60000 }).then(() => true, () => false);
+    if (!ok) await shot(p, "logout-stuck");
+    return ok;
 }
 
 // ======================================================================================= run
@@ -110,123 +117,35 @@ await login(partner, A.b.user, A.b.password);
 await login(third, A.c.user, A.c.password);
 await shot(me, "logged-in");
 
-// ---- recovery key: Settings → Encryption → Set up recovery
-let recoveryKey = null;
-try {
-    await dismiss(me);
-    await settingsTab(me, "Encryption");
-    await me.locator('button:has-text("Create recovery key"), button:has-text("Set up recovery")').first().click({ timeout: 15000 });
-    const KEY = /(?:[1-9A-HJ-NP-Za-km-z]{4}\s){11}[1-9A-HJ-NP-Za-km-z]{4}/;
-    for (let i = 0; i < 10 && !recoveryKey; i++) {
-        await sleep(1500);
-        recoveryKey = (KEY.exec(await me.locator(".mx_Dialog").innerText()) || [null])[0];
-        if (!recoveryKey) await me.locator('.mx_Dialog button:has-text("Continue")').first().click({ timeout: 2000 }).catch(() => {});
-    }
-    await shot(me, "recovery-key");
-    if (!recoveryKey) throw new Error("recovery key not shown");
-    await me.locator('.mx_Dialog button:has-text("Continue")').first().click({ timeout: 10000 });
-    await sleep(1500);
-    await me.locator(".mx_Dialog input:not([type=hidden]), .mx_Dialog textarea").last().fill(recoveryKey);
-    await me.locator('.mx_Dialog button:has-text("Finish set up"), .mx_Dialog button:has-text("Continue")').first().click({ timeout: 10000 });
-    await sleep(5000);
-    const st = await cli(me, async () => { const c = window.mxMatrixClientPeg.get().getCrypto(); return { backup: await c.getActiveSessionBackupVersion(), ss: await c.isSecretStorageReady() }; });
-    await shot(me, "recovery");
-    await me.keyboard.press("Escape");
-    record("recovery", recoveryKey && st.backup && st.ss ? "ok" : "fail", `obnovovací kľúč vytvorený, záloha kľúčov verzia ${st.backup}, secret storage ${st.ss}`);
-} catch (e) { record("recovery", "fail", String(e.message).slice(0, 200)); await shot(me, "recovery-error"); }
-
-// ---- QR sign-in: "Link new device" shows a QR code (scanned by the Android app in the Android part)
-try {
-    await dismiss(me);
-    await me.locator('[aria-label="User menu"]').first().click({ timeout: 15000 });
-    await me.locator('[role=menuitem]:has-text("Link new device")').first().click({ timeout: 10000 });
-    await me.locator('button:has-text("Show QR code"), button:has-text("Mobile device")').first().click({ timeout: 10000 }).catch(() => {});
-    const qr = await me.locator(".mx_LoginWithQR canvas, .mx_LoginWithQR img, .mx_QRCode, canvas").first().waitFor({ timeout: 30000 }).then(() => true, () => false);
-    await shot(me, "qr");
-    record("qr_login", qr ? "ok" : "fail", qr ? "web zobrazí QR na prihlásenie nového zariadenia (MSC4108)" : "QR sa nezobrazil");
-    await me.keyboard.press("Escape"); await me.keyboard.press("Escape");
-} catch (e) { record("qr_login", "fail", String(e.message).slice(0, 200)); }
-
 // ---- the shared suite (messages, files, calls, profile, ...)
-await runFeatures({ me, partner, third, users: { me: A.a.user, partner: A.b.user, third: A.c.user }, record, out: OUT, platform: "web" });
+// PSST_AUDIT_ONLY_ACCOUNT=1: only account flows (recovery key, verification, logout, re-login) — a quick re-test
+if (!process.env.PSST_AUDIT_ONLY_ACCOUNT) {
+    await runFeatures({ me, partner, third, users: { me: A.a.user, partner: A.b.user, third: A.c.user }, record, out: OUT, platform: "web" });
+} else {
+    // a little encrypted history to check later on the new / re-logged-in session
+    const dm = await cli(me, async (who) => (await window.mxMatrixClientPeg.get().createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] })).room_id, `@${A.b.user}:${HS}`);
+    await cli(partner, async (r) => { await window.mxMatrixClientPeg.get().joinRoom(r); }, dm);
+    await sleep(3000);
+    for (let i = 0; i < 3; i++) await cli(me, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, `history ${i} ${Date.now()}`]);
+    await cli(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, `history from partner ${Date.now()}`]);
+    await sleep(5000);
+}
 
 // ---- notifications in a background tab / with the app closed
 record("notif_background", "upstream", "web: notifikácia príde, kým je karta otvorená (aj na pozadí); Element Web nemá Web Push");
 record("notif_closed", "upstream", "web: po zatvorení karty nič nepríde — Element Web nepodporuje Web Push (upstream)");
 record("notif_lock", "na", "web: zamknutá obrazovka je vec OS/prehliadača");
 
-// ---- device verification by emoji: a 2nd web session of `me` → "Use another device" → me accepts
-let second = null;
-try {
-    second = await newPage();
-    const st = await login(second, A.a.user, A.a.password);
-    if (st !== "identity") throw new Error("2nd session did not ask to confirm identity: " + st);
-    record("verify_unverified_state", (await second.locator(APP).count()) === 0 ? "ok" : "fail", "nová relácia je zablokovaná na „Confirm your digital identity“, kým nie je overená");
-    await second.locator('button:has-text("Use another device")').click({ timeout: 15000 });
-    const toast = me.locator('.mx_Toast_toast:has-text("Verification requested"), .mx_Toast_toast:has-text("verify")').first();
-    const req = await toast.waitFor({ timeout: 60000 }).then(() => true, () => false);
-    await shot(me, "verify-toast");
-    await toast.locator('button:has-text("Start Verification"), button:has-text("Verify session"), button:has-text("Verify"), button:has-text("Accept")').first().click({ timeout: 10000 });
-    await me.locator('button:has-text("Verify by emoji"), button:has-text("Start")').first().click({ timeout: 20000 }).catch(() => {});
-    await second.locator('button:has-text("Verify by emoji")').first().click({ timeout: 20000 }).catch(() => {});
-    const emoji = await me.locator(".mx_VerificationShowSas_emojiSas").first().waitFor({ timeout: 40000 }).then(() => true, () => false);
-    const e1 = (await me.locator(".mx_VerificationShowSas_emojiSas").innerText().catch(() => "")).replace(/\s+/g, " ");
-    const e2 = (await second.locator(".mx_VerificationShowSas_emojiSas").innerText().catch(() => "")).replace(/\s+/g, " ");
-    await shot(second, "verify-emoji");
-    await me.locator('button:has-text("They match")').first().click({ timeout: 10000 }).catch(() => {});
-    await second.locator('button:has-text("They match")').first().click({ timeout: 10000 }).catch(() => {});
-    let verified = false;
-    for (let i = 0; i < 30 && !verified; i++) {
-        verified = await second.evaluate(async () => { const c = window.mxMatrixClientPeg.get(); return !!(await c.getCrypto().getDeviceVerificationStatus(c.getUserId(), c.getDeviceId()))?.crossSigningVerified; }).catch(() => false);
-        if (!verified) await sleep(1500);
-    }
-    record("verify_emoji", req && emoji && e1 && e1 === e2 && verified ? "ok" : "fail", `žiadosť doručená ${req}, emoji zhodné ${!!e1 && e1 === e2}, relácia cross-signed ${verified}`);
-    for (let i = 0; i < 4; i++) { await second.locator('button:has-text("Done"), button:has-text("Got it")').first().click({ timeout: 2000 }).catch(() => {}); await second.keyboard.press("Escape").catch(() => {}); }
-    await me.locator('button:has-text("Done"), button:has-text("Got it")').first().click({ timeout: 2000 }).catch(() => {});
-    record("verify_qr", "na", "web/desktop zobrazí QR na overenie, skenovať ho vie len mobil (overené v časti Android)");
-    // history on the newly verified session (keys from backup / key sharing)
-    const old = await second.evaluate(async () => {
-        const c = window.mxMatrixClientPeg.get();
-        const rooms = c.getRooms().filter((r) => r.getMyMembership() === "join");
-        let enc = 0, ok = 0;
-        for (const r of rooms) { await c.scrollback(r, 30).catch(() => {}); for (const e of r.getLiveTimeline().getEvents()) if (e.isEncrypted()) { enc++; if (!e.isDecryptionFailure() && e.getClearContent()?.body) ok++; } }
-        return { enc, ok };
-    });
-    record("history_new_device", old.enc && old.ok === old.enc ? "ok" : (old.enc ? "fail" : "na"), `nová overená relácia: dešifrovaných ${old.ok}/${old.enc} starších šifrovaných správ`);
-} catch (e) { record("verify_emoji", "fail", String(e.message).slice(0, 200)); await shot(second || me, "verify-error"); }
-
-// ---- logout → sign in again with the recovery key → history restored from key backup
-try {
-    if (second) { await logout(second).catch(() => {}); await second.context().close(); }
-    const out = await logout(me);
-    record("logout", out ? "ok" : "fail", "odhlásenie (Settings → Account → Remove this device)");
-    const st = await login(me, A.a.user, A.a.password);
-    if (st === "identity" && recoveryKey) {
-        await me.locator('button:has-text("Use recovery key")').click({ timeout: 15000 });
-        await sleep(1500);
-        await me.locator(".mx_Dialog input:not([type=hidden]), .mx_Dialog textarea, input:not([type=hidden])").last().fill(recoveryKey);
-        await me.locator('button:has-text("Continue")').last().click({ timeout: 15000 });
-        await me.locator('button:has-text("Done")').first().click({ timeout: 30000 }).catch(() => {});
-        await me.waitForSelector(APP, { timeout: 60000 });
-    }
-    await sleep(15000);
-    const hist = await me.evaluate(async () => {
-        const c = window.mxMatrixClientPeg.get();
-        let enc = 0, ok = 0;
-        for (const r of c.getRooms().filter((r) => r.getMyMembership() === "join")) {
-            await c.scrollback(r, 50).catch(() => {});
-            for (const e of r.getLiveTimeline().getEvents()) if (e.isEncrypted()) { enc++; if (!e.isDecryptionFailure() && (e.getClearContent()?.body || e.getClearContent()?.["m.relates_to"])) ok++; }
-        }
-        const s = await c.getCrypto().getDeviceVerificationStatus(c.getUserId(), c.getDeviceId());
-        return { enc, ok, verified: !!s?.crossSigningVerified };
-    });
-    await shot(me, "relogin");
-    record("relogin", st ? "ok" : "fail", `opätovné prihlásenie → ${st}${st === "identity" ? " → obnovovací kľúč" : ""}, relácia overená ${hist.verified}`);
-    record("key_backup_restore", hist.verified && hist.enc && hist.ok >= hist.enc - 1 ? "ok" : "fail", `po prihlásení s obnovovacím kľúčom dešifrovaných ${hist.ok}/${hist.enc} starších správ`);
-} catch (e) { record("relogin", "fail", String(e.message).slice(0, 200)); await shot(me, "relogin-error"); }
+// ---- account flows (shared with the desktop audit): recovery key, QR, emoji verification, logout, re-login
+await runAccountFlows({
+    me, record, platform: "web", shot,
+    newWebSession: async () => { const p = await newPage(); return { page: p, state: await login(p, A.a.user, A.a.password) }; },
+    loginMe: () => login(me, A.a.user, A.a.password),
+});
+record("verify_qr", "na", "web/desktop zobrazí QR na overenie, naskenovať ho vie len mobil; Element X pri overovaní ponúka len emoji");
 
 // ---- 1:1 call with UDP blocked (WebRTC may use only TCP / TURN-TLS): separate browser for me
-try {
+if (!process.env.PSST_AUDIT_ONLY_ACCOUNT) try {
     const b2 = await chromium.launch({ args: [...MEDIA, "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"] });
     const me2 = await newPage(b2);
     if (!A.d) throw new Error("accounts.json needs a 4th fresh account \"d\" for this test");
