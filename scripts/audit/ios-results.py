@@ -42,7 +42,7 @@ v = partner.get("verification", {})
 ios_emoji = res.pop("verify_emoji_ios", {}).get("note", "")
 web_names = " ".join(v.get("emojiNames", [])).lower().split() or \
     [t for t in v.get("emoji", "").lower().split() if any(ch.isalpha() for ch in t)]
-ios_names = ios_emoji.lower().split() if ios_emoji else []
+ios_names = [t for t in ios_emoji.lower().split() if any(ch.isalpha() for ch in t)]  # labels are "Lion 🦁"
 same = bool(web_names) and web_names == ios_names
 if "verify_emoji" in res:
     ios_ok = res["verify_emoji"]["status"] == "ok"
