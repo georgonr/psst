@@ -31,7 +31,12 @@ services:
     networks: [psst]
 
   synapse:
-    image: ghcr.io/element-hq/synapse:v1.165.0
+    # D66: official image + longer QR sign-in (MSC4108) session lifetime, see synapse/Dockerfile
+    build:
+      context: ./synapse
+      args:
+        SYNAPSE_VERSION: v1.165.0
+    image: psst-synapse:v1.165.0
     restart: unless-stopped
     logging: *logging
     depends_on:

@@ -89,6 +89,26 @@ cd server && LETSENCRYPT_EMAIL=admin@macet.eu ./deploy.sh   # na cieľovom serve
 gh workflow run server-smoke.yml -R georgonr/psst            # lokálny test celého stacku v CI
 ```
 
+Synapse beží z `server/synapse/Dockerfile` (oficiálny image + QR relácia 5 min, D66). Pri zmene verzie Synapse
+upraviť `SYNAPSE_VERSION` v `compose.yml`; ak build zlyhá na `grep`, upstream zmenil riadok s `RendezvousHandler`
+— skontrolovať, či je oprava ešte potrebná. Aktualizácia na serveri: rsync `server/` (bez `data`, `secrets`, `.env`,
+`app`, `backups`, `downloads`; `--rsync-path="sudo rsync"`) a `sudo ./deploy.sh …` (viď `~/proj/psst-server-notes.md`).
+
+## 7. Audit funkcií (docs/FEATURE-MATRIX.md, D64)
+
+Vždy len **nové testovacie účty** (`qa-au*`, `mas-cli manage register-user`), na konci deaktivovať
+(`sudo scripts/members.sh block <meno> --deactivate`); testovacie verejné kanály stiahnuť z adresára.
+
+| platforma | ako | poznámka |
+|---|---|---|
+| Web | `node scripts/audit/web-audit.mjs <out> accounts.json [token]` | accounts: `{a,b,c,d}`; d = test hovoru s blokovaným UDP |
+| Windows, macOS | `gh workflow run desktop-audit.yml -f run_id=<Web + Desktop run>` | secret `PSST_AUDIT_DESKTOP_ACCOUNTS` `{windows:{a,b,c}, macos:{…}}` |
+| Android | emulátor `psst34` (Google APIs), `scripts/android/ui.py`, `mas-login.sh`, partner `scripts/audit/call-partner.mjs` | UDP blok: `adb root` + iptables |
+| iOS | `gh workflow run ios-audit.yml` (XCUITest `PsstAuditTests` + `scripts/audit/ios-partner.mjs`) | secret `PSST_AUDIT_IOS_ACCOUNTS` `{a,b}` |
+
+Výsledky (JSON zoznam `{id, status, note}`) → `python3 scripts/audit/matrix.py docs/FEATURE-MATRIX.md web=… windows=… macos=… android=… ios=…`.
+Po audite secrets zmazať (`gh secret delete …`).
+
 ## Verzie
 
 | Komponent | Verzia |

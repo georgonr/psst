@@ -395,3 +395,71 @@ v headless Chromiu (E2EE na oboch stranách skutočné klienty). Testovacie úč
 (iné zariadenie/recovery key), čo je správne pre ľudí, ale blokuje opakované automatické behy. Nájdené a opravené:
 About na desktope ukazoval len verziu Electronu bez buildu (teraz `1.12.35-bN (dátum)`); Android `versionName`
 so zátvorkami rozbíjal User-Agent (názov zariadenia „psst on 2026-11-15) (…") → teraz `26.11.0-bN+RRRR-MM-DD`.
+
+## Tri chyby z telefónov a audit funkcií (2026-11-16, desiata dávka)
+
+**D61 — Android: sprievodca nastavením a kanál správ.** (1) Nastavenia sa otvárali s `FLAG_ACTIVITY_NEW_TASK`;
+One UI ich potom nechá v úlohe aplikácie Nastavenia a „Späť" nevráti do psst, takže ďalší krok neprišiel (na AOSP
+sa to neprejaví). Teraz sa otvárajú v úlohe psst (bez NEW_TASK) a `MainActivity.onResume` po návrate sám zistí
+skutočný stav a ukáže ďalší chýbajúci krok: upozornenia + vyskakovacie okno kanála správ → upozornenia na zamknutej
+obrazovke (globálny prepínač → systémová stránka Upozornenia) → celoobrazovkové hovory → batéria. Každý krok
+najviac raz za verziu; „Neskôr" pokračuje ďalším krokom hneď. (2) Kanál správ dostal nové ID `PSST_MESSAGES_V4`
+(Android si pamätá nastavenia kanála, vrátane ručne zníženej dôležitosti), `IMPORTANCE_HIGH`, názov „Správy/
+Messages"; staré `PSST_NOISY_*_V3` a `DEFAULT_NOISY_*_V2` sa pri štarte mažú. `lockscreenVisibility` appka nastaviť
+nemôže (Android ju pri vytvorení kanála nahradí „bez prepísania" = rozhoduje nastavenie telefónu), preto ju
+kontroluje sprievodca. Notifikácia je `CATEGORY_MESSAGE` s `MessagingStyle` (upstream). Overené v emulátore
+(Android 14): vyskakovacie okno, zamknutá obrazovka, aktualizácia b13 → b18 → b20 (starý kanál zmazaný).
+Samsung One UI má navyše vlastné „Štýl vyskakovacích upozornení" a „Upozornenia na zamknutej obrazovke → Skryť obsah"
+— tie appka nevidí ani nezmení; na skutočnom A05 treba overiť.
+
+**D62 — Neoverená relácia na webe/desktope sa nesmie tváriť ako overená.** Príčina zle zobrazeného stavu: keď
+iné zariadenie resetuje digitálnu identitu (Element X: „Can't confirm?" → reset — v databáze to vidno aj na dvoch
+skutočných účtoch), existujúca relácia na počítači prestane byť overená, ale upstream Element ukáže len odložiteľný toast
+„Verify this device" (Later/Continue) a appka ďalej normálne funguje — vyzerá ako overená. `force_verification`
+upstream platí len pri čerstvom prihlásení. Fork: s `force_verification` sa zablokuje aj existujúca relácia,
+ktorá stratila overenie — pri štarte (`shouldForceVerification`) aj počas behu (DeviceListener →
+`psst_force_verification` → obrazovka „Confirm your digital identity"). Nasadené (web b13, desktop b15) a overené
+na produkcii: reset identity z Androidu → web sa okamžite prepne na potvrdenie identity → „Use another device" →
+telefón (otvorený) → emoji → späť v appke. Skutoční používatelia: všetky ich aktívne webové/desktopové relácie sú
+podpísané aktuálnym kľúčom (overené read-only v DB), zmena ich nezablokuje.
+
+**Chýbajúca notifikácia o žiadosti o overenie (bez zmeny kódu — obmedzenie protokolu a upstreamu).** Žiadosť
+o overenie zariadenia je *to-device* správa; Matrix push (pravidlá aj Sygnal) existuje len pre udalosti
+v miestnostiach, MSC na push to-device správ neexistuje. Element X ju preto zobrazí len pri bežiacej synchronizácii
+(otvorená appka) a s limitom 1 minúta; staršiu žiadosť zahodí. Neoverené nové zariadenie Element X navyše vôbec
+neregistruje push (až po overení). Postup pre ľudí: overovať tak, že **na novom zariadení** zvolíte „Use another
+device" a **na starom zariadení appku otvoríte**. Možné rozšírenie (navrhnuté, nenasadené): malá služba za nginx
+(`mirror` na `PUT /sendToDevice/m.key.verification.request/…`) pošle cez Sygnal „budíček" na pushery cieľového
+používateľa a fork Androidu zobrazí notifikáciu „Žiadosť o overenie — otvorte psst"; iOS NSE by bez entitlementu
+na filtrovanie ukázal len všeobecný text.
+
+**D63 — Android: kontrola novej verzie.** APK sa inštaluje mimo obchodu, nič neupozorní na novší build (zastarané
+APK boli príčinou výpadku push v D52). Appka najviac raz za 12 h (pri `onResume`, keď sprievodca nič neukazuje)
+prečíta verejné `https://app.macet.eu/download/latest.json` (bez cookies a údajov o používateľovi); ak je
+`android.build` vyšší než nainštalovaný (`versionCode/10 − 21 000 000`), ponúkne „Stiahnuť" → stránka na stiahnutie.
+Ten istý build ponúkne znova najskôr o 3 dni. iOS rieši aktualizácie TestFlight/App Store.
+
+**D64 — Audit funkcií (docs/FEATURE-MATRIX.md).** Testuje sa na produkcii, výhradne na nových testovacích účtoch
+(`qa-au*`), ktoré sa po audite deaktivujú; skutočných používateľov ani ich miestnosti sa test nedotkne. Web:
+`scripts/audit/web-audit.mjs` (Playwright, partner = ďalšia webová relácia). Windows/macOS: workflow *Desktop audit*
+nainštaluje MSI/DMG na GitHub runneri a spustí rovnakú sadu (`features.mjs`) cez CDP; hovor s blokovaným UDP cez
+firewall OS. Android: emulátor API 34 s Google Play services, ručne riadený cez adb/uiautomator + webový partner
+(`scripts/audit/call-partner.mjs` pre hovory), blokované UDP cez iptables. iOS: workflow *iOS audit* — XCUITest
+`PsstAuditTests` v simulátore + partner Element Web (`ios-partner.mjs`); podpísaný build nie je (zmluva v App Store
+Connect), takže bez APNs, kamery a mikrofónu. Prihlasovacie údaje testovacích účtov len ako šifrované GitHub
+secrets, po audite zmazané. Bunka „funguje" len po skutočnom teste.
+
+**D65 — Server: adresár členov, nešifrované verejné kanály.** (1) `limit_profile_requests_to_users_who_share_rooms`
++ `search_all_users: false` spôsobovali, že Element X pri platnom používateľovi písal „This Matrix ID can't be found"
+a nový kontakt sa nedal nájsť menom. Na uzavretom serveri (registrácia len pozvánkou) je zoznam členov ako firemný
+adresár → `search_all_users: true`, profily členov viditeľné aj bez spoločnej miestnosti; mimo prihlásených
+členov sa nič nezverejňuje (`require_auth_for_profile_requests`). (2) `encryption_enabled_by_default_for_room_type:
+invite` (predtým `all`): súkromné miestnosti a DM sú šifrované automaticky, verejné kanály nie — noví členovia
+kanála vidia históriu a funguje serverové vyhľadávanie; šifrovanie kanála môže tvorca zapnúť ručne.
+
+**D66 — QR prihlásenie: relácia 5 minút namiesto 60 s.** Synapse drží rendezvous reláciu MSC4108 natvrdo 60 s od
+vytvorenia QR kódu (zápisy ju nepredlžujú, voľba v konfigurácii neexistuje). Celý postup — naskenovať, opísať
+2 číslice, opísať overovací kód v MAS, „Grant access" — musel stihnúť do minúty, inak „The sign in was not
+completed in time" (v produkčných logoch: posledný zápis telefónu 63 s po vytvorení → 404). `server/synapse/
+Dockerfile`: oficiálny image + jediná zmena `RendezvousHandler(self, ttl=5 min)`; build zlyhá, ak sa riadok
+v novej verzii Synapse zmení. Overené: prihlásenie cez QR prešlo pri 96 s. MSC4388 má už 120 s (bez zmeny).

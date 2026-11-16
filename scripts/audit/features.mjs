@@ -68,8 +68,10 @@ async function hookNotifications(p) {
         const N = window.Notification;
         window.Notification = function (title, opts) { window.__psstNotes.push({ title, body: opts?.body, t: Date.now() }); return new N(title, opts); };
         Object.assign(window.Notification, N); window.Notification.prototype = N.prototype;
-        Object.defineProperty(window.Notification, "permission", { get: () => N.permission });
-        Object.defineProperty(window.Notification, "requestPermission", { value: N.requestPermission.bind(N) });
+        // headless Chromium answers "denied" regardless of the granted permission → behave like a browser where
+        // the user clicked "Allow" (Element's own logic — toast, setting, per-room rules — is what is tested)
+        Object.defineProperty(window.Notification, "permission", { get: () => "granted" });
+        Object.defineProperty(window.Notification, "requestPermission", { value: async () => "granted" });
     });
 }
 const notes = (p) => p.evaluate(() => (window.__psstNotes || []).length).catch(() => -1);
@@ -225,8 +227,9 @@ export async function runFeatures(ctx) {
         const base = state.replyBase;
         await lastTile(base).hover();
         await lastTile(base).locator('[aria-label="React"]').first().click({ timeout: 10000 });
-        const search = me.locator(".mx_EmojiPicker input").first();
-        await search.fill("thumbs up", { timeout: 10000 });
+        const search = me.locator('input[aria-label="Search"][aria-haspopup="grid"]').first();
+        await search.waitFor({ state: "visible", timeout: 10000 });
+        await search.fill("thumbs up");
         await sleep(800);
         await me.keyboard.press("Enter");
         const ev = await waitEvent(partner, state.dm, `(e) => e.type === "m.reaction" && e.content?.["m.relates_to"]?.key?.startsWith("👍")`);
@@ -332,20 +335,13 @@ export async function runFeatures(ctx) {
     // ---- notifications (app open, other room / home)
     await step("notif_open", async () => {
         await hookNotifications(me);
-        // Element Web asks with a toast ("Enable desktop notifications") → Enable; otherwise Settings → Notifications
+        // Element Web asks with a toast ("Enable desktop notifications") → Enable = the "notificationsEnabled" device
+        // setting (Settings → Notifications → "Enable desktop notifications for this session")
         if (!(await cli(me, () => window.mxSettingsStore?.getValue("notificationsEnabled")))) {
             const t = me.locator('.mx_Toast_toast:has-text("otification") button:has-text("Enable")').first();
             if (await t.count()) await t.click().catch(() => {});
-            else {
-                await me.locator('[aria-label="User menu"]').first().click({ timeout: 15000 });
-                await me.locator('[role=menuitem]:has-text("Notifications"), [role=menuitem]:has-text("All settings")').first().click({ timeout: 15000 });
-                await me.getByRole("tab", { name: "Notifications" }).first().click({ timeout: 10000 }).catch(() => {});
-                await sleep(1500);
-                const sw = me.locator('.mx_Dialog [role=switch]:near(:text("desktop notifications")), .mx_Dialog input[type=checkbox]:near(:text("desktop notifications"))').first();
-                await sw.click({ timeout: 10000 }).catch(() => {});
-                await sleep(1000); await me.keyboard.press("Escape");
-            }
-            await sleep(2000);
+            await cli(me, async () => { if (!window.mxSettingsStore.getValue("notificationsEnabled")) await window.mxSettingsStore.setValue("notificationsEnabled", null, "device", true); });
+            await sleep(1500);
         }
         await me.evaluate(() => { location.hash = "#/home"; });
         await sleep(2000);
@@ -515,8 +511,9 @@ export async function runFeatures(ctx) {
     await step("leave", async () => {
         if (!state.pub) throw new Error("no public room");
         await openRoom(me, state.pub);
-        await compose(me, "/leave"); await sleep(2000);
-        await me.locator('.mx_Dialog button:has-text("Leave")').first().click({ timeout: 5000 }).catch(() => {});
+        await me.locator('[aria-label="Room info"]').first().click({ timeout: 10000 });
+        await me.getByText(/^Leave room$/).first().click({ timeout: 10000 });
+        await me.locator('.mx_Dialog button:has-text("Leave")').first().click({ timeout: 10000 });
         let left = false;
         for (let i = 0; i < 20 && !left; i++) { left = await cli(me, (r) => window.mxMatrixClientPeg.get().getRoom(r)?.getMyMembership() !== "join", state.pub); if (!left) await sleep(1000); }
         record("leave", left ? "ok" : "fail", left ? "miestnosť opustená" : "stále člen");

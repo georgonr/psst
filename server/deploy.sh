@@ -380,7 +380,7 @@ log "zostavujem psst-admin"
 compose build -q admin
 
 log "štartujem celý stack"
-compose up -d --remove-orphans
+compose up -d --build --remove-orphans
 # služby, ktorých konfigurácia sa pri tomto behu zmenila, reštartovať (compose up -d zmenu obsahu nevidí)
 if [ -n "$CFG_BEFORE" ]; then
   CHANGED="$(diff <(printf '%s\n' "$CFG_BEFORE") <(cfg_sums) | awk '/^[<>]/{print $4}' | cut -d/ -f2 | sort -u || true)"

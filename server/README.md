@@ -14,7 +14,7 @@ sudo ./deploy.sh <IP_SERVERA> <EMAIL> [--contact "…"] [--hosting "…"] [--app
 
 | Služba | Image | Doména / port | Úloha |
 |---|---|---|---|
-| Synapse | `ghcr.io/element-hq/synapse:v1.165.0` | chat.macet.eu (len cez nginx; admin API 127.0.0.1:8008) | Matrix homeserver, federácia vypnutá |
+| Synapse | `ghcr.io/element-hq/synapse:v1.165.0` + vrstva `server/synapse/Dockerfile` (QR relácia 5 min, D66) | chat.macet.eu (len cez nginx; admin API 127.0.0.1:8008) | Matrix homeserver, federácia vypnutá |
 | MAS | `ghcr.io/element-hq/matrix-authentication-service:1.29.0` | chat.macet.eu**/auth/** | účty, prihlásenie, **registrácia len s pozývacím tokenom** (aj z Element X) |
 | PostgreSQL | `postgres:18.7-alpine` | interne | databázy `synapse` a `mas` |
 | LiveKit | `livekit/livekit-server:v1.13.11` | chat.macet.eu/livekit/sfu, 7881/tcp, 7882/udp | SFU pre hovory |
