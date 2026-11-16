@@ -66,3 +66,23 @@ do kľúčenky a nastaví **šifrované** GitHub secrets `PSST_MAC_CERT_P12_BASE
   `spctl -a -vvv -t install` + `-t open --context context:primary-signature` (DMG), `spctl -a -vvv -t exec` +
   `codesign --verify --deep --strict` (app v DMG), `xcrun stapler validate` (DMG aj app). Pri podpísanom builde
   musí všetko prejsť, inak len zapíše výsledok.
+
+## Suchý test bez skutočného certifikátu (16. 11. 2026)
+
+Workflow **macOS signing dry run** (`.github/workflows/macos-signing-dryrun.yml`, len ručne) spustí produkčné kroky
+jobu *Desktop macOS* z `web-desktop.yml` **doslovne** (ich `run:` skripty číta za behu
+`scripts/desktop/workflow-step.py`, nevyriešený `${{ }}` výraz = chyba) s jednorazovým certifikátom
+„Developer ID Application: PSST CI Test (MHV67VMY8T)" od jednorazovej koreňovej CA, cez dočasné secrets
+`PSST_MAC_DRYRUN_P12_BASE64` + `PSST_MAC_DRYRUN_P12_PASSWORD` (nikdy nie `PSST_MAC_CERT_*`). Rozdiely oproti ostrému
+buildu, všetky označené „[dry run]": jednorazová CA je na runneri dôveryhodná (zastupuje Apple reťazec), notarizácia
+vynechaná (prázdne `APPLE_API_*` pre electron-builder, `xcrun notarytool`/`stapler` nahradené), nič sa nenahráva ani
+nepublikuje (len textový report).
+
+Výsledok (run 43962661843, macos-15): import p12 + `find-identity -v` + kontrola „Developer ID Application: … (MHV67VMY8T)"
+✔, electron-builder podpísal `psst.app` touto identitou (hardened runtime, entitlementy JIT, kamera, mikrofón,
+library validation off, časová pečiatka Apple) ✔, `codesign` DMG ✔, `codesign --verify --deep --strict` app aj DMG
+✔ („satisfies its Designated Requirement"), `spctl` app aj DMG **odmietnuté** — očakávane (nie je Apple reťazec ani
+notarizácia). Jediné rozdiely oproti ostrému buildu: dôvera (Apple Developer ID CA namiesto testovacej), notarizácia +
+staple a `TeamIdentifier` (codesign ho číta z Apple rozšírenia certifikátu; pri testovacom „not set", pri ostrom
+MHV67VMY8T). Po nahratí skutočného certifikátu skriptom `macos-devid-secrets.sh` teda CI nepotrebuje žiadnu ďalšiu
+zmenu. Dočasné secrets boli po teste zmazané.

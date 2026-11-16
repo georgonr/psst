@@ -85,6 +85,10 @@ V Apple Developer portáli treba vopred vytvoriť:
   (`com.apple.developer.usernotifications.filtering`) — bez neho ho workflow z NSE vyhodí.
 - App Store provisioning profily pre všetky tri App ID, záznam aplikácie v App Store Connect (pre TestFlight).
 
+**Odporúčaná cesta je jeden príkaz `scripts/ios/release-testflight.sh`** (`--check` = len kontrolný zoznam): bundle ID,
+capabilities, distribučný certifikát a profily pridá cez API sám, secrets nastaví, spustí tento workflow s uploadom
+a build pridá do TestFlightu. Ručne (Account Holder) ostáva len záznam appky — `scripts/ios/README.md`.
+
 Workflow: kontrola sekretov (chýbajúce vypíše ako `::error` a skončí) → dočasný keychain s certifikátom →
 inštalácia profilov a mapovanie bundle id → profil → `psst-signing.yml` include do XcodeGen specu,
 `aps-environment: production`, build number = `inputs.build_number` alebo `github.run_number` → `xcodegen` →
