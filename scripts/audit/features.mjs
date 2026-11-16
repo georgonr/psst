@@ -219,7 +219,10 @@ export async function runFeatures(ctx) {
         const base = state.replyBase;
         await lastTile(base).hover();
         await lastTile(base).locator('[aria-label="React"]').first().click({ timeout: 10000 });
-        await me.locator(".mx_EmojiPicker").getByText("👍", { exact: true }).first().click({ timeout: 10000 });
+        const search = me.locator(".mx_EmojiPicker input").first();
+        await search.fill("thumbs up", { timeout: 10000 });
+        await sleep(800);
+        await me.keyboard.press("Enter");
         const ev = await waitEvent(partner, state.dm, `(e) => e.type === "m.reaction" && e.content?.["m.relates_to"]?.key?.startsWith("👍")`);
         record("reaction", ev ? "ok" : "fail", ev ? "reakcia 👍 prišla partnerovi" : "reakcia neprišla");
     });
@@ -251,8 +254,8 @@ export async function runFeatures(ctx) {
         record("delete", red ? "ok" : "fail", red ? "správa zmazaná aj u partnera (redaction)" : "správa u partnera nezmazaná");
     });
     await step("mention", async () => {
-        const name = await cli(partner, () => window.mxMatrixClientPeg.get().getUser(window.mxMatrixClientPeg.get().getUserId())?.displayName || window.mxMatrixClientPeg.get().getUserId());
-        await compose(me, `hey @${name.slice(0, 4)}`, { enter: false });
+        await compose(me, `hey @${users.partner.slice(0, 8)}`, { enter: false });
+        await sleep(1500);
         await me.locator(".mx_Autocomplete .mx_Autocomplete_Completion, .mx_Autocomplete_Completion_pill").first().click({ timeout: 10000 });
         await me.keyboard.press("Enter");
         const ev = await waitEvent(partner, state.dm, `(e) => (e.content?.["m.mentions"]?.user_ids || []).includes(${JSON.stringify(PA)})`);
