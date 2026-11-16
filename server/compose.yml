@@ -166,6 +166,23 @@ services:
       - ./secrets/fcm:/fcm:ro
     networks: [psst]
 
+  # Budíček pri žiadosti o overenie zariadenia (DECISIONS D68): nginx sem zrkadlí m.key.verification.request,
+  # služba overí token a pošle cez Sygnal push na psst Android telefóny toho istého používateľa.
+  psst-wake:
+    build: ./wake
+    image: psst-wake:local
+    profiles: ["sygnal"]
+    restart: unless-stopped
+    logging: *logging
+    environment:
+      MATRIX_DOMAIN: ${MATRIX_DOMAIN}
+      WAKE_APP_IDS: ${ANDROID_PUSH_APP_IDS:-eu.macet.psst}
+    volumes:
+      - ./secrets/admin-run:/secrets:ro   # admin_token (UID 10001, viď admin_secrets v scripts/lib.sh)
+    depends_on:
+      - synapse
+    networks: [psst]
+
   # Administrácia pozvánok a členov — https://<APP_DOMAIN>/admin (len cez nginx), DECISIONS D56
   admin:
     build: ./admin

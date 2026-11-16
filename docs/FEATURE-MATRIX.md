@@ -1,13 +1,13 @@
 # PSST — matica funkcií
 
-Stav k 2026-11-16, testované na produkčnom serveri chat.macet.eu výhradne na testovacích účtoch (po teste deaktivované). Postup a skripty: `scripts/audit/` (DECISIONS D64), podrobnosti v REPORT.md.
+Stav k 2026-11-16 (dávka 12 doplnená na konci), testované na produkčnom serveri chat.macet.eu výhradne na testovacích účtoch (po teste deaktivované). Postup a skripty: `scripts/audit/` (DECISIONS D64), podrobnosti v REPORT.md.
 
 - **Web**: Element Web app.macet.eu v Chromiu (Playwright), partner = ďalšia webová relácia.
 - **Windows / macOS**: nainštalované MSI / DMG na GitHub runneroch (windows-latest, macos-latest), riadené cez CDP.
 - **Android**: APK v emulátore (API 34, Google APIs = Google Play services, FCM), ovládané cez adb/uiautomator.
 - **iOS**: simulátor na GitHub runneri (XCUITest `PsstAuditTests`), nepodpísaný build — bez APNs, kamery a mikrofónu.
 
-**Súhrn (225 buniek):** ✅ 171 funguje · ❌ 0 nefunguje · 🟠 7 nefunguje kvôli upstreamu · ⚪ 47 nedá sa tu overiť
+**Súhrn (250 buniek):** ✅ 176 funguje · ❌ 1 nefunguje · 🟠 8 nefunguje kvôli upstreamu · ⚪ 65 nedá sa tu overiť
 
 Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje, obmedzenie upstreamu (nie náš fork/server) · ⚪ nedá sa v tomto prostredí overiť (dôvod v bunke).
 
@@ -80,3 +80,13 @@ Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje,
 | Admin stránka (app.macet.eu/admin) | ✅ funguje — 18/18: prihlásenie cez MAS, pozvánka → registrácia → stav, blokovanie/odblokovanie, zrušenie pozvánky, CSRF/Origin 403, neadmin 403, mobil 390 px | ⚪ nedá sa tu overiť — admin stránka je webová (testovaná v stĺpci Web) | ⚪ nedá sa tu overiť — admin stránka je webová (testovaná v stĺpci Web) | ⚪ nedá sa tu overiť — admin stránka je webová (app.macet.eu/admin), testovaná v stĺpci Web | ⚪ nedá sa tu overiť — admin stránka je webová (testovaná v stĺpci Web) |
 | Stránka na stiahnutie | ✅ funguje — odkaz „Download apps“ na prihlasovacej obrazovke true | ✅ funguje — odkaz „Download apps“ na prihlasovacej obrazovke true | ✅ funguje — odkaz „Download apps“ na prihlasovacej obrazovke true | ✅ funguje — stránka ponúka APK arm64 b23 (SHA-256 overené po nahratí cez HTTPS); aktualizácia b13 → b18 → b20 → b23 prešla so zachovaním prihlásenia/kanálov | ⚪ nedá sa tu overiť — stránka ukazuje iOS „Coming soon“ — build čaká na zmluvu v App Store Connect |
 | Kontrola novej verzie | ✅ funguje — Element Web každých 10 min číta /version: proti produkcii „bez aktualizácie“ (b15), pri novšej verzii „Ready b15 → b99“ a ponuka obnovenia (toast upstream skryje účtom registrovaným < 24 h) | ✅ funguje — psst update check: installed b15, available b15 | ✅ funguje — psst update check: installed b15, available b15 | ✅ funguje — b20 ponúkol „New psst version – build 21“ (app.macet.eu/download/latest.json); tlačidlo Download otváralo psst namiesto prehliadača (App Link na celú doménu) → opravené v b23: /download/ otvorí prehliadač, odkazy /#/… ďalej psst (overené, App Links stále „verified“) | ⚪ nedá sa tu overiť — iOS aktualizácie rieši TestFlight/App Store, appka vlastnú kontrolu nemá (zámerne) |
+
+## Dávka 12 (2026-11-16)
+
+| Funkcia | Web | Windows | macOS | Android | iOS |
+|---|---|---|---|---|---|
+| Upozornenie na žiadosť o overenie (druhé zariadenie má appku zatvorenú) | 🟠 nefunguje — upstream — Element Web nemá Web Push; žiadosť sa zobrazí, len keď je karta otvorená | ⚪ nedá sa tu overiť — desktop dostane žiadosť, len keď beží (aj v tray); budíček D68 je len pre Android | ⚪ nedá sa tu overiť — desktop dostane žiadosť, len keď beží (aj v Docku); budíček D68 je len pre Android | ✅ funguje — b24: web poslal žiadosť, psst-wake → Sygnal → FCM; pri zastavenej appke notifikácia „Verification request“ do 0,5 s, ťuknutie otvorilo „Verification requested“ (D68) | ⚪ nedá sa tu overiť — budíček D68 je len pre psst Android; iOS simulátor nemá APNs |
+| Overenie „Použiť iné zariadenie“: výzva, odpočet, Poslať znova | ✅ funguje — produkcia (web b18): výzva otvoriť appku na druhom zariadení, odpočet 10 min, „Poslať znova“ zruší a pošle novú žiadosť, aj po vypršaní; emoji overenie dokončené (D71) | ⚪ nedá sa tu overiť — rovnaký kód ako web (desktop b18/b19), na Windows runneri tento tok netestovaný | ⚪ nedá sa tu overiť — rovnaký kód ako web (desktop b18/b19), na macOS runneri tento tok netestovaný | ⚪ nedá sa tu overiť — funkcia web/desktop klienta (strana, ktorá žiadosť posiela) | ⚪ nedá sa tu overiť — funkcia web/desktop klienta |
+| Admin: nastaviť nové heslo členovi | ✅ funguje — app.macet.eu/admin: dočasné heslo zobrazené raz + Kopírovať, záznam v audit logu bez hesla; prihlásenie novým heslom do Element Web prešlo, staré odmietnuté (D70) | ⚪ nedá sa tu overiť — admin stránka je webová (stĺpec Web) | ⚪ nedá sa tu overiť — admin stránka je webová (stĺpec Web) | ⚪ nedá sa tu overiť — admin stránka je webová (stĺpec Web) | ⚪ nedá sa tu overiť — admin stránka je webová (stĺpec Web) |
+| Diagnostika upozornení (Nastavenia → Upozornenia) | ⚪ nedá sa tu overiť — len v Android appke | ⚪ nedá sa tu overiť — len v Android appke | ⚪ nedá sa tu overiť — len v Android appke | ✅ funguje — b24: stav systému, kanály, aktívne notifikácie, RANK cez voliteľný listener, záznam pushov; testy „správa“ a „jednoduché“ o 10 s; „Uložiť a odoslať“ → Stiahnuté/psst-diagnostika-*.txt + zdieľanie (D67) | ⚪ nedá sa tu overiť — len v Android appke |
+| Stiahnutý build sa otvorí bez varovania | ⚪ nedá sa tu overiť — web sa neinštaluje | ⚪ nedá sa tu overiť — MSI nie je podpísané (SmartScreen môže varovať); v tejto dávke netestované | ❌ nefunguje — DMG b18 nepodpísaný: Gatekeeper ho po stiahnutí odmietne (spctl „no usable signature“, run 43902841926); podpis čaká na Developer ID certifikát od Account Holdera, návod na otvorenie je na stránke (D69) | ✅ funguje — APK b24 sa nainštaluje cez b23 (adb install -r, rovnaký podpisový kľúč) | ⚪ nedá sa tu overiť — iOS build čaká na TestFlight |

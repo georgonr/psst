@@ -1,69 +1,69 @@
 {
  "web": {
-  "build": 15,
+  "build": 19,
   "date": "20261116",
-  "note": "macOS build carries the build number (About, update check); force_verification also blocks sessions that lost verification (D62).",
+  "note": "Overenie: text spomína upozornenie psst na Androide (D68); výzva, odpočet a Poslať znova (D71)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261116-b15.tar.gz",
-    "sha256": "eed03e09ebbf967716929ea7aa2097f654fd159723efb383bdb17610777c9b8e"
+    "name": "psst-web-20261116-b19.tar.gz",
+    "sha256": "c26d323a6a342dda10693e984055cb2b45df1e8f8daa20ce166e46783a0d183d"
    }
   ]
  },
  "macos": {
-  "build": 15,
+  "build": 19,
   "date": "20261116",
-  "note": "macOS build carries the build number (About, update check); force_verification also blocks sessions that lost verification (D62).",
+  "note": "Overenie: text spomína upozornenie psst na Androide (D68); výzva, odpočet a Poslať znova (D71)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261116-b15.dmg",
-    "sha256": "52ce9b359339a92733ce49b1f5c3e20f77afd2fa6a40df25df1137d298d636e1"
+    "name": "psst-macos-20261116-b19.dmg",
+    "sha256": "cada5673f22245cdc588d153bd6f1426ce6294ba4abda5bdf19a8c294dedf311"
    },
    {
-    "name": "psst-macos-20261116-b15.zip",
-    "sha256": "5c079b57c02ada44e9d82b92b697ea357d3c2c008e539604cccc2a6957cabab5"
+    "name": "psst-macos-20261116-b19.zip",
+    "sha256": "41d1223fc47f489dd0ba9ecbce507e645d21f59673b8f40e1c65b1c2af44b917"
    }
   ]
  },
  "windows": {
-  "build": 15,
+  "build": 19,
   "date": "20261116",
-  "note": "macOS build carries the build number (About, update check); force_verification also blocks sessions that lost verification (D62).",
+  "note": "Overenie: text spomína upozornenie psst na Androide (D68); výzva, odpočet a Poslať znova (D71)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261116-b15-setup.exe",
-    "sha256": "484923bbf50679d74fa0b73a0fe008312d982d6bd95b0007f76debb547fd7695"
+    "name": "psst-windows-20261116-b19-setup.exe",
+    "sha256": "db6ac6875d6af39f22f35fb9381490c4f774c97a9bd1bb348b5c5b0662ec1b2e"
    },
    {
-    "name": "psst-windows-20261116-b15.msi",
-    "sha256": "b5df7c1a9a5fa07da59a588b26edaf918d5f0c7cb919a5137152d699e45fa000"
+    "name": "psst-windows-20261116-b19.msi",
+    "sha256": "a7dc8105dd9080ecf4159d3635566a2c8a2def031dc233c8084e986d1fde4c65"
    }
   ]
  },
  "android": {
-  "build": 23,
+  "build": 24,
   "date": "20261116",
-  "note": "Setup wizard returns to psst and finishes by itself; new message channel (pop-up, lock screen); update check; app.macet.eu pages other than permalinks open in the browser.",
+  "note": "Diagnostika upozornení v Nastavenia → Upozornenia (export do súboru), súhrnná notifikácia už nezvoní namiesto správy, notifikácia „Žiadosť o overenie“ pri overovaní z iného zariadenia",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261116-b23-arm64.apk",
-    "sha256": "1a4949c910c715b90aba244f2191c54308681da97080f0237b08c7e71697510d"
+    "name": "psst-android-20261116-b24-arm64.apk",
+    "sha256": "7a86bf518bf27576b7057c4a7f87e8264641c0cff739d374f523035a35c8eba9"
    },
    {
-    "name": "psst-android-20261116-b23-armv7.apk",
-    "sha256": "ff9081191d2bd244c3b2ddde1feea3e5d2b5908ef82333c680d0f71fe8fa4f1b"
+    "name": "psst-android-20261116-b24-armv7.apk",
+    "sha256": "9b1762cc7449e59b1b3bd02588ed3b4476c452dd31b725b281eb8b358e64c814"
    },
    {
-    "name": "psst-android-20261116-b23-x86_64.apk",
-    "sha256": "bc4696d14cdf10c5bad7a69dee287c75d839bed0c18154b9302e95caa9520683"
+    "name": "psst-android-20261116-b24-x86_64.apk",
+    "sha256": "71e264832dc638c02d24bbb182dc1c621b920088b950abf09f22a032488f551b"
    },
    {
-    "name": "psst-android-20261116-b23.aab",
-    "sha256": "0ec8ca07af8381d7ba1b6208f08a5ce74df8ecfbe014f62d27cdefb46b27bc5d"
+    "name": "psst-android-20261116-b24.aab",
+    "sha256": "9936408f41f9468966965cdd2e87e8e697d8ab3affdee76ca4098534047ca4c2"
    }
   ]
  }

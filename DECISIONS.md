@@ -463,3 +463,62 @@ vytvorenia QR kódu (zápisy ju nepredlžujú, voľba v konfigurácii neexistuje
 completed in time" (v produkčných logoch: posledný zápis telefónu 63 s po vytvorení → 404). `server/synapse/
 Dockerfile`: oficiálny image + jediná zmena `RendezvousHandler(self, ttl=5 min)`; build zlyhá, ak sa riadok
 v novej verzii Synapse zmení. Overené: prihlásenie cez QR prešlo pri 96 s. MSC4388 má už 120 s (bez zmeny).
+
+## Chyby z testov na skutočných zariadeniach (2026-11-16, dvanásta dávka)
+
+**D67 — Samsung: zvuk bez vyskakovacieho okna — diagnostika v appke a tichá súhrnná notifikácia.** Samsung A05 nebol
+počas dávky pripojený cez adb, takže dôkaz zo samotného telefónu chýba. Porovnanie s upstreamom Element X v26.11.0
+(`docs/android-notifications-upstream.md`): cesta push → WorkManager → resolver → renderer je v psst nezmenená; líšime
+sa len kanálom (HIGH namiesto DEFAULT, D61). Našla sa upstream chyba: `GROUP_ALERT_CHILDREN` je nastavené na
+notifikáciách miestností, kde nemá účinok, a súhrnná notifikácia skupiny (rovnaký HIGH kanál, `GROUP_ALERT_ALL`) tak
+sama zvoní pri každej prvej správe po vyčistení. Na AOSP ju stlmí len limit 1 upozornenie/s na appku (emulátor:
+`notification_alert` len pre notifikáciu miestnosti). Na One UI s pomalým telefónom môže zvoniť súhrn, ktorý sa nikdy
+neukáže ako vyskakovacie okno → presne „pípne, ale nič nevyskočí". b24: súhrn má `GROUP_ALERT_CHILDREN` (nikdy
+nezvoní). Keďže príčinu na Samsungu nemožno potvrdiť bez telefónu, b24 pridáva Nastavenia → Upozornenia →
+„Diagnostika upozornení (psst)": stav systému, všetky kanály (dôležitosť, zamknutá obrazovka, zmenené používateľom),
+čitateľné nastavenia telefónu (vrátane Samsung pop-up / lock screen), aktívne notifikácie, záznam pushov a
+zobrazených notifikácií (kanál, dôležitosť, onlyAlertOnce, skupina, fallback, stav zámku — bez obsahu správ a mien),
+voliteľne prístup k upozorneniam (zaznamená, ako systém notifikáciu zaradil: efektívna dôležitosť, kanál konverzácie,
+potlačené efekty), dva testy o 10 s (ako správa / jednoduché) a „Uložiť a odoslať" (Stiahnuté + zdieľanie).
+
+**D68 — Budíček pri žiadosti o overenie zariadenia (rozšírenie D62).** nginx zrkadlí
+`PUT …/sendToDevice/m.key.verification.request/…` do novej služby `server/wake` (psst-wake, stdlib Python, profil
+sygnal). Služba overí token cez `/whoami`, budí len zariadenia **toho istého používateľa** (overovanie vlastných
+zariadení; cudzích ľudí nikdy), načíta jeho pushery cez Synapse admin API (token zostáva na serveri), vynechá
+žiadajúce zariadenie a pošle cez Sygnal high-priority push s označením `!psst-verification:<doména>` len pusherom
+psst Android; max. 1× za 20 s na používateľa; v logoch žiadne celé ID. Android (b24) pre takýto push nič nesťahuje ani
+nesynchronizuje (inak by žiadosť mohol spotrebovať notifikačný klient) a ukáže „Žiadosť o overenie — otvorte psst"
+(kanál „Overenie zariadenia", HIGH, platnosť 10 min); ťuknutie otvorí psst, ktorý po synchronizácii zobrazí obrazovku
+„Verification requested". Overené na produkcii: zastavená appka v emulátore dostala notifikáciu 0,5 s po žiadosti
+z webu, ťuknutie otvorilo overenie. iPhone (oficiálny Element X ani psst iOS) budíček nedostane — tam treba appku
+otvoriť (web/desktop to teraz hovorí, D71). Staršie Android buildy (≤ b23) by takýto push zobrazili ako „nová správa"
+(fallback) — aktualizácia na b24 to rieši.
+
+**D69 — macOS: Developer ID podpis + notarizácia, dovtedy návod na stránke.** Certifikát Developer ID Application
+nejde vytvoriť cez App Store Connect API (POST /v1/certificates → 403 „This operation can only be performed by the
+Account Holder.", aj pre G2); vytvorí ho Account Holder GexPay SE z nášho CSR (`~/psst-keys/macos-devid/devid.csr`,
+súkromný kľúč neopúšťa Mac). CI (`web-desktop.yml`) podpisuje a notarizuje automaticky, keď existujú secrets
+`PSST_MAC_CERT_P12_BASE64` + `PSST_MAC_CERT_PASSWORD` (notarizácia existujúcim ASC kľúčom U4SWSW9CRM, overené, že
+notarytool sa ním prihlási); bez nich build ostáva nepodpísaný (warning). Po každom publikovaní `macos-gatekeeper.yml`
+stiahne DMG z app.macet.eu cez HTTPS s quarantine a spustí spctl/codesign/stapler. Stránka na stiahnutie zobrazuje
+slovenský návod (Súkromie a bezpečnosť → Napriek tomu otvoriť), kým `latest.json` nemá `"signed": true` — to nastaví CI
+len pre overený podpísaný build. Postup: `docs/build/macos-signing.md`, `scripts/desktop/macos-devid-secrets.sh`.
+
+**D70 — Nové heslo pre člena z administrácie.** https://app.macet.eu/admin → pri členovi „Nastaviť nové heslo"
+(potvrdenie, CSRF + Origin ako ostatné akcie). Náhodné dočasné heslo (4×4 znaky bez l/1/o/0/i, ≈ 79 bitov) sa nastaví
+cez MAS admin API `set-password` a zobrazí adminovi **raz** s tlačidlom „Kopírovať" (len v pamäti session, nikdy
+v URL, logu ani na disku). Audit log: `user_password_reset` (kto, kedy, komu — bez hesla). Nedá sa použiť na chránené,
+admin, servisné, vlastné ani deaktivované účty. Relácie člena ostávajú (typicky zabudnuté heslo pri prihlásenom
+telefóne — zachová si zariadenia aj kľúče); pri podozrení na zneužitie treba „Zablokovať". `members.sh password` ostáva
+ako záloha cez SSH. Overené na produkcii: prihlásenie novým heslom prešlo, staré odmietnuté.
+
+**D71 — Overenie „Použiť iné zariadenie": jasná výzva, odpočet a „Poslať znova".** Hlásenie: po prihlásení na Windows
+sa žiadosť na iPhone (oficiálny Element X) prvýkrát neotvorila. Príčina (bez chyby v kóde): web/desktop pošle
+nešifrovanú to-device `m.key.verification.request` všetkým vlastným cross-signed zariadeniam (okrem seba); to-device
+správy sa nepushujú a iPhone ju spracuje až pri otvorenej appke. matrix-sdk-crypto 0.19.1: žiadosť platí 10 min
+u odosielateľa (potom `m.timeout`), príjemca ignoruje žiadosť staršiu ako 10 min (alebo > 5 min v budúcnosti).
+Element X iOS ďalší limit nemá — údaj „1 minúta" v D62 platí len pre obrazovku Element X Android (odpočet „Time limited
+action"), nie pre samotnú žiadosť. Fork web/desktop: počas čakania výzva otvoriť psst/Element na druhom zariadení,
+poznámka, že psst na Androide ukáže upozornenie (D68), inde nie, zostávajúci čas a „Poslať znova" (zruší aktuálnu,
+pošle novú) aj po zrušení/vypršaní. Overené Playwrightom lokálne aj na produkcii. Podrobnosti:
+`docs/verification-request-notes.md`.

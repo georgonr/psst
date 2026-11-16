@@ -89,6 +89,9 @@ cd server && LETSENCRYPT_EMAIL=admin@macet.eu ./deploy.sh   # na cieľovom serve
 gh workflow run server-smoke.yml -R georgonr/psst            # lokálny test celého stacku v CI
 ```
 
+Budíček pri žiadosti o overenie zariadenia beží ako `psst-wake` (`server/wake`, profil sygnal, D68); nginx mu zrkadlí
+`sendToDevice/m.key.verification.request`.
+
 Synapse beží z `server/synapse/Dockerfile` (oficiálny image + QR relácia 5 min, D66). Pri zmene verzie Synapse
 upraviť `SYNAPSE_VERSION` v `compose.yml`; ak build zlyhá na `grep`, upstream zmenil riadok s `RendezvousHandler`
 — skontrolovať, či je oprava ešte potrebná. Aktualizácia na serveri: rsync `server/` (bez `data`, `secrets`, `.env`,

@@ -1,3 +1,35 @@
+# PSST — report (2026-11-16, dávka 12: chyby z testov na skutočných zariadeniach)
+
+Rozhodnutia: D67 (Samsung notifikácie, diagnostika), D68 (budíček pri overení), D69 (podpis macOS), D70 (nové heslo
+v administrácii), D71 (overenie na webe/desktope). Matica: [docs/FEATURE-MATRIX.md](docs/FEATURE-MATRIX.md) (sekcia
+„Dávka 12“), porovnanie s upstreamom: [docs/android-notifications-upstream.md](docs/android-notifications-upstream.md).
+
+| Bod | Stav | Dôkaz |
+|---|---|---|
+| 1. Samsung A05: pípne, bez pop-upu | **Telefón nebol pripojený cez adb** — príčinu na ňom nebolo možné potvrdiť. Nájdená upstream chyba: súhrnná notifikácia skupiny sama zvoní (GROUP_ALERT_CHILDREN je na nesprávnej notifikácii); na AOSP ju stlmí len limit 1 upozornenie/s, na One UI môže zvoniť súhrn, ktorý sa nikdy neukáže ako pop-up. b24: súhrn nikdy nezvoní + diagnostika v Nastavenia → Upozornenia s exportom do súboru | emulátor b23: `notification_alert` len vďaka limitu; b24: súhrn `groupAlertBehavior=2`, správa pop-up, test pri zamknutí, export `psst-diagnostika-*.txt` |
+| 1b. Hovor na celú obrazovku pri zamknutí | funguje (emulátor, b24, PIN) | `IncomingCallActivity` nad zamknutou obrazovkou, kanál RINGING_CALL |
+| 2. macOS DMG sa nedá otvoriť | podpis blokovaný Apple: Developer ID certifikát vie vytvoriť len Account Holder (API 403). CI podpíše + notarizuje automaticky po nahratí certifikátu; stránka zatiaľ ukazuje návod | spctl na stiahnutom DMG: „rejected, no usable signature“ (run 43902841926) |
+| 3a. Budíček pri žiadosti o overenie | nasadené (server psst-wake + Android b24) | zastavená appka: notifikácia 0,5 s po žiadosti z webu, ťuknutie → „Verification requested“ |
+| 3b. Windows → iPhone neotvoril žiadosť | príčina: to-device žiadosť sa nepushuje, iPhone ju dostane až po otvorení appky (platí 10 min). Web/desktop b19: výzva otvoriť appku, odpočet, „Poslať znova“ | Playwright lokálne aj produkcia, emoji overenie dokončené |
+| 4. Admin: nové heslo | nasadené | prihlásenie novým heslom prešlo, staré odmietnuté, audit log bez hesla |
+
+**Account Holder GexPay SE musí:** na developer.apple.com → Certificates → + → Developer ID Application (G2 Sub-CA)
+nahrať `devid.csr` (pošleme) a vrátiť `.cer`; potom `scripts/desktop/macos-devid-secrets.sh <cer> --run`
+(docs/build/macos-signing.md). Ak je zobrazená výzva na novú licenčnú zmluvu, prijať ju.
+
+**Verzie na stránke na stiahnutie:** Android b24, Windows b19 (MSI), macOS b19 (DMG, nepodpísaný + návod), iOS
+„Coming soon“; web b19.
+
+**Treba otestovať na skutočných zariadeniach:** Samsung A05 s b24 (aktualizácia sa ponúkne sama): správa pri
+odomknutom aj zamknutom telefóne; ak stále len pípne → Nastavenia → Upozornenia → Diagnostika upozornení → povoliť
+prístup k upozorneniam → nechať si poslať správu → oba testy → „Uložiť a odoslať“ a súbor poslať. Ďalej: hovor pri
+zamknutom Samsungu, budíček overenia (prihlásiť sa na počítači, „Použiť iné zariadenie“, telefón so zatvorenou appkou),
+„Poslať znova“ na Windows, nové heslo z /admin.
+
+Testovacie účty qa-n*, qa-pw*, qa-vw* sú deaktivované; skutočných používateľov sa testy nedotkli.
+
+---
+
 # PSST — report (2026-11-16, dávka 11: tri chyby z telefónov + audit funkcií)
 
 Rozhodnutia: D61 (Android sprievodca + kanál správ), D62 (neoverená relácia na webe/desktope), D63 (Android kontrola
