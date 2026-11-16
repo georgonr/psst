@@ -33,7 +33,7 @@ jobs:
     dryrun:
         name: Developer ID signing dry run (throwaway cert)
         runs-on: macos-15 # same image as web-desktop.yml desktop-mac
-        timeout-minutes: 90
+        timeout-minutes: 60
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
               with:
@@ -190,13 +190,6 @@ jobs:
               working-directory: apps/desktop
               run: $PROD "Check output" "needs.web.outputs.build=$DRY_BUILD" "needs.web.outputs.date=${{ steps.web.outputs.date }}"
 
-            - name: "[dry run] remove the throwaway root and the build (nothing is published)"
-              if: always()
-              run: |
-                  sudo security remove-trusted-cert -d "$RUNNER_TEMP/dry-root.pem" 2>/dev/null || true
-                  sudo security delete-certificate -c "PSST CI Test Root (throwaway, not Apple)" /Library/Keychains/System.keychain 2>/dev/null || true
-                  rm -rf apps/desktop/dist apps/desktop/out "$RUNNER_TEMP/dry-root.pem"
-
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               if: always()
               with:
@@ -204,3 +197,9 @@ jobs:
                   path: ${{ runner.temp }}/report.md
                   if-no-files-found: ignore
                   retention-days: 14
+
+            # The hosted runner VM is discarded after the job, together with the trusted throwaway root. Removing the
+            # trust setting here would wait for an authorization dialog (security remove-trusted-cert) and hang.
+            - name: "[dry run] delete the build (nothing is published)"
+              if: always()
+              run: rm -rf apps/desktop/dist apps/desktop/out "$RUNNER_TEMP/dry-root.pem"
