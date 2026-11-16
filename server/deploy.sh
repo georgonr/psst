@@ -79,7 +79,7 @@ NTFY_DOMAIN="${NTFY_DOMAIN:-push.${DOMAIN_BASE}}"
 TURN_DOMAIN="${TURN_DOMAIN:-${CALL_DOMAIN}}"
 ALL_DOMAINS="$(printf '%s\n' "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" "$TURN_DOMAIN" | awk '!s[$0]++' | tr '\n' ' ')"
 ALL_DOMAINS="${ALL_DOMAINS% }"
-NGINX_IP=172.30.0.10
+NGINX_IP=172.30.0.250   # pevná IP mimo dynamicky prideľovaných nízkych adries (kolízia pri prvom štarte)
 DOCKER_GW=172.30.0.1   # brána Docker siete "psst" (coturn v host sieti počúva aj tu pre nginx)
 
 # ----------------------------------------------------------------- 0. pre-flight

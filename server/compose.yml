@@ -234,7 +234,7 @@ services:
       psst:
         # pevná IP: Synapse ju má v ip_range_whitelist (push brána Sygnal za nginx),
         # LiveKit jej verí PROXY protocol hlavičku (TURN/TLS)
-        ipv4_address: 172.30.0.10
+        ipv4_address: 172.30.0.250   # = NGINX_IP v deploy.sh; vysoko, aby ju dynamické IP iných kontajnerov nikdy nezabrali
         # interní klienti volajú verejné domény priamo na tento nginx: lk-jwt-service (OpenID cez :8448,
         # LiveKit API), Synapse (push na Sygnal)
         aliases:

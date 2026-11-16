@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 OUT="$1"; shift
 mkdir -p "$OUT"
 docker run --rm --network psst --ipc=host \
-  -e PSST_RELAY_ONLY="${PSST_RELAY_ONLY:-0}" -e PSST_HOST_IP=172.30.0.10 \
+  -e PSST_RELAY_ONLY="${PSST_RELAY_ONLY:-0}" -e PSST_HOST_IP=172.30.0.250 \
   -v "$ROOT/scripts/web:/work:ro" -v "$OUT:/out" \
   -v "$ROOT/server/data/certbot/conf/live/psst/fullchain.pem:/ca.pem:ro" \
   mcr.microsoft.com/playwright:v1.64.1-noble bash -c '

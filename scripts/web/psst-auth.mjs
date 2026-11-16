@@ -1,6 +1,6 @@
 // PSST — spoločné kroky pre Playwright testy: prihlásenie a registrácia cez MAS (chat.macet.eu/auth/, alebo auth.macet.eu).
 // Element Web → "Continue"/"Create account" → stránka MAS → (súhlas) → späť do appky.
-// PSST_HOST_IP: kam mapovať domény (127.0.0.1 na Macu, 172.30.0.10 = nginx v Docker sieti "psst")
+// PSST_HOST_IP: kam mapovať domény (127.0.0.1 na Macu, 172.30.0.250 = nginx v Docker sieti "psst")
 const IP = (typeof process !== "undefined" && process.env.PSST_HOST_IP) || "127.0.0.1";
 // MAS beží na https://chat.macet.eu/auth/ (D42) alebo na vlastnej subdoméne auth.macet.eu
 export const MAS_URL_RE = /(auth\.macet\.eu|macet\.eu\/auth\/)/;
