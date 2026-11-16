@@ -152,6 +152,32 @@ if (PLATFORM === "windows") {
     record("win_restored", row(rows, "notifications").on === n.on ? "ok" : "fail", row(rows, "notifications").code);
 }
 
+// turning a switch on asks the OS / opens exactly the right system screen
+if (PLATFORM === "macos" && row(rows, "notifications").code === "os_not_determined") {
+    const before = await me.evaluate(() => (window.__psstAlertNotes || []).length);
+    await clickToggle(me, "notifications", 8000);
+    rows = await refocus(me, 3000);
+    const after = await me.evaluate(() => (window.__psstAlertNotes || []).slice(-1));
+    const st = await me.evaluate(async () => window.electron.psstAlerts("status", "fresh"));
+    record("mac_notifications_request", "info",
+        `click → notification shown ${JSON.stringify(after)} (count +${(await me.evaluate(() => (window.__psstAlertNotes || []).length)) - before}); OS now ${st.notifications.state}/${st.notifications.detail}; switch ${row(rows, "notifications").on} (${row(rows, "notifications").code})`);
+    await shot(me, "03-mac-after-request");
+}
+{
+    const mic = row(rows, "microphone");
+    const proc = PLATFORM === "windows" ? 'tasklist /FI "IMAGENAME eq SystemSettings.exe"' : "pgrep -lf 'System Settings|System Preferences'";
+    const before = sh(proc);
+    await clickToggle(me, "microphone", 6000);
+    rows = await readRows(me);
+    const after = sh(proc);
+    const opened = PLATFORM === "windows" ? /SystemSettings\.exe/i.test(after) : /System (Settings|Preferences)/.test(after);
+    record("microphone_opens_settings", row(rows, "microphone").hint && opened ? "ok" : "fail",
+        `${mic.on === "true" ? "on→off" : "off→on"} (${mic.code}): hint "${row(rows, "microphone").hint}", settings app running before ${PLATFORM === "windows" ? /SystemSettings/i.test(before) : /System/.test(before)} / after ${opened}`);
+    if (PLATFORM === "windows") sh("taskkill /IM SystemSettings.exe /F");
+    else sh(`osascript -e 'quit app "System Settings"'`);
+    await sleep(1000);
+}
+
 // psst's own switches: message sound, ringing (push rule), tray, start at login
 for (const id of ["sound", "ringing"]) {
     const start = row(rows, id).on;
