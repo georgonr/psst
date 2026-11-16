@@ -1,8 +1,8 @@
 [
  {
   "id": "block",
-  "status": "na",
-  "note": "v detaile DM test nenašiel položku členov/blokovania (Element X má Block v profile partnera); netestované"
+  "status": "ok",
+  "note": "detail DM → Block user → potvrdenie → riadok sa zmenil na „Unblock user“ (ignore uložené na serveri)"
  },
  {
   "id": "call_button",
@@ -12,7 +12,7 @@
  {
   "id": "delete",
   "status": "ok",
-  "note": "Remove message → partner (web) dostal redaction"
+  "note": "partner dostal zmazanie (redaction) z iOS"
  },
  {
   "id": "dm",
@@ -21,8 +21,8 @@
  },
  {
   "id": "edit",
-  "status": "na",
-  "note": "test podržal správu partnera (bez „Edit“); menu vlastnej správy „Edit“ obsahuje (diagnostika), doručenie úpravy neoverené"
+  "status": "ok",
+  "note": "partner dostal úpravu (m.replace) z iOS"
  },
  {
   "id": "image",
@@ -37,12 +37,27 @@
  {
   "id": "login",
   "status": "ok",
-  "note": "prihlásenie cez MAS (ASWebAuthenticationSession) → zoznam konverzácií; zamknutý server (úvodná obrazovka „Sign in to chat.macet.eu“)"
+  "note": "prihlásenie cez MAS (ASWebAuthenticationSession) → zoznam konverzácií"
  },
  {
   "id": "logout",
   "status": "ok",
   "note": "odhlásenie → úvodná obrazovka"
+ },
+ {
+  "id": "notif_local_test",
+  "status": "ok",
+  "note": "„Send a test notification“ → banner sa zobrazil (PSST, now, psst, Test notification — this is how a new message looks.) — The test notification arrives in 5 seconds — you can lock the phone now."
+ },
+ {
+  "id": "notif_settings_once",
+  "status": "ok",
+  "note": "po reštarte tej istej verzie sa obrazovka už neotvorila (raz za verziu)"
+ },
+ {
+  "id": "notif_settings",
+  "status": "ok",
+  "note": "automaticky otvorená po prihlásení: true (psst needs this for reliable notifications and calls: Allow notifications, Sound, Lock screen, Banners, Microphone); pred: notifications=off (Missing, Allow notifications, Not allowed yet — turn on to allow); sound=off (Missing, Sound, Allow notifications first); lock_screen=off (Missing, Lock screen, Allow notifications first); banners=off (Missing, Banners, Allow notifications first); callkit=on (Calls via CallKit, Available — an incoming call rings like a phone call, also on the lock screen (CallKit needs no permission)); microphone=off (Missing, Microphone, Not allowed yet — turn on to allow); camera=off (Camera, Not allowed yet — turn on to allow); „Zapnúť všetko potrebné“ + Kamera → 3 systémových výziev povolených; po: notifications=on (Allow notifications, On); sound=on (Sound, On — messages play a sound); lock_screen=on (Lock screen, On — notifications show on the lock screen); banners=on (Banners, On — temporary banners); callkit=on (Calls via CallKit, Available — an incoming call rings like a phone call, also on the lock screen (CallKit needs no permission)); microphone=on (Microphone, Access allowed); camera=on (Camera, Access allowed)"
  },
  {
   "id": "profile",
@@ -52,7 +67,7 @@
  {
   "id": "reaction",
   "status": "ok",
-  "note": "menu správy → „Add reaction: 👍️“ → partner (web) dostal m.reaction"
+  "note": "partner (web) dostal m.reaction z iOS"
  },
  {
   "id": "receipts",
@@ -63,6 +78,11 @@
   "id": "reply",
   "status": "ok",
   "note": "partner dostal odpoveď (m.in_reply_to) z iOS"
+ },
+ {
+  "id": "ring_test",
+  "status": "ok",
+  "note": "„Test ringing“ → systémové UI hovoru nevidno — Ringing test finished: CallKit accepted the test call and rang for 5 seconds (in silent mode it only vibrates)."
  },
  {
   "id": "sessions",
@@ -76,8 +96,8 @@
  },
  {
   "id": "verify_emoji",
-  "status": "na",
-  "note": "čiastočne: iOS (overené zariadenie) dostal žiadosť od nového webového prihlásenia, prijal ju a zobrazil emoji zhodné s webom; potvrdenie „They match“ test v simulátore nedokončil"
+  "status": "ok",
+  "note": "iOS (overené zariadenie) ↔ nové webové prihlásenie toho istého účtu: rovnaké emoji na oboch (Dog Thumbs Up Cloud Bicycle Tree Robot Pig), potvrdené na oboch stranách, web relácia je potom cross-signed (overená)"
  },
  {
   "id": "notif_open",
@@ -163,75 +183,5 @@
   "id": "download_page",
   "status": "na",
   "note": "stránka ukazuje iOS „Coming soon“ — build čaká na zmluvu v App Store Connect"
- },
- {
-  "id": "register",
-  "status": "na",
-  "note": "registrácia (MAS v ASWebAuthenticationSession) v iOS audite netestovaná; rovnaký MAS formulár overený na webe a Androide"
- },
- {
-  "id": "group",
-  "status": "na",
-  "note": "v iOS audite netestované (simulátorový test pokrýva DM)"
- },
- {
-  "id": "public",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "invite",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "mention",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "search",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "search_public",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "members",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "leave",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "password",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "key_backup_restore",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "history_new_device",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "recovery",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
- },
- {
-  "id": "verify_unverified_state",
-  "status": "na",
-  "note": "v iOS audite (simulátor, XCUITest) netestované"
  }
 ]
