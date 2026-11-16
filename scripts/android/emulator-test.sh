@@ -45,8 +45,8 @@ dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over ou
     if printf '%s' "$t" | grep -q "isn't responding"; then
       # "Wait" lets the overloaded launcher ANR again right away; "Close app" restarts it (our app is not affected)
       log "INFO: dismissing system ANR dialog"; xy="$($CHECK tap "$OUT/_anr.xml" "Close app" || $CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
-    elif printf '%s' "$t" | grep -qE "^(Full-screen calls|Reliable calls and messages)$"; then
-      log "INFO: psst prompt: $(printf '%s' "$t" | grep -E "^(Full-screen calls|Reliable calls and messages)$") → Later"
+    elif printf '%s' "$t" | grep -qE "^(Full-screen calls|Reliable calls and messages|Message notifications|Messages on the lock screen)$"; then
+      log "INFO: psst prompt: $(printf '%s' "$t" | grep -E "^(Full-screen calls|Reliable calls and messages|Message notifications|Messages on the lock screen)$") → Later"
       xy="$($CHECK tap "$OUT/_anr.xml" "Later" || $CHECK tap "$OUT/_anr.xml" "LATER")" || return 0
     else
       return 0
