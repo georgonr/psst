@@ -81,13 +81,17 @@ presence:
   enabled: false
 url_preview_enabled: false
 require_auth_for_profile_requests: true
-limit_profile_requests_to_users_who_share_rooms: true
-allow_public_rooms_without_auth: false
+# D65: uzavretý server (registrácia len pozvánkou) = adresár členov. Profil a hľadanie ostatných členov psst je
+# povolené aj bez spoločnej miestnosti — inak Element X pri platnom používateľovi píše „This Matrix ID can't be
+# found“ a nový kontakt sa nedá nájsť menom. Mimo prihlásených členov sa nič nezverejňuje (require_auth_...).
+limit_profile_requests_to_users_who_share_rooms: false
 user_directory:
   enabled: true
-  search_all_users: false
-# Všetky nové miestnosti (aj skupinové) sú šifrované end-to-end.
-encryption_enabled_by_default_for_room_type: all
+  search_all_users: true
+# D65: súkromné miestnosti a DM (invite/private_chat) sú šifrované end-to-end automaticky; verejné kanály nie —
+# šifrovaný kanál v adresári by noví členovia nevedeli čítať spätne a serverové vyhľadávanie by nefungovalo.
+# (Šifrovanie verejného kanála môže jeho tvorca zapnúť ručne.)
+encryption_enabled_by_default_for_room_type: invite
 
 # --- MatrixRTC / Element Call ---
 experimental_features:
@@ -170,7 +174,7 @@ rc_delayed_event_mgmt:
   per_second: 1
   burst_count: 20
 
-# --- Push notifikácie (vlastné brány: ntfy pre Android/UnifiedPush, Sygnal pre iOS/APNs) ---
+# --- Push notifikácie (vlastný Sygnal: Android cez FCM, iOS cez APNs; ntfy zrušený 2026-11-14) ---
 # Obsah správ do push brán neposielame (len event_id; appka si správu stiahne a dešifruje sama).
 push:
   include_content: false

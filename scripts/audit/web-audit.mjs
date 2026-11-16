@@ -27,8 +27,16 @@ async function newPage(b = browser) {
 }
 async function masForm(p, user, password) {
     await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
-    await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', password);
-    await p.locator("button[type=submit]").first().click();
+    // MAS may still have a browser session for this account → "Continue to psst?" without the form
+    for (let i = 0; i < 30; i++) {
+        if (await p.locator('input[name="username"]').count()) break;
+        if (await p.getByText("Continue to psst?").count()) break;
+        await sleep(1000);
+    }
+    if (await p.locator('input[name="username"]').count()) {
+        await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', password);
+        await p.locator("button[type=submit]").first().click();
+    }
     for (let i = 0; i < 20 && !p.url().startsWith(WEB); i++) { await p.locator('button[type=submit]:has-text("Continue")').first().click({ timeout: 1500 }).catch(() => {}); await sleep(1000); }
 }
 const APP = ".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel";
@@ -158,7 +166,7 @@ try {
     const toast = me.locator('.mx_Toast_toast:has-text("Verification requested"), .mx_Toast_toast:has-text("verify")').first();
     const req = await toast.waitFor({ timeout: 60000 }).then(() => true, () => false);
     await shot(me, "verify-toast");
-    await toast.locator('button:has-text("Verify session"), button:has-text("Verify"), button:has-text("Accept")').first().click({ timeout: 10000 });
+    await toast.locator('button:has-text("Start Verification"), button:has-text("Verify session"), button:has-text("Verify"), button:has-text("Accept")').first().click({ timeout: 10000 });
     await me.locator('button:has-text("Verify by emoji"), button:has-text("Start")').first().click({ timeout: 20000 }).catch(() => {});
     await second.locator('button:has-text("Verify by emoji")').first().click({ timeout: 20000 }).catch(() => {});
     const emoji = await me.locator(".mx_VerificationShowSas_emojiSas").first().waitFor({ timeout: 40000 }).then(() => true, () => false);
@@ -221,10 +229,11 @@ try {
 try {
     const b2 = await chromium.launch({ args: [...MEDIA, "--force-webrtc-ip-handling-policy=disable_non_proxied_udp"] });
     const me2 = await newPage(b2);
-    const st = await login(me2, A.c.user, A.c.password);
-    if (st === "identity") { await me2.locator('button:has-text("Can\'t confirm?")').click().catch(() => {}); }
-    // partner calls third (c) in a fresh DM
-    const dm = await cli(partner, async (who) => { const c = window.mxMatrixClientPeg.get(); const r = await c.createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] }); await c.setAccountData("m.direct", { [who]: [r.room_id] }); return r.room_id; }, `@${A.c.user}:${HS}`);
+    if (!A.d) throw new Error("accounts.json needs a 4th fresh account \"d\" for this test");
+    const st = await login(me2, A.d.user, A.d.password);
+    if (st !== "app") throw new Error("login d → " + st);
+    // partner calls d in a fresh DM
+    const dm = await cli(partner, async (who) => { const c = window.mxMatrixClientPeg.get(); const r = await c.createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] }); await c.setAccountData("m.direct", { [who]: [r.room_id] }); return r.room_id; }, `@${A.d.user}:${HS}`);
     await cli(me2, async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); }, [dm, `@${A.b.user}:${HS}`]);
     await sleep(4000);
     await startCall(partner, dm, "Video call");

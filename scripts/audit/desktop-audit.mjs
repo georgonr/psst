@@ -116,8 +116,14 @@ try {
     await me.evaluate(() => { location.hash = "#/home"; });
     const before = await me.evaluate(() => (window.__psstNotes || []).length);
     if (PLATFORM === "macos") {
-        // red close button: Element hides the window on macOS, the app keeps running in the Dock
-        await me.evaluate(() => window.close());
+        // ⌘W / red close button: Element hides the app on macOS (window-close.ts), it keeps running in the Dock.
+        // Needs System Events (Accessibility) on the runner; window.close() from the page would destroy the window.
+        try {
+            execSync(`osascript -e 'tell application "System Events" to tell process "psst" to keystroke "w" using command down'`, { stdio: "pipe", timeout: 20000 });
+        } catch (e) {
+            record("notif_closed", "na", "na macOS runneri sa okno nedá zavrieť natívne (osascript bez povolenia Accessibility): " + String(e.message).split("\n")[0].slice(0, 120));
+            throw new Error("__skip__");
+        }
     } else {
         execSync(`powershell -NoProfile -Command "Add-Type -Name W -Namespace P -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern bool PostMessage(System.IntPtr h, uint m, System.IntPtr w, System.IntPtr l);'; $h=(Get-Process psst | Where-Object MainWindowHandle -ne 0 | Select-Object -First 1).MainWindowHandle; [void][P.W]::PostMessage($h, 0x0010, [System.IntPtr]::Zero, [System.IntPtr]::Zero)"`);
     }
@@ -127,7 +133,7 @@ try {
     let after = before;
     for (let i = 0; i < 30 && after <= before; i++) { await sleep(1000); after = await me.evaluate(() => (window.__psstNotes || []).length).catch(() => -1); }
     record("notif_closed", after > before ? "ok" : "fail", `okno zatvorené (${PLATFORM === "macos" ? "appka v Docku" : "appka v tray"}), notifikácia ${before}→${after}`);
-} catch (e) { record("notif_closed", "fail", String(e.message).slice(0, 200)); }
+} catch (e) { if (e.message !== "__skip__") record("notif_closed", "fail", String(e.message).slice(0, 200)); }
 record("notif_lock", "na", "zamknutá obrazovka OS sa na CI runneri nedá overiť");
 
 // 1:1 call with outgoing UDP blocked by the OS firewall (DNS allowed) → media must go over TCP / TURN-TLS 443

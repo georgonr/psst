@@ -1,5 +1,5 @@
 // PSST — test administračnej stránky https://app.macet.eu/admin na produkcii (D56).
-//   node admin-page-test.mjs <out-dir> <accounts.json>     (accounts.json: {"qa-admin": "...", "qa-plain": "..."})
+//   node admin-page-test.mjs <out-dir> <accounts.json>     (accounts.json: {"<admin user>": "pw", "<plain user>": "pw"} (order matters))
 // Overí: prihlásenie cez MAS, pozvánka → registrácia → "použitá" + priradenie, blokovanie/odblokovanie,
 // zrušenie pozvánky → registrácia neprejde, 403 pre neadmina, CSRF/Origin ochrana, geo sa nedá zablokovať.
 // Na konci vypíše JSON {codes, user} pre upratovanie.
@@ -11,6 +11,7 @@ import { registerViaMas } from "./psst-auth.mjs";
 const [out, accFile] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const acc = JSON.parse(fs.readFileSync(accFile, "utf8"));
+const [ADM, PLAIN] = Object.keys(acc); // first = admin account, second = plain account
 const A = "https://app.macet.eu/admin";
 const res = [];
 const check = (n, ok, d = "") => { res.push({ n, ok, d }); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  -- " + d : ""}`); };
@@ -54,7 +55,7 @@ const newUser = `qa-inv${sfx}`;
 const codes = [];
 
 // 1) admin login
-const adm = await adminLogin("qa-admin", acc["qa-admin"]);
+const adm = await adminLogin(ADM, acc[ADM]);
 check("admin: prihlásenie cez MAS → stránka správy", (await adm.page.locator("h2", { hasText: "Nová pozvánka" }).count()) === 1, adm.page.url());
 await shot(adm.page, "1-admin");
 const cookies = await adm.ctx.cookies();
@@ -120,8 +121,8 @@ check("mobil (390 px): bez vodorovného posúvania stránky", overflow <= 1, `${
 await shot(adm.page, "5-mobile");
 
 // 7) non-admin → 403
-const pl = await adminLogin("qa-plain", acc["qa-plain"]);
-check("neadmin qa-plain → 403", pl.status() === 403 && /Prístup zamietnutý/.test(await pl.page.content()), `status ${pl.status()}`);
+const pl = await adminLogin(PLAIN, acc[PLAIN]);
+check("neadmin → 403", pl.status() === 403 && /Prístup zamietnutý/.test(await pl.page.content()), `status ${pl.status()}`);
 await shot(pl.page, "6-forbidden");
 const direct = await pl.ctx.request.get(A, { maxRedirects: 0 });
 check("neadmin bez session → presmerovanie na prihlásenie", [302, 303, 307].includes(direct.status()), String(direct.status()));

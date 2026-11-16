@@ -26,7 +26,13 @@ export async function compose(p, text, { enter = true } = {}) {
     const c = p.locator(".mx_RoomView .mx_BasicMessageComposer_input").last();
     await c.click();
     await c.pressSequentially(text, { delay: 5 });
-    if (enter) await p.keyboard.press("Enter");
+    if (!enter) return;
+    await p.keyboard.press("Enter");
+    // a /command: the first Enter may only accept the autocomplete suggestion
+    if (text.startsWith("/")) {
+        await sleep(800);
+        if ((await c.innerText().catch(() => "")).trim().startsWith("/")) await p.keyboard.press("Enter");
+    }
 }
 /** Waits until event matching pred (serialized function source) exists in the room timeline of page p. */
 export async function waitEvent(p, roomId, predSrc, timeout = 60000) {
@@ -52,7 +58,7 @@ const tileText = (p, text, timeout = 60000) =>
     p.locator(`.mx_EventTile_body:has-text("${text}"), .mx_EventTile:has-text("${text}")`).first().waitFor({ timeout }).then(() => true, () => false);
 
 export async function dismiss(p) {
-    for (const name of ["Not now", "Dismiss", "Close", "OK", "Ok", "Later", "Got it", "Done"]) await p.getByRole("button", { name, exact: true }).first().click({ timeout: 600 }).catch(() => {});
+    for (const name of ["Not now", "Close", "OK", "Ok", "Later", "Got it", "Done"]) await p.getByRole("button", { name, exact: true }).first().click({ timeout: 600 }).catch(() => {});
     for (let i = 0; i < 2; i++) await p.keyboard.press("Escape").catch(() => {});
 }
 async function hookNotifications(p) {
@@ -170,7 +176,7 @@ export async function runFeatures(ctx) {
             await c.setAccountData("m.direct", { [who]: [r.room_id] });
             return r.room_id;
         }, PA);
-        await cli(partner, async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); }, [state.dm, ME]);
+        await cli(partner, async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); return null; }, [state.dm, ME]);
         await sleep(5000);
         await openRoom(me, state.dm);
         const t1 = `dm me→partner ${Date.now()}`;
@@ -326,8 +332,21 @@ export async function runFeatures(ctx) {
     // ---- notifications (app open, other room / home)
     await step("notif_open", async () => {
         await hookNotifications(me);
-        // Element Web asks with a toast ("Enable desktop notifications"); the user's "Enable" = this setting
-        await cli(me, async () => { if (!window.mxSettingsStore.getValue("notificationsEnabled")) await window.mxSettingsStore.setValue("notificationsEnabled", null, "device", true); });
+        // Element Web asks with a toast ("Enable desktop notifications") → Enable; otherwise Settings → Notifications
+        if (!(await cli(me, () => window.mxSettingsStore?.getValue("notificationsEnabled")))) {
+            const t = me.locator('.mx_Toast_toast:has-text("otification") button:has-text("Enable")').first();
+            if (await t.count()) await t.click().catch(() => {});
+            else {
+                await me.locator('[aria-label="User menu"]').first().click({ timeout: 15000 });
+                await me.locator('[role=menuitem]:has-text("Notifications"), [role=menuitem]:has-text("All settings")').first().click({ timeout: 15000 });
+                await me.getByRole("tab", { name: "Notifications" }).first().click({ timeout: 10000 }).catch(() => {});
+                await sleep(1500);
+                const sw = me.locator('.mx_Dialog [role=switch]:near(:text("desktop notifications")), .mx_Dialog input[type=checkbox]:near(:text("desktop notifications"))').first();
+                await sw.click({ timeout: 10000 }).catch(() => {});
+                await sleep(1000); await me.keyboard.press("Escape");
+            }
+            await sleep(2000);
+        }
         await me.evaluate(() => { location.hash = "#/home"; });
         await sleep(2000);
         const before = await notes(me);
@@ -348,7 +367,7 @@ export async function runFeatures(ctx) {
             let inv = false;
             for (let i = 0; i < 20 && !inv; i++) { inv = await cli(p, (r) => window.mxMatrixClientPeg.get().getRoom(r)?.getMyMembership() === "invite", state.group); if (!inv) await sleep(1500); }
             invited.push(inv);
-            if (inv) await cli(p, (r) => window.mxMatrixClientPeg.get().joinRoom(r), state.group);
+            if (inv) await cli(p, async (r) => { await window.mxMatrixClientPeg.get().joinRoom(r); }, state.group);
         }
         record("invite", invited.every(Boolean) ? "ok" : "fail", `pozvánka cez /invite doručená: ${invited.join(", ")}`);
         await sleep(5000);
@@ -430,8 +449,8 @@ export async function runFeatures(ctx) {
     await step("call_group", async () => {
         // the group lost `third` in "members"; re-invite third and use a fresh group for the call
         const g = await cli(partner, async (who) => (await window.mxMatrixClientPeg.get().createRoom({ preset: "private_chat", name: "psst audit call", invite: who })).room_id, [ME, TH]);
-        await cli(me, (r) => window.mxMatrixClientPeg.get().joinRoom(r), g);
-        await cli(third, (r) => window.mxMatrixClientPeg.get().joinRoom(r), g);
+        await cli(me, async (r) => { await window.mxMatrixClientPeg.get().joinRoom(r); }, g);
+        await cli(third, async (r) => { await window.mxMatrixClientPeg.get().joinRoom(r); }, g);
         await sleep(4000);
         await startCall(partner, g, "Video call");
         await me.evaluate(() => { location.hash = "#/home"; });
