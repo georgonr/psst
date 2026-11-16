@@ -17,7 +17,7 @@
  {
   "id": "about_build",
   "status": "ok",
-  "note": "verzia 1.12.35-b15 (2026-11-16)"
+  "note": "verzia 1.12.35-b27 (2026-11-16)"
  },
  {
   "id": "dm",
@@ -77,7 +77,7 @@
  {
   "id": "voice",
   "status": "ok",
-  "note": "hlasová správa (msc3245), 4023 ms"
+  "note": "hlasová správa (msc3245), 4040 ms"
  },
  {
   "id": "search",
@@ -117,7 +117,7 @@
  {
   "id": "call_video",
   "status": "ok",
-  "note": "zvonenie/oznámenie true, pripojenie true, prehrávané video 2/2; ICE [{\"local\":\"prflx/udp\",\"remote\":\"host/udp:7882\",\"bytes\":1225525}]"
+  "note": "zvonenie/oznámenie true, pripojenie true, prehrávané video 2/2; ICE [{\"local\":\"prflx/udp\",\"remote\":\"host/udp:7882\",\"bytes\":1181428}]"
  },
  {
   "id": "screenshare",
@@ -137,7 +137,7 @@
  {
   "id": "profile",
   "status": "ok",
-  "note": "meno „QA windows 7300“, avatar nastavený (partner vidí)"
+  "note": "meno „QA windows 6638“, avatar nastavený (partner vidí)"
  },
  {
   "id": "sessions",
@@ -212,31 +212,51 @@
  {
   "id": "call_udp_blocked",
   "status": "ok",
-  "note": "UDP zablokované firewallom: pripojenie true, video 2, ICE [{\"local\":\"prflx/tcp\",\"remote\":\"host/tcp:7881\",\"bytes\":1237149}]"
+  "note": "UDP zablokované firewallom: pripojenie true, video 2, ICE [{\"local\":\"prflx/tcp\",\"remote\":\"host/tcp:7881\",\"bytes\":1252893}]"
  },
  {
   "id": "update_check",
   "status": "ok",
-  "note": "psst update check: installed b15, available b15"
+  "note": "psst update check: installed b27, available b27"
  },
  {
-  "id": "notif_background",
+  "id": "alerts_settings",
   "status": "ok",
-  "note": "okno minimalizované → notifikácia (Windows E2E 4.1, D60); okno zatvorené do tray → notifikácia (notif_closed)"
+  "note": "b25, Desktop audit suite=alerts (run 43943392193): 18 ok — notifikácie/mikrofón/kamera podľa OS, Nerušiť zistené (WNF + SHQueryUserNotificationState), tray, spustenie po prihlásení (D75)"
  },
  {
-  "id": "register",
-  "status": "na",
-  "note": "registrácia beží v MAS v systémovom prehliadači; v desktop audite netestovaná (formulár MAS overený na webe a Androide)"
+  "id": "setup_after_update",
+  "status": "ok",
+  "note": "b27: obrazovka sa otvorí pri prvom spustení, ak chýbajú upozornenia; po opätovnom prihlásení v tej istej verzii už nie (b26 ju na macOS otváral znova a prekryla prichádzajúci hovor — opravené v b27, hovor s blokovaným UDP prešiel)"
  },
  {
-  "id": "verify_qr",
+  "id": "wake_screen",
   "status": "na",
-  "note": "QR na overenie vie naskenovať len mobil; Element X pri overovaní ponúka len emoji"
+  "note": "len Android"
  },
  {
-  "id": "admin",
+  "id": "notif_diag",
   "status": "na",
-  "note": "admin stránka je webová (testovaná v stĺpci Web)"
+  "note": "len Android"
+ },
+ {
+  "id": "verify_wakeup",
+  "status": "na",
+  "note": "desktop dostane žiadosť, len keď beží (aj v tray); budíček D68 je pre Android a web"
+ },
+ {
+  "id": "verify_other_device",
+  "status": "na",
+  "note": "rovnaký kód ako web (testovaný v stĺpci Web); na runneri tento tok netestovaný"
+ },
+ {
+  "id": "admin_password",
+  "status": "na",
+  "note": "admin stránka je webová (stĺpec Web)"
+ },
+ {
+  "id": "install_clean",
+  "status": "na",
+  "note": "MSI nie je podpísané — SmartScreen môže varovať; na runneri sa inštalácia netestuje voči SmartScreen"
  }
 ]

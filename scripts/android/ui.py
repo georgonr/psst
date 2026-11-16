@@ -27,6 +27,12 @@ elif cmd == "tap":
         if rest[0].lower() in (n["text"] + " " + n["desc"]).lower():
             adb("shell", "input", "tap", *map(str, n["c"])); print("tapped", n["text"] or n["desc"]); break
     else: sys.exit(f"not found: {rest[0]}")
+elif cmd == "longpress":
+    ns = list(nodes(dump()))
+    for n in ns:
+        if rest[0].lower() in (n["text"] + " " + n["desc"]).lower():
+            x, y = map(str, n["c"]); adb("shell", "input", "swipe", x, y, x, y, "900"); print("long-pressed", n["text"] or n["desc"]); break
+    else: sys.exit(f"not found: {rest[0]}")
 elif cmd == "tapfield":
     f = [n for n in nodes(dump()) if "EditText" in n["cls"]]
     adb("shell", "input", "tap", *map(str, f[int(rest[0])]["c"])); print("tapped field", rest[0], "of", len(f))

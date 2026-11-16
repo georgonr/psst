@@ -1,69 +1,69 @@
 {
  "web": {
-  "build": 25,
+  "build": 27,
   "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory: skutočný stav upozornení, zvuku, zvonenia, mikrofónu, kamery (desktop aj tray, spustenie po prihlásení, Nerušiť), test upozornenia a zvonenia; otvorí sa samo, keď chýbajú upozornenia (D75); obsahuje aj Web Push (D76)",
+  "note": "Nastavenia → Upozornenia a hovory (D75), Web Push (D76); obrazovka sa po opätovnom prihlásení znova neotvára",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261116-b25.tar.gz",
-    "sha256": "11a110465c0ed6b300c25d09471529fd6af867cbd547e451c022245b0ff7f2c2"
+    "name": "psst-web-20261116-b27.tar.gz",
+    "sha256": "b58024a6fb3017b847360d712b5bd4f25030a86571342375d1c6e26336b21b1b"
    }
   ]
  },
  "macos": {
-  "build": 25,
+  "build": 27,
   "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory: skutočný stav upozornení, zvuku, zvonenia, mikrofónu, kamery (desktop aj tray, spustenie po prihlásení, Nerušiť), test upozornenia a zvonenia; otvorí sa samo, keď chýbajú upozornenia (D75); obsahuje aj Web Push (D76)",
+  "note": "Nastavenia → Upozornenia a hovory (D75), Web Push (D76); obrazovka sa po opätovnom prihlásení znova neotvára",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261116-b25.dmg",
-    "sha256": "5a01ea97deedc6996f9a0e005b73ebde8bbf95cd3b81d528ee7e39ccb1c29636"
+    "name": "psst-macos-20261116-b27.dmg",
+    "sha256": "87679b015d73f1255f144cea9556d8bf42435b7932b821524fd11e21d48a88dd"
    },
    {
-    "name": "psst-macos-20261116-b25.zip",
-    "sha256": "8e0b6935532b750248c922c4adec674e773647dd59059081b4811386923242df"
+    "name": "psst-macos-20261116-b27.zip",
+    "sha256": "1d4b2ceb7f7ff15c615ff363d9827c07460bdb6b69e454c1b59e44123a19b543"
    }
   ]
  },
  "windows": {
-  "build": 25,
+  "build": 27,
   "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory: skutočný stav upozornení, zvuku, zvonenia, mikrofónu, kamery (desktop aj tray, spustenie po prihlásení, Nerušiť), test upozornenia a zvonenia; otvorí sa samo, keď chýbajú upozornenia (D75); obsahuje aj Web Push (D76)",
+  "note": "Nastavenia → Upozornenia a hovory (D75), Web Push (D76); obrazovka sa po opätovnom prihlásení znova neotvára",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261116-b25-setup.exe",
-    "sha256": "d2f480747276418a5cc9a0556b334101c4e078c1832a6ce87e260fa7def2ddce"
+    "name": "psst-windows-20261116-b27-setup.exe",
+    "sha256": "a98b0fa18159fb7cf5fbe76f9d5b267bb1f6707b26b4f898889dced0cb54a589"
    },
    {
-    "name": "psst-windows-20261116-b25.msi",
-    "sha256": "b06a08d6f99473987cac4b1b78cf5d0874f8a449e44a0caeea98ec34323dd8f6"
+    "name": "psst-windows-20261116-b27.msi",
+    "sha256": "9daed3092728c83654c1f45df7834ddf003a3e157badab525b0946d67ad7a1b5"
    }
   ]
  },
  "android": {
-  "build": 24,
+  "build": 29,
   "date": "20261116",
-  "note": "Diagnostika upozornení v Nastavenia → Upozornenia (export do súboru), súhrnná notifikácia už nezvoní namiesto správy, notifikácia „Žiadosť o overenie“ pri overovaní z iného zariadenia",
+  "note": "Nastavenia → Upozornenia a hovory (prepínače so skutočným stavom, test upozornenia a zvonenia), rozsvietenie obrazovky pri správe, chýbajúce povolenia sa vyžiadajú hneď po inštalácii aj aktualizácii",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261116-b24-arm64.apk",
-    "sha256": "7a86bf518bf27576b7057c4a7f87e8264641c0cff739d374f523035a35c8eba9"
+    "name": "psst-android-20261116-b29-arm64.apk",
+    "sha256": "555a80a040b5a40e1f3f187402bc3401ecde8dc8c3918fc4c224bc8871ff9962"
    },
    {
-    "name": "psst-android-20261116-b24-armv7.apk",
-    "sha256": "9b1762cc7449e59b1b3bd02588ed3b4476c452dd31b725b281eb8b358e64c814"
+    "name": "psst-android-20261116-b29-armv7.apk",
+    "sha256": "a8d19726997da3fb2a94c9184a12c6d9cdc8e0c138e9cf8f689ca7c24d609a51"
    },
    {
-    "name": "psst-android-20261116-b24-x86_64.apk",
-    "sha256": "71e264832dc638c02d24bbb182dc1c621b920088b950abf09f22a032488f551b"
+    "name": "psst-android-20261116-b29-x86_64.apk",
+    "sha256": "8873037aaecce6cc8f96fbc6a1aace014cc9943a6f52f8f9f82f869465d20ed3"
    },
    {
-    "name": "psst-android-20261116-b24.aab",
-    "sha256": "9936408f41f9468966965cdd2e87e8e697d8ab3affdee76ca4098534047ca4c2"
+    "name": "psst-android-20261116-b29.aab",
+    "sha256": "d3beb7bbb1b73481972fea06f54df956af8073750dbefe1d546fafe8fcc2d9b7"
    }
   ]
  }

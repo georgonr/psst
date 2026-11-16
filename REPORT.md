@@ -1,3 +1,24 @@
+# PSST — report (2026-11-17, dávka 13: nočný beh — upozornenia a hovory na všetkých platformách)
+
+**Samsung A05 nebol pripojený** (adb: len emulátor). Android testovaný v emulátore Android 14 (Google APIs, FCM).
+Rozhodnutia D72–D79 v DECISIONS.md, matica [docs/FEATURE-MATRIX.md](docs/FEATURE-MATRIX.md).
+
+| Bod | Výsledok | Overenie |
+|---|---|---|
+| 1. Obrazovka „Upozornenia a hovory“ | Android b29, web/desktop b27, iOS (fork, simulátor) — prepínače so skutočným stavom, žiadosti za sebou, test upozornenia a zvonenia, samo sa otvorí raz za verziu, ak niečo chýba | Android emulátor; web Playwright 17/17; Windows 18 a macOS 15 kontrol na runneroch; iOS XCUITest |
+| 2. Rozsvietenie obrazovky (Android) | predvolene zapnuté; Android 14 nepotrebuje povolenie, Android 15+ „Zapnúť obrazovku“ (TURN_SCREEN_ON) | emulátor 14: displej sa pri správe rozsvietil, v Nerušiť nie; Android 15 neoverený (emulátor príliš pomalý) |
+| 3. Sprievodca po aktualizácii | reťaz dialógov nahradená obrazovkou z bodu 1, ktorá si chýbajúce povolenia hneď vyžiada | aktualizácia b28→b29 aj čistá inštalácia: upozornenia → celá obrazovka → batéria |
+| 4. Upstream obmedzenia | web: upozornenia pri karte na pozadí/zatvorenej a žiadosť o overenie — vyriešené (Web Push); ostatné nie (odhady v D79) | Chrome na produkcii |
+| 5. iOS / macOS | iOS obrazovka + overenie v simulátore OK, TestFlight jedným skriptom; macOS podpis overený suchým behom | run 43972090982, 43962661843 |
+| 6. Regresia | 265 buniek: ✅ 191 · ❌ 1 · 🟠 5 · ⚪ 68; pokazený hovor s blokovaným UDP na macOS (b26) opravený v b27 | desktop audit 43962770275 |
+
+**Čaká na Account Holdera GexPay SE:** (1) Developer ID Application certifikát (G2) z `devid.csr` → podpis
+a notarizácia macOS sa zapnú samy; (2) záznam appky `eu.macet.psst` v App Store Connect → `scripts/ios/release-testflight.sh`.
+
+**Verzie na stránke:** Android b29, Windows b27, macOS b27 (nepodpísaný + návod), iOS „Coming soon“; web b27.
+
+---
+
 # PSST — report (2026-11-16, dávka 12: chyby z testov na skutočných zariadeniach)
 
 Rozhodnutia: D67 (Samsung notifikácie, diagnostika), D68 (budíček pri overení), D69 (podpis macOS), D70 (nové heslo

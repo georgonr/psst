@@ -522,3 +522,87 @@ action"), nie pre samotnú žiadosť. Fork web/desktop: počas čakania výzva o
 poznámka, že psst na Androide ukáže upozornenie (D68), inde nie, zostávajúci čas a „Poslať znova" (zruší aktuálnu,
 pošle novú) aj po zrušení/vypršaní. Overené Playwrightom lokálne aj na produkcii. Podrobnosti:
 `docs/verification-request-notes.md`.
+
+## Upozornenia a hovory na všetkých platformách, nočný beh (2026-11-16/17, trinásta dávka)
+
+Samsung A05 nebol pripojený (adb videl len emulátor); Android testovaný v emulátore Android 14.
+
+**D72 — Android: obrazovka „Upozornenia a hovory".** Nastavenia → App settings → „Upozornenia a hovory" (aj z diagnostiky
+a z pripomienky po zmeškanom hovore). Riadky = prepínače, ktoré vždy ukazujú skutočný stav (čítaný pri každom návrate
+na obrazovku a po výsledku povolenia): upozornenia povolené (POST_NOTIFICATIONS + appka), vyskakovacie okno (kanál
+Správy ≥ HIGH), zamknutá obrazovka (kanál nie je „tajný" + systémové `lock_screen_show_notifications`), hovory na celú
+obrazovku (`canUseFullScreenIntent`), bez obmedzenia batérie, zvuk a vibrácie správ (kanál), zvonenie hovorov (kanál
+zvonenia ≥ HIGH so zvukom), rozsvietiť obrazovku (D73), mikrofón, kamera. Zapnutie: runtime povolenie, inak presná
+systémová stránka (bez NEW_TASK → „Späť" vedie do psst); po trvalom odmietnutí stránka appky. Viac položiek ide za
+sebou (fronta, pokračuje po návrate). Tlačidlá: „Zapnúť všetko potrebné", „Poslať testovacie upozornenie" (rovnaký
+tvar ako správa), „Otestovať zvonenie" (kanál zvonenia, opakovaný tón 8 s), „Diagnostika upozornení" (D67, podstránka).
+Vypnutie: otvorí systémovú stránku (appka povolenie sama odobrať nemôže), okrem rozsvietenia (naša voľba).
+
+**D73 — Android: rozsvietenie obrazovky pri novej správe.** One UI nerozsvieti displej pri upozornení appky. psst pri
+zobrazení upozornenia správy (kategória msg, nie súhrn, nie tichá aktualizácia, kanál ≥ DEFAULT), keď je displej
+vypnutý a filter Nerušiť = „všetko", získa na 3 s wake lock SCREEN_BRIGHT + ACQUIRE_CAUSES_WAKEUP. Android 14+ to
+podmieňuje špeciálnym prístupom „Zapnúť obrazovku" (`android.permission.TURN_SCREEN_ON`, normal|appop; stránka
+`android.settings.TURN_SCREEN_ON_SETTINGS` s `package:`), bez neho sa wake lock získa, ale displej ostane zhasnutý.
+Predvolene zapnuté, ak je povolenie udelené; prepínač si ho vyžiada. Každé rozsvietenie (alebo dôvod, prečo nie) je
+v zázname diagnostiky.
+
+**D74 — Android: chýbajúce povolenia hneď po inštalácii a po aktualizácii.** Pôvodný sprievodca (D57/D61) bol reťaz
+dialógov: krok sa označil ako „opýtaný" už pri zobrazení, dialóg sa dal zrušiť dotykom mimo / prekryť systémovým
+dialógom (napr. povolenie upozornení) a statický príznak „dialóg sa zobrazuje" sa nulovať len v dismiss callbacku,
+ktorý pri zničení aktivity nebeží. V emulátore sa krok „hovory na celú obrazovku" po aktualizácii b23→b24 zobrazil
+(appop zamietnutý), na Samsungu podľa hlásenia nie — presnú príčinu bez telefónu potvrdiť nemožno, uvedené slabiny
+ju vysvetľujú. Teraz: MainActivity.onResume otvorí obrazovku D72 so zvýraznenými chýbajúcimi položkami, ak chýba
+niečo potrebné (upozornenia, vyskakovacie okno, zamknutá obrazovka, celá obrazovka, batéria) — raz za verziu (prvé
+spustenie aj každá aktualizácia) a znova po hovore, ktorý nemohol zazvoniť na celú obrazovku; obrazovka si chýbajúce
+položky hneď vyžiada jednu po druhej. Žiadny dialóg, ktorý by sa dal omylom zrušiť.
+
+**D75 — Web a desktop: Nastavenia → „Upozornenia a hovory".** Nová karta v nastaveniach používateľa so skutočným
+stavom: upozornenia (web `Notification.permission`; Windows register `PushNotifications\ToastEnabled` +
+`Notifications\Settings\eu.macet.psst`; macOS `com.apple.ncprefs`, najlepší dostupný signál) spolu s nastaveniami
+Element, zvuk správ, zvonenie (pravidlo `.m.rule.call`; podľa neho po novom zvoní aj Element Call), na desktope beh
+v lište po zatvorení okna a spustenie po prihlásení, mikrofón a kamera; Windows Nerušiť (WNF + SHQueryUserNotificationState),
+macOS Sústredenie bez Full Disk Access zistiť nejde — obrazovka to povie. Zapnutie si vyžiada povolenie alebo otvorí
+systémovú stránku, viac žiadostí za sebou. Tlačidlá test upozornenia a test zvonenia (5 s). Pri prvom spustení
+a po každej aktualizácii sa karta otvorí sama, ak chýbajú upozornenia — raz za verziu; značka verzie prežije aj
+odhlásenie (b26 ju na macOS po opätovnom prihlásení otváral znova a dialóg prekryl prichádzajúci hovor — b27).
+
+**D76 — Web Push pre psst web.** Pri zapnutých upozorneniach si web vytvorí push subscription (VAPID kľúč len na
+serveri, `secrets/webpush/`, verejná časť `https://app.macet.eu/psst-push.json`) a pusher `eu.macet.psst.web`
+(event_id_only). Synapse → Sygnal (pushkin webpush, `allowed_endpoints` len FCM/Mozilla/WNS/Apple) → service worker:
+„psst — Nová správa" bez obsahu, jedno na miestnosť, klik otvorí miestnosť; ak je okno appky vpredu, worker nič
+neukáže. psst-wake budí aj web („Žiadosť o overenie"). Pusher sa ruší pri odhlásení a pri vypnutí upozornení;
+desktop pusher neregistruje. Prehliadač musí bežať; overené v Chrome, Firefox/Safari netestované. Zároveň nginx
+v sieti psst má pevnú IP 172.30.0.250 (predtým .10, ktorú pri čistom štarte stihol zabrať iný kontajner) — D34 platí
+s novou IP.
+
+**D77 — iOS: „Upozornenia a hovory", audit v simulátore, TestFlight jedným skriptom.** Obrazovka v Nastaveniach so
+skutočným stavom iOS (upozornenia, zvuk, zamknutá obrazovka, bannery, CallKit, mikrofón, kamera), žiadosti za sebou,
+kde iOS nedovolí, jedna veta + nastavenia appky; test upozornenia a CallKit test hovoru; otvorí sa raz za verziu, ak
+niečo chýba. Simulátor (run 43972090982): overenie zariadenia iOS↔web end-to-end, úprava, blokovanie, odpoveď,
+reakcia, mazanie potvrdené partnerom. `scripts/ios/release-testflight.sh` (`--check`) v zdieľanom tíme len pridáva
+(nič nemaže); chýba iba záznam appky v App Store Connect od Account Holdera.
+
+**D78 — macOS: cesta Developer ID overená suchým behom.** `macos-signing-dryrun.yml` spustil produkčné kroky
+macOS jobu s jednorazovým certifikátom „Developer ID Application: PSST CI Test (MHV67VMY8T)": import, kontrola
+identity, podpis appky (hardened runtime) aj DMG a `codesign --verify` prešli; `spctl` odmietol podľa očakávania
+(chýba dôvera Apple a notarizácia). Po vložení `PSST_MAC_CERT_*` netreba v CI nič meniť; testovacie secrets zmazané,
+do `PSST_MAC_CERT_*` sa nikdy nesmú dať testovacie hodnoty.
+
+**D79 — Upstream obmedzenia z auditu: čo sa doplnilo a čo nie.**
+- **Web — upozornenia pri karte na pozadí / zatvorenej, upozornenie na žiadosť o overenie:** doplnené Web Pushom (D76),
+  ohraničená zmena (service worker + pusher + Sygnal webpush), otestované v Chrome na produkcii.
+- **Android — vyhľadávanie v správach (šifrované aj kanály):** Element X v26.11 má vyhľadávanie rozpracované (feature
+  flag `MessageSearch`, upstream `isFinished = false`; v našom builde je zapnuté). V teste b27 sa lokálny index (tantivy)
+  vytvoril, ale vyhľadávanie vrátilo 0 výsledkov ani pre správy odoslané z telefónu. Chyba je v nedokončenej upstream
+  funkcii (Rust SDK search service + UI), nie v našom forku. Vlastná oprava = zásah do matrix-rust-sdk a vlastný build
+  natívnej knižnice: odhad 1–2 týždne, vysoké riziko (šifrovaný index, migrácie). Nerobené; počkať na upstream
+  (funkcia je v aktívnom vývoji). Obchádzka: vyhľadávanie na desktope (Seshat) a na webe v nešifrovaných miestnostiach.
+- **Android — zdieľanie obrazovky v hovore:** Element Call beží v Android WebView, ktorý `getDisplayMedia` nepodporuje.
+  Riešenie = natívny MediaProjection + foreground service + most do LiveKit v Element Call (zmeny vo forku Element X aj
+  Element Call). Odhad 2–3 týždne, vysoké riziko (Android 14 obmedzenia projekcie, údržba dvoch forkov). Nerobené.
+- **Android — overenie zariadenia QR kódom:** FFI `SessionVerificationController` v26.11 vie len SAS (emoji); QR
+  overenie by vyžadovalo nové FFI v matrix-rust-sdk + UI (kamera, zobrazenie QR). Odhad 1–2 týždne, stredné riziko.
+  Nerobené; emoji overenie funguje a je rovnako bezpečné.
+- **Web — vyhľadávanie v šifrovaných miestnostiach:** Element Web nemá lokálny index (Seshat je natívny modul len pre
+  desktop). Riešenie = index v prehliadači (IndexedDB + vlastný indexer) s rizikom úniku obsahu do úložiska
+  prehliadača. Odhad 3+ týždne, vysoké riziko. Nerobené; obchádzka: desktop appka.

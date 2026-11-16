@@ -2,147 +2,147 @@
  {
   "id": "login",
   "status": "ok",
-  "note": "prihlásenie cez MAS v Chrome Custom Tab → zoznam konverzácií"
+  "note": "b29: čistá inštalácia → prihlásenie cez MAS v Chrome Custom Tab → nové zariadenie → „Can't confirm?“ → reset identity cez MAS → zoznam konverzácií"
  },
  {
   "id": "logout",
   "status": "ok",
-  "note": "Nastavenia → Remove this device → úvodná obrazovka (overené 2×)"
+  "note": "b23 (dávka 11): Nastavenia → Remove this device → úvodná obrazovka (overené 2×)"
  },
  {
   "id": "verify_emoji",
   "status": "ok",
-  "note": "nové Android zariadenie ↔ web (overené zariadenie): emoji zhodné na oboch, web potvrdil cross-signing; po overení sa zaregistroval pusher"
+  "note": "b23 (dávka 11): nové Android zariadenie ↔ web (overené zariadenie): emoji zhodné na oboch, web potvrdil cross-signing; po overení sa zaregistroval pusher"
  },
  {
   "id": "verify_unverified_state",
   "status": "ok",
-  "note": "nové prihlásenie zostane na „Confirm your digital identity“, kým sa neoverí; push sa registruje až po overení"
+  "note": "b23 (dávka 11): nové prihlásenie zostane na „Confirm your digital identity“, kým sa neoverí; push sa registruje až po overení"
  },
  {
   "id": "notif_background",
   "status": "ok",
-  "note": "b18: vyskakovacie okno (heads-up) pri appke na pozadí, kanál PSST_MESSAGES_V4 importance HIGH, MessagingStyle + Quick reply"
+  "note": "b27: appka na pozadí → notification_alert pre správu (kanál Messages, HIGH), súhrn už nezvoní (D67)"
  },
  {
   "id": "notif_lock",
   "status": "ok",
-  "note": "b18: správa na zamknutej obrazovke (PIN zámok v emulátore)"
+  "note": "b29: zamknutý telefón (PIN), zhasnutý displej → správa rozsvietila displej (D73) a je na zamknutej obrazovke s menom a textom"
  },
  {
   "id": "dm",
   "status": "ok",
-  "note": "šifrovaná DM založená z Androidu (Start chat): odoslanie aj príjem dešifrované na oboch stranách (web partner)"
+  "note": "b27/b29: šifrovaná DM — správy z Androidu odoslané (Sent), správy partnera prijaté a zobrazené"
  },
  {
   "id": "receipts",
   "status": "ok",
-  "note": "„Previous message read by …“ po prečítaní partnerom"
+  "note": "b23 (dávka 11): „Previous message read by …“ po prečítaní partnerom"
  },
  {
   "id": "typing",
   "status": "ok",
-  "note": "„QA android b is typing“"
+  "note": "b23 (dávka 11): „QA android b is typing“"
  },
  {
   "id": "reaction",
   "status": "ok",
-  "note": "rýchla reakcia 👍 z menu správy → m.reaction u partnera"
+  "note": "b29: 👍 z menu správy → m.reaction (m.annotation) u partnera"
  },
  {
   "id": "reply",
   "status": "ok",
-  "note": "odpoveď cez menu správy → m.in_reply_to u partnera"
+  "note": "b29: Reply → m.in_reply_to u partnera (po odstránení starého neovereného zariadenia účtu; Element X dovtedy odoslanie správne blokoval)"
  },
  {
   "id": "edit",
   "status": "ok",
-  "note": "úprava (m.replace) → partner vidí „android ping 1 EDITED“"
+  "note": "b29: Edit → m.replace u partnera"
  },
  {
   "id": "delete",
   "status": "ok",
-  "note": "zmazanie (Remove) → u partnera redaction"
+  "note": "b29: Remove → m.room.redaction u partnera, „Message removed“"
  },
  {
   "id": "mention",
   "status": "ok",
-  "note": "výber z návrhov @… → m.mentions + zvýraznenie u partnera"
+  "note": "b23 (dávka 11): výber z návrhov @… → m.mentions + zvýraznenie u partnera"
  },
  {
   "id": "voice",
   "status": "ok",
-  "note": "nahrávanie podržaním tlačidla (mikrofón emulátora) → m.audio s org.matrix.msc3245.voice, šifrované"
+  "note": "b23 (dávka 11): nahrávanie podržaním tlačidla (mikrofón emulátora) → m.audio s org.matrix.msc3245.voice, šifrované"
  },
  {
   "id": "file",
   "status": "ok",
-  "note": "príloha zo Súborov → šifrovaný m.file, partner ho stiahne (authenticated media)"
+  "note": "b23 (dávka 11): príloha zo Súborov → šifrovaný m.file, partner ho stiahne (authenticated media)"
  },
  {
   "id": "image",
   "status": "ok",
-  "note": "obrázok (PNG) → šifrovaný m.image 320×240 s náhľadom"
+  "note": "b23 (dávka 11): obrázok (PNG) → šifrovaný m.image 320×240 s náhľadom"
  },
  {
   "id": "video",
   "status": "ok",
-  "note": "video (MP4) → šifrovaný m.video, trvanie 2 s"
+  "note": "b23 (dávka 11): video (MP4) → šifrovaný m.video, trvanie 2 s"
  },
  {
   "id": "notif_open",
   "status": "ok",
-  "note": "appka otvorená na zozname konverzácií → systémová notifikácia (kanál Messages) + odznak"
+  "note": "b27: appka otvorená na zozname konverzácií → notifikácia so zvukom"
  },
  {
   "id": "notif_closed",
   "status": "ok",
-  "note": "proces appky ukončený (am kill) → FCM push appku zobudil, notifikácia so správou prišla"
+  "note": "b27: proces ukončený (am kill) → FCM ju zobudil, notifikácia so zvukom"
  },
  {
   "id": "group",
   "status": "ok",
-  "note": "súkromná skupina založená v Androide (3 členovia, šifrovaná): správy oboma smermi dešifrované"
+  "note": "b23 (dávka 11): súkromná skupina založená v Androide (3 členovia, šifrovaná): správy oboma smermi dešifrované"
  },
  {
   "id": "invite",
   "status": "ok",
-  "note": "pozvánky pri zakladaní skupiny doručené obom; pred opravou servera (D65) appka mylne písala „This Matrix ID can't be found“"
+  "note": "b23 (dávka 11): pozvánky pri zakladaní skupiny doručené obom; pred opravou servera (D65) appka mylne písala „This Matrix ID can't be found“"
  },
  {
   "id": "members",
   "status": "ok",
-  "note": "Roles & permissions → partner moderátor (PL 50), Remove user → tretí odstránený"
+  "note": "b23 (dávka 11): Roles & permissions → partner moderátor (PL 50), Remove user → tretí odstránený"
  },
  {
   "id": "public",
   "status": "ok",
-  "note": "kanál partnera nájdený v Room directory, Join → pripojený, staršiu správu vidí"
+  "note": "b23 (dávka 11): kanál partnera nájdený v Room directory, Join → pripojený, staršiu správu vidí"
  },
  {
   "id": "search",
   "status": "upstream",
-  "note": "Element X Android nemá vyhľadávanie v správach (len hľadanie miestností podľa mena) — upstream, obchádzka: web/desktop"
+  "note": "b27: Element X má rozpracované vyhľadávanie správ (feature flag MessageSearch, upstream isFinished=false) — index sa v zariadení vytvára (tantivy), ale vyhľadávanie vrátilo 0 výsledkov aj pre správy odoslané z telefónu; oprava je v Rust SDK/upstream"
  },
  {
   "id": "search_public",
   "status": "upstream",
-  "note": "Element X Android nemá vyhľadávanie v správach — upstream"
+  "note": "b27: rovnako ako v šifrovaných — rozpracované upstream, výsledky prázdne"
  },
  {
   "id": "leave",
   "status": "ok",
-  "note": "Room details → Leave room → u partnera membership leave"
+  "note": "b23 (dávka 11): Room details → Leave room → u partnera membership leave"
  },
  {
   "id": "block",
   "status": "ok",
-  "note": "profil → Block user → m.ignored_user_list na serveri, nová správa blokovaného sa nezobrazí"
+  "note": "b23 (dávka 11): profil → Block user → m.ignored_user_list na serveri, nová správa blokovaného sa nezobrazí"
  },
  {
   "id": "call_video",
   "status": "ok",
-  "note": "prichádzajúci video hovor zazvonil (heads-up Incoming call, kanál zvonenia), prijatý → obraz aj zvuk oboma smermi (web partner: video+audio, ICE UDP 7882)"
+  "note": "b28: prichádzajúci hovor pri zamknutom telefóne (PIN) → IncomingCallActivity na celú obrazovku, kanál zvonenia; prijatie a médiá overené v b23"
  },
  {
   "id": "screenshare",
@@ -152,52 +152,52 @@
  {
   "id": "call_voice",
   "status": "ok",
-  "note": "hlasový hovor spustený z Androidu → web prijal, zvuk tečie (ICE UDP 7882); 1× chyba „Sorry, an error occurred“ pri štarte hneď po skončení predošlého hovoru, druhý pokus OK"
+  "note": "b23 (dávka 11): hlasový hovor spustený z Androidu → web prijal, zvuk tečie (ICE UDP 7882); 1× chyba „Sorry, an error occurred“ pri štarte hneď po skončení predošlého hovoru, druhý pokus OK"
  },
  {
   "id": "call_group",
   "status": "ok",
-  "note": "skupinový hovor (3 účastníci: Android + 2× web): Android sa pripojil cez Join, vidí video oboch; odosielanie videa z Androidu emulátor neoverí (nemá prednú kameru)"
+  "note": "b23 (dávka 11): skupinový hovor (3 účastníci: Android + 2× web): Android sa pripojil cez Join, vidí video oboch; odosielanie videa z Androidu emulátor neoverí (nemá prednú kameru)"
  },
  {
   "id": "call_udp_blocked",
   "status": "ok",
-  "note": "UDP zablokované v emulátore (iptables, zahodených 65 UDP paketov) → hovor sa pripojil a video od partnera beží cez TCP (LiveKit 7881 / TURN-TLS 443)"
+  "note": "b23 (dávka 11): UDP zablokované v emulátore (iptables, zahodených 65 UDP paketov) → hovor sa pripojil a video od partnera beží cez TCP (LiveKit 7881 / TURN-TLS 443)"
  },
  {
   "id": "profile",
   "status": "ok",
-  "note": "Edit profile: meno + avatar z galérie → Save; iný účet cez API vidí nové meno aj avatar"
+  "note": "b23 (dávka 11): Edit profile: meno + avatar z galérie → Save; iný účet cez API vidí nové meno aj avatar"
  },
  {
   "id": "password",
   "status": "ok",
-  "note": "Nastavenia → Manage account & devices → MAS Change password; nové heslo funguje, staré nie"
+  "note": "b23 (dávka 11): Nastavenia → Manage account & devices → MAS Change password; nové heslo funguje, staré nie"
  },
  {
   "id": "sessions",
   "status": "ok",
-  "note": "Manage account & devices → MAS Devices: zoznam zariadení (model, posledná aktivita) s „Remove device“; Element X nemá vlastný zoznam (zámer upstreamu pri MAS)"
+  "note": "b23 (dávka 11): Manage account & devices → MAS Devices: zoznam zariadení (model, posledná aktivita) s „Remove device“; Element X nemá vlastný zoznam (zámer upstreamu pri MAS)"
  },
  {
   "id": "recovery",
   "status": "ok",
-  "note": "Encryption → Get recovery key → Generate → uložený; záloha kľúčov zapnutá"
+  "note": "b23 (dávka 11): Encryption → Get recovery key → Generate → uložený; záloha kľúčov zapnutá"
  },
  {
   "id": "key_backup_restore",
   "status": "ok",
-  "note": "odhlásenie → prihlásenie → „Use recovery key“ → zariadenie overené, staré šifrované správy (aj prílohy) čitateľné"
+  "note": "b23 (dávka 11): odhlásenie → prihlásenie → „Use recovery key“ → zariadenie overené, staré šifrované správy (aj prílohy) čitateľné"
  },
  {
   "id": "history_new_device",
   "status": "ok",
-  "note": "nové prihlásenie (nové zariadenie) po obnovení kľúčom vidí celú staršiu históriu DM"
+  "note": "b23 (dávka 11): nové prihlásenie (nové zariadenie) po obnovení kľúčom vidí celú staršiu históriu DM"
  },
  {
   "id": "qr_login",
   "status": "ok",
-  "note": "„Sign in with QR code“ → sken QR z webu (Link new device) → 2 číslice + overovací kód v MAS → Grant access → prihlásený a overený; po oprave D66 aj pri 96 s trvaní (predtým limit 60 s → „sign in was not completed in time“)"
+  "note": "b23 (dávka 11): „Sign in with QR code“ → sken QR z webu (Link new device) → 2 číslice + overovací kód v MAS → Grant access → prihlásený a overený; po oprave D66 aj pri 96 s trvaní (predtým limit 60 s → „sign in was not completed in time“)"
  },
  {
   "id": "verify_qr",
@@ -207,12 +207,12 @@
  {
   "id": "register",
   "status": "ok",
-  "note": "Create account → MAS registrácia (meno, heslo, podmienky) → pozývací token → zobrazované meno → súhlas → appka; pri existujúcej MAS relácii v prehliadači treba najprv „Use another account“"
+  "note": "b23 (dávka 11): Create account → MAS registrácia (meno, heslo, podmienky) → pozývací token → zobrazované meno → súhlas → appka; pri existujúcej MAS relácii v prehliadači treba najprv „Use another account“"
  },
  {
   "id": "download_page",
   "status": "ok",
-  "note": "stránka ponúka APK arm64 b23 (SHA-256 overené po nahratí cez HTTPS); aktualizácia b13 → b18 → b20 → b23 prešla so zachovaním prihlásenia/kanálov"
+  "note": "b23 (dávka 11): stránka ponúka APK arm64 b23 (SHA-256 overené po nahratí cez HTTPS); aktualizácia b13 → b18 → b20 → b23 prešla so zachovaním prihlásenia/kanálov"
  },
  {
   "id": "admin",
@@ -223,5 +223,45 @@
   "id": "update_check",
   "status": "ok",
   "note": "b20 ponúkol „New psst version – build 21“ (app.macet.eu/download/latest.json); tlačidlo Download otváralo psst namiesto prehliadača (App Link na celú doménu) → opravené v b23: /download/ otvorí prehliadač, odkazy /#/… ďalej psst (overené, App Links stále „verified“)"
+ },
+ {
+  "id": "alerts_settings",
+  "status": "ok",
+  "note": "b27–b29: 10 prepínačov so skutočným stavom (upozornenia, vyskakovacie okno, zamknutá obrazovka, celá obrazovka, batéria, zvuk, zvonenie, rozsvietenie, mikrofón, kamera); mikrofón → systémová žiadosť → zapnuté; „Poslať testovacie upozornenie“ → notification_alert; „Otestovať zvonenie“ → kanál zvonenia (D72)"
+ },
+ {
+  "id": "setup_after_update",
+  "status": "ok",
+  "note": "b29: aktualizácia b28→b29 s odobratými hovormi na celú obrazovku → obrazovka sa sama otvorila a hneď otvorila systémovú stránku; čistá inštalácia → upozornenia → celá obrazovka → batéria za sebou, na konci „všetko zapnuté“ (D74)"
+ },
+ {
+  "id": "wake_screen",
+  "status": "ok",
+  "note": "b27/b29 (Android 14): správa pri zhasnutom displeji → „Waking up … psst:message-wake“, správa na zamknutej obrazovke; v režime Nerušiť sa displej nerozsvietil (D73). Android 15 neoverený (emulátor príliš pomalý)"
+ },
+ {
+  "id": "notif_diag",
+  "status": "ok",
+  "note": "b24: diagnostika v Nastavenia → Upozornenia, testy o 10 s, „Uložiť a odoslať“ → Stiahnuté/psst-diagnostika-*.txt (D67)"
+ },
+ {
+  "id": "verify_wakeup",
+  "status": "ok",
+  "note": "b28: web požiadal o overenie, proces appky ukončený → notifikácia „Verification request“ (kanál Overenie zariadenia); v b24 ťuknutie otvorilo „Verification requested“ (D68)"
+ },
+ {
+  "id": "verify_other_device",
+  "status": "na",
+  "note": "funkcia web/desktop klienta (strana, ktorá žiadosť posiela)"
+ },
+ {
+  "id": "admin_password",
+  "status": "na",
+  "note": "admin stránka je webová (stĺpec Web)"
+ },
+ {
+  "id": "install_clean",
+  "status": "ok",
+  "note": "b29: APK sa nainštaluje čisto aj cez staršiu verziu (rovnaký podpisový kľúč); sideload vyžaduje povoliť inštaláciu z prehliadača"
  }
 ]

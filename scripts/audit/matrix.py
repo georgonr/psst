@@ -67,6 +67,16 @@ ROWS = [
         ("download_page", "Stránka na stiahnutie"),
         ("update_check", "Kontrola novej verzie"),
     ]),
+    ("Upozornenia, overenie a inštalácia (dávky 12–13)", [
+        ("alerts_settings", "Nastavenia → Upozornenia a hovory (prepínače so skutočným stavom, test upozornenia a zvonenia)"),
+        ("setup_after_update", "Chýbajúce povolenia sa vyžiadajú po inštalácii aj po aktualizácii"),
+        ("wake_screen", "Rozsvietenie obrazovky pri novej správe"),
+        ("notif_diag", "Diagnostika upozornení (export do súboru)"),
+        ("verify_wakeup", "Upozornenie na žiadosť o overenie (appka zatvorená)"),
+        ("verify_other_device", "Overenie „Použiť iné zariadenie“: výzva, odpočet, Poslať znova"),
+        ("admin_password", "Admin: nastaviť nové heslo členovi"),
+        ("install_clean", "Stiahnutý build sa nainštaluje a otvorí bez varovania"),
+    ]),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}

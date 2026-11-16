@@ -183,5 +183,45 @@
   "id": "download_page",
   "status": "na",
   "note": "stránka ukazuje iOS „Coming soon“ — build čaká na zmluvu v App Store Connect"
+ },
+ {
+  "id": "alerts_settings",
+  "status": "ok",
+  "note": "simulátor (run 43972090982): Nastavenia → Upozornenia a hovory — upozornenia, zvuk, zamknutá obrazovka, bannery, CallKit, mikrofón, kamera; žiadosti za sebou (3 výzvy → 7 riadkov zapnutých); test upozornenia (banner) a CallKit test hovoru 5 s (D77)"
+ },
+ {
+  "id": "setup_after_update",
+  "status": "ok",
+  "note": "simulátor: po prihlásení sa obrazovka otvorila sama s 5 zvýraznenými chýbajúcimi riadkami; po reštarte v tej istej verzii už nie (D77)"
+ },
+ {
+  "id": "wake_screen",
+  "status": "na",
+  "note": "len Android (iOS displej pri upozornení riadi systém)"
+ },
+ {
+  "id": "notif_diag",
+  "status": "na",
+  "note": "len Android"
+ },
+ {
+  "id": "verify_wakeup",
+  "status": "na",
+  "note": "budíček D68 je pre psst Android a web; iOS simulátor nemá APNs"
+ },
+ {
+  "id": "verify_other_device",
+  "status": "na",
+  "note": "funkcia web/desktop klienta"
+ },
+ {
+  "id": "admin_password",
+  "status": "na",
+  "note": "admin stránka je webová (stĺpec Web)"
+ },
+ {
+  "id": "install_clean",
+  "status": "na",
+  "note": "iOS build čaká na App Store Connect záznam od Account Holdera (TestFlight)"
  }
 ]

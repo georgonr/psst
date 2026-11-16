@@ -17,7 +17,7 @@
  {
   "id": "about_build",
   "status": "ok",
-  "note": "verzia 1.12.35-b15 (2026-11-16)"
+  "note": "verzia 1.12.35-b27 (2026-11-16)"
  },
  {
   "id": "dm",
@@ -77,7 +77,7 @@
  {
   "id": "voice",
   "status": "ok",
-  "note": "hlasová správa (msc3245), 3520 ms"
+  "note": "hlasová správa (msc3245), 3877 ms"
  },
  {
   "id": "search",
@@ -117,7 +117,7 @@
  {
   "id": "call_video",
   "status": "ok",
-  "note": "zvonenie/oznámenie true, pripojenie true, prehrávané video 2/2; ICE [{\"local\":\"prflx/udp\",\"remote\":\"host/udp:7882\",\"bytes\":313030}]"
+  "note": "zvonenie/oznámenie true, pripojenie true, prehrávané video 2/2; ICE [{\"local\":\"prflx/udp\",\"remote\":\"host/udp:7882\",\"bytes\":222218}]"
  },
  {
   "id": "screenshare",
@@ -137,7 +137,7 @@
  {
   "id": "profile",
   "status": "ok",
-  "note": "meno „QA macos 7800“, avatar nastavený (partner vidí)"
+  "note": "meno „QA macos 6451“, avatar nastavený (partner vidí)"
  },
  {
   "id": "sessions",
@@ -212,31 +212,51 @@
  {
   "id": "call_udp_blocked",
   "status": "ok",
-  "note": "UDP zablokované firewallom: pripojenie true, video 2, ICE [{\"local\":\"prflx/tcp\",\"remote\":\"host/tcp:7881\",\"bytes\":638898}]"
+  "note": "UDP zablokované firewallom: pripojenie true, video 2, ICE [{\"local\":\"prflx/tcp\",\"remote\":\"host/tcp:7881\",\"bytes\":573453}]"
  },
  {
   "id": "update_check",
   "status": "ok",
-  "note": "psst update check: installed b15, available b15"
+  "note": "psst update check: installed b27, available b27"
  },
  {
-  "id": "notif_background",
+  "id": "alerts_settings",
   "status": "ok",
-  "note": "appka skrytá (⌘W, v Docku) → notifikácia (notif_closed)"
+  "note": "b25, Desktop audit suite=alerts (run 43943392193): 15 ok — otvorí sa pri prvom spustení (notifikácie neurčené), mikrofón otvorí Systémové nastavenia, Sústredenie len ako pokyn (bez Full Disk Access sa nedá zistiť), spustenie po prihlásení (D75)"
  },
  {
-  "id": "register",
-  "status": "na",
-  "note": "registrácia beží v MAS v systémovom prehliadači; v desktop audite netestovaná (formulár MAS overený na webe a Androide)"
+  "id": "setup_after_update",
+  "status": "ok",
+  "note": "b27: obrazovka sa otvorí pri prvom spustení, ak chýbajú upozornenia; po opätovnom prihlásení v tej istej verzii už nie (b26 ju na macOS otváral znova a prekryla prichádzajúci hovor — opravené v b27, hovor s blokovaným UDP prešiel)"
  },
  {
-  "id": "verify_qr",
+  "id": "wake_screen",
   "status": "na",
-  "note": "QR na overenie vie naskenovať len mobil; Element X pri overovaní ponúka len emoji"
+  "note": "len Android"
  },
  {
-  "id": "admin",
+  "id": "notif_diag",
   "status": "na",
-  "note": "admin stránka je webová (testovaná v stĺpci Web)"
+  "note": "len Android"
+ },
+ {
+  "id": "verify_wakeup",
+  "status": "na",
+  "note": "desktop dostane žiadosť, len keď beží (aj v Docku); budíček D68 je pre Android a web"
+ },
+ {
+  "id": "verify_other_device",
+  "status": "na",
+  "note": "rovnaký kód ako web (testovaný v stĺpci Web); na runneri tento tok netestovaný"
+ },
+ {
+  "id": "admin_password",
+  "status": "na",
+  "note": "admin stránka je webová (stĺpec Web)"
+ },
+ {
+  "id": "install_clean",
+  "status": "fail",
+  "note": "b27: DMG nepodpísaný — Gatekeeper ho po stiahnutí odmietne (spctl „no usable signature“); CI podpíše a notarizuje automaticky po dodaní Developer ID certifikátu (overené suchým behom s testovacím certifikátom, D78); návod na otvorenie je na stránke"
  }
 ]
