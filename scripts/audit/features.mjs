@@ -555,13 +555,18 @@ export async function logoutUi(p, shot = async () => {}) {
 async function decryptedHistory(p) {
     return p.evaluate(async () => {
         const c = window.mxMatrixClientPeg.get();
-        let enc = 0, ok = 0;
+        let enc = 0, ok = 0; const failed = [];
         for (const r of c.getRooms().filter((r) => r.getMyMembership() === "join")) {
             await c.scrollback(r, 50).catch(() => {});
-            for (const e of r.getLiveTimeline().getEvents()) if (e.isEncrypted()) { enc++; if (!e.isDecryptionFailure() && (e.getClearContent()?.body || e.getClearContent()?.["m.relates_to"])) ok++; }
+            for (const e of r.getLiveTimeline().getEvents()) if (e.isEncrypted()) {
+                enc++;
+                const cc = e.getClearContent();
+                if (!e.isDecryptionFailure() && cc && Object.keys(cc).length) ok++;
+                else failed.push(`${r.name}|${e.getClearType?.() || e.getType()}|${e.getSender()?.split(":")[0]}|${e.decryptionFailureReason ?? ""}`);
+            }
         }
         const s = await c.getCrypto().getDeviceVerificationStatus(c.getUserId(), c.getDeviceId());
-        return { enc, ok, verified: !!s?.crossSigningVerified };
+        return { enc, ok, verified: !!s?.crossSigningVerified, failed: failed.slice(0, 10) };
     });
 }
 
@@ -610,7 +615,7 @@ export async function runAccountFlows(ctx) {
         await settingsTab(me, "Account");
         const href = await me.locator('.mx_Dialog a:has-text("Manage account")').first().getAttribute("href", { timeout: 10000 });
         record("password", href && href.includes("/auth/account") ? "ok" : "fail", `Settings → Account → „Manage account“ → ${href} (MAS: Change password; zmena hesla overená na Androide)`);
-        await me.keyboard.press("Escape");
+        for (let i = 0; i < 3 && await me.locator(".mx_Dialog").count(); i++) { await me.keyboard.press("Escape"); await sleep(700); }
     } catch (e) { record("password", "fail", String(e.message).slice(0, 200)); }
 
     let second = null;
@@ -622,7 +627,8 @@ export async function runAccountFlows(ctx) {
         await second.locator('button:has-text("Use another device")').click({ timeout: 15000 });
         const toast = me.locator('.mx_Toast_toast:has-text("Verification requested"), .mx_Toast_toast:has-text("verify")').first();
         const req = await toast.waitFor({ timeout: 60000 }).then(() => true, () => false);
-        await toast.getByRole("button", { name: /^(Start Verification|Verify session|Verify|Accept)$/ }).first().click({ timeout: 10000 });
+        for (let i = 0; i < 3 && await me.locator(".mx_Dialog").count(); i++) { await me.keyboard.press("Escape"); await sleep(700); }
+        await toast.getByRole("button", { name: /^(Start Verification|Verify session|Verify|Accept)$/ }).first().click({ timeout: 15000 });
         for (let i = 0; i < 20; i++) {
             for (const p of [second, me]) await p.locator(".mx_Dialog").getByRole("button", { name: /^(Start|Verify by emoji)$/ }).first().click({ timeout: 1000 }).catch(() => {});
             if (await me.locator(".mx_VerificationShowSas_emojiSas").count() && await second.locator(".mx_VerificationShowSas_emojiSas").count()) break;
@@ -643,7 +649,7 @@ export async function runAccountFlows(ctx) {
         await me.getByRole("button", { name: /^(Done|Got it)$/ }).first().click({ timeout: 2000 }).catch(() => {});
         await sleep(8000);
         const old = await decryptedHistory(second);
-        record("history_new_device", old.enc && old.ok === old.enc ? "ok" : (old.enc ? "fail" : "na"), `nová overená relácia: dešifrovaných ${old.ok}/${old.enc} starších šifrovaných správ`);
+        record("history_new_device", old.enc && old.ok === old.enc ? "ok" : (old.enc ? "fail" : "na"), `nová overená relácia: dešifrovaných ${old.ok}/${old.enc} starších šifrovaných udalostí${old.failed.length ? "; nedešifrované: " + old.failed.join(" ; ") : ""}`);
     } catch (e) { record("verify_emoji", "fail", String(e.message).slice(0, 200)); await shot(second || me, "verify-error"); }
     if (second) await second.context().close().catch(() => {});
 
@@ -664,7 +670,7 @@ export async function runAccountFlows(ctx) {
         const hist = await decryptedHistory(me);
         await shot(me, "relogin");
         record("relogin", st ? "ok" : "fail", `opätovné prihlásenie → ${st}${st === "identity" ? " → obnovovací kľúč" : ""}, relácia overená ${hist.verified}`);
-        record("key_backup_restore", hist.verified && hist.enc && hist.ok >= hist.enc - 1 ? "ok" : "fail", `po prihlásení s obnovovacím kľúčom dešifrovaných ${hist.ok}/${hist.enc} starších správ`);
+        record("key_backup_restore", hist.verified && hist.enc && hist.ok === hist.enc ? "ok" : "fail", `po prihlásení s obnovovacím kľúčom dešifrovaných ${hist.ok}/${hist.enc} starších šifrovaných udalostí${hist.failed.length ? "; nedešifrované: " + hist.failed.join(" ; ") : ""}`);
     } catch (e) { record("relogin", "fail", String(e.message).slice(0, 200)); await shot(me, "relogin-error"); }
     return me;
 }
