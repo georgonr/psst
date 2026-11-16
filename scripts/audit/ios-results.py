@@ -39,9 +39,21 @@ for cid, (pred, note) in checks.items():
         res[cid] = {"id": cid, "status": "fail", "note": res[cid]["note"] + "; partner udalosť nedostal"}
 
 v = partner.get("verification", {})
-if v.get("webVerified"):
-    res["verify_emoji"] = {"id": "verify_emoji", "status": "ok",
-                           "note": "iOS (overené zariadenie) overil nové webové prihlásenie toho istého účtu cez emoji; web relácia je cross-signed"}
+ios_emoji = res.pop("verify_emoji_ios", {}).get("note", "")
+web_names = " ".join(v.get("emojiNames", [])).lower().split() or \
+    [t for t in v.get("emoji", "").lower().split() if any(ch.isalpha() for ch in t)]
+ios_names = ios_emoji.lower().split() if ios_emoji else []
+same = bool(web_names) and web_names == ios_names
+if "verify_emoji" in res:
+    ios_ok = res["verify_emoji"]["status"] == "ok"
+    if ios_ok and v.get("webVerified") and same:
+        res["verify_emoji"] = {"id": "verify_emoji", "status": "ok",
+                               "note": f"iOS (overené zariadenie) ↔ nové webové prihlásenie toho istého účtu: rovnaké emoji na oboch ({ios_emoji}), "
+                                       "potvrdené na oboch stranách, web relácia je potom cross-signed (overená)"}
+    else:
+        res["verify_emoji"]["status"] = "fail"
+        res["verify_emoji"]["note"] += (f"; web emoji: {' '.join(v.get('emojiNames', [])) or '—'}, zhodné: {same}, "
+                                        f"web potvrdil: {bool(v.get('webConfirmed'))}, web overený: {bool(v.get('webVerified'))}")
 
 NA = {
     "notif_open": "nepodpísaný build v simulátore nemá APNs; notifikácie sa dajú overiť len na zariadení (TestFlight)",

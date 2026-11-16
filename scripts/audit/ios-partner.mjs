@@ -77,17 +77,25 @@ while (Date.now() - t0 < 60 * 60 * 1000) {
             state.verification.identityScreen = await aWeb.getByText("Confirm your digital identity").count() > 0;
             await aWeb.locator('button:has-text("Use another device")').click({ timeout: 20000 }).catch((e) => log("no Use another device: " + e.message));
             state.verification.requested = true; save();
-            // accept emoji automatically when the iOS side starts SAS
+            // accept emoji automatically (once) when the iOS side starts SAS, then confirm the result dialog
             (async () => {
+                let clicked = false;
                 for (let i = 0; i < 150; i++) {
                     await sleep(2000);
-                    if (await aWeb.locator(".mx_VerificationShowSas_emojiSas").count().catch(() => 0)) {
+                    if (!clicked && await aWeb.locator(".mx_VerificationShowSas_emojiSas").count().catch(() => 0)) {
                         state.verification.emoji = (await aWeb.locator(".mx_VerificationShowSas_emojiSas").innerText()).replace(/\s+/g, " ");
+                        state.verification.emojiNames = (await aWeb.locator(".mx_VerificationShowSas_emojiSas_label").allInnerTexts().catch(() => [])).map((x) => x.trim());
                         await aWeb.locator('button:has-text("They match")').first().click().catch(() => {});
-                        log("web: emoji shown, clicked They match: " + state.verification.emoji);
+                        clicked = true; state.verification.webConfirmed = true;
+                        log("web: emoji shown, clicked They match once: " + state.verification.emoji);
+                    }
+                    if (clicked) {
+                        const dlg = await aWeb.locator(".mx_Dialog, .mx_CompleteSecurity, .mx_EncryptionCard").first().innerText().catch(() => "");
+                        if (dlg && dlg !== state.verification.lastDialog) { state.verification.lastDialog = dlg.replace(/\s+/g, " ").slice(0, 300); log("web dialog: " + state.verification.lastDialog); }
+                        await aWeb.locator('button:has-text("Got it"), button:has-text("Done"), button:has-text("Continue")').first().click({ timeout: 1000 }).catch(() => {});
                     }
                     const v = await aWeb.evaluate(async () => { const c = window.mxMatrixClientPeg.get(); return !!(await c.getCrypto().getDeviceVerificationStatus(c.getUserId(), c.getDeviceId()))?.crossSigningVerified; }).catch(() => false);
-                    if (v) { state.verification.webVerified = true; log("web session of the iOS user is now verified"); save(); return; }
+                    if (v) { state.verification.webVerified = true; log("web session of the iOS user is now verified (cross-signed)"); save(); return; }
                 }
                 log("verification did not complete on the web side");
             })();
