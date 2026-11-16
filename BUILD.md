@@ -106,6 +106,7 @@ Vždy len **nové testovacie účty** (`qa-au*`, `mas-cli manage register-user`)
 |---|---|---|
 | Web | `node scripts/audit/web-audit.mjs <out> accounts.json [token]` | accounts: `{a,b,c,d}`; d = test hovoru s blokovaným UDP |
 | Windows, macOS | `gh workflow run desktop-audit.yml -f run_id=<Web + Desktop run>` | secret `PSST_AUDIT_DESKTOP_ACCOUNTS` `{windows:{a,b,c}, macos:{…}}` |
+| Upozornenia a hovory (D75) | web: `node scripts/audit/alerts-web.mjs <out> <user> <heslo> [webapp-dir]`; desktop: `gh workflow run desktop-audit.yml -f run_id=… -f suite=alerts` | desktop secret `PSST_AUDIT_ALERTS_ACCOUNTS` `{windows:{user,password}, macos:{…}}` |
 | Android | emulátor `psst34` (Google APIs), `scripts/android/ui.py`, `mas-login.sh`, partner `scripts/audit/call-partner.mjs` | UDP blok: `adb root` + iptables |
 | iOS | `gh workflow run ios-audit.yml` (XCUITest `PsstAuditTests` + `scripts/audit/ios-partner.mjs`) | secret `PSST_AUDIT_IOS_ACCOUNTS` `{a,b}` |
 

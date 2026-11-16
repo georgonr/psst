@@ -2,6 +2,8 @@
 # from a "Web + Desktop" run, installed on GitHub runners and driven over CDP (scripts/audit/desktop-audit.mjs)
 # against production chat.macet.eu. Partner and third member are Element Web sessions on the same runner.
 # Test accounts only: secret PSST_AUDIT_DESKTOP_ACCOUNTS = {"windows": {a,b,c}, "macos": {a,b,c}} (deleted afterwards).
+# suite=alerts: only Settings → "Notifications & calls" (scripts/audit/alerts-desktop.mjs, D75), one account per OS in
+# secret PSST_AUDIT_ALERTS_ACCOUNTS = {"windows": {user,password}, "macos": {user,password}}.
 name: Desktop audit
 on:
     workflow_dispatch:
@@ -9,6 +11,12 @@ on:
             run_id:
                 description: "Web + Desktop run id (empty = latest successful)"
                 required: false
+            suite:
+                description: "full = feature audit, alerts = Notifications & calls screen only"
+                required: false
+                default: full
+                type: choice
+                options: [full, alerts]
 permissions:
     contents: read
     actions: read
@@ -68,6 +76,7 @@ jobs:
                   mkdir -p audit && cp -R scripts/audit/* audit/
                   cd audit && npm init -y >/dev/null && npm i playwright@1.64.1 >/dev/null && npx playwright install chromium >/dev/null
             - name: Run audit
+              if: inputs.suite != 'alerts'
               env:
                   ACCOUNTS: ${{ secrets.PSST_AUDIT_DESKTOP_ACCOUNTS }}
               run: |
@@ -77,6 +86,17 @@ jobs:
                   node desktop-audit.mjs "$BIN" "$GITHUB_WORKSPACE/audit-results" "$RUNNER_TEMP/acc.json" "${{ matrix.platform }}" || true
                   rm -f "$RUNNER_TEMP/acc.json"
                   cat "$GITHUB_WORKSPACE/audit-results/${{ matrix.platform }}-result.md" >> "$GITHUB_STEP_SUMMARY" || true
+            - name: Notifications & calls screen
+              if: inputs.suite == 'alerts'
+              env:
+                  ACCOUNTS: ${{ secrets.PSST_AUDIT_ALERTS_ACCOUNTS }}
+              run: |
+                  [ -n "$ACCOUNTS" ] || { echo "::error::secret PSST_AUDIT_ALERTS_ACCOUNTS missing"; exit 1; }
+                  node -e 'const a=JSON.parse(process.env.ACCOUNTS)[process.argv[1]]; require("fs").writeFileSync(process.argv[2], JSON.stringify(a))' "${{ matrix.platform }}" "$RUNNER_TEMP/acc.json"
+                  cd audit
+                  node alerts-desktop.mjs "$BIN" "$GITHUB_WORKSPACE/audit-results" "$RUNNER_TEMP/acc.json" "${{ matrix.platform }}" || true
+                  rm -f "$RUNNER_TEMP/acc.json"
+                  cat "$GITHUB_WORKSPACE/audit-results/${{ matrix.platform }}-alerts-result.md" >> "$GITHUB_STEP_SUMMARY" || true
             - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
               if: always()
               with:
