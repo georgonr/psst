@@ -1,0 +1,206 @@
+# PSST (D69 check): dry run of the macOS Developer ID signing in web-desktop.yml WITHOUT the real certificate.
+#
+# Runs the production steps of job desktop-mac VERBATIM (their run: scripts are read from web-desktop.yml at run time
+# by scripts/desktop/workflow-step.py) with a THROWAWAY certificate "Developer ID Application: PSST CI Test
+# (MHV67VMY8T)" issued by a throwaway root, injected through the temporary secrets PSST_MAC_DRYRUN_P12_BASE64 +
+# PSST_MAC_DRYRUN_P12_PASSWORD (never the real PSST_MAC_CERT_* names). Differences to a real build, all marked
+# "[dry run]": the throwaway root is trusted on the runner (stands in for Apple's Developer ID chain), notarization is
+# skipped (empty APPLE_API_* for electron-builder, xcrun notarytool/stapler shimmed), Gatekeeper (spctl) is expected
+# to reject. Nothing is uploaded except a text report; nothing is published.
+name: macOS signing dry run
+
+on:
+    workflow_dispatch:
+        inputs:
+            web_run_id:
+                description: "Web + Desktop run whose psst-web-dist artifact is packaged (empty = latest successful)"
+                required: false
+
+permissions:
+    contents: read
+    actions: read
+
+concurrency:
+    group: macos-signing-dryrun
+    cancel-in-progress: true
+
+env:
+    WEB_REPO: georgonr/psst-web
+    WEB_REF: psst
+    DRY_BUILD: "0"
+
+jobs:
+    dryrun:
+        name: Developer ID signing dry run (throwaway cert)
+        runs-on: macos-15 # same image as web-desktop.yml desktop-mac
+        timeout-minutes: 90
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  repository: ${{ env.WEB_REPO }}
+                  ref: ${{ env.WEB_REF }}
+                  persist-credentials: false
+
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  path: .psst-ci
+                  persist-credentials: false
+
+            - name: Web build to package
+              id: web
+              env:
+                  GH_TOKEN: ${{ github.token }}
+                  RUN_ID: ${{ inputs.web_run_id }}
+              run: |
+                  [ -n "$RUN_ID" ] || RUN_ID="$(gh run list -R "$GITHUB_REPOSITORY" --workflow web-desktop.yml --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+                  echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+                  echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
+                  echo "web build from run $RUN_ID"
+
+            - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+              with:
+                  name: psst-web-dist
+                  path: web-dist
+                  run-id: ${{ steps.web.outputs.run_id }}
+                  github-token: ${{ github.token }}
+
+            - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+              with:
+                  python-version: "3.13"
+
+            - name: "[dry run] step extractor: $PROD <step name> runs that step of web-desktop.yml / desktop-mac verbatim"
+              run: |
+                  python3 -m pip install --quiet pyyaml
+                  cat > "$RUNNER_TEMP/prod" <<'EOF'
+                  #!/bin/bash
+                  set -eo pipefail
+                  f="$(mktemp)"
+                  ( cd "$GITHUB_WORKSPACE" && python3 .psst-ci/scripts/desktop/workflow-step.py .psst-ci/.github/workflows/web-desktop.yml desktop-mac "$@" ) > "$f"
+                  exec bash -eo pipefail "$f"
+                  EOF
+                  chmod +x "$RUNNER_TEMP/prod"
+                  echo "PROD=$RUNNER_TEMP/prod" >> "$GITHUB_ENV"
+
+            - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+              with:
+                  node-version-file: apps/desktop/.node-version
+                  cache: true
+                  install: false
+
+            - name: "[prod] Enable optional dependencies for both architectures"
+              run: $PROD "Enable optional dependencies for both architectures"
+
+            - name: "[prod] Install deps"
+              working-directory: apps/desktop
+              run: $PROD "Install deps"
+
+            - name: "[prod] Build webapp.asar from this run's web build"
+              working-directory: apps/desktop
+              run: $PROD "Build webapp.asar from this run's web build"
+
+            - name: "[dry run] trust the throwaway root (stands in for Apple's Developer ID chain)"
+              env:
+                  P12: ${{ secrets.PSST_MAC_DRYRUN_P12_BASE64 }}
+                  P12_PASS: ${{ secrets.PSST_MAC_DRYRUN_P12_PASSWORD }}
+              run: |
+                  [ -n "$P12" ] || { echo "::error::secret PSST_MAC_DRYRUN_P12_BASE64 missing"; exit 1; }
+                  printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/dry.p12"
+                  /usr/bin/openssl pkcs12 -in "$RUNNER_TEMP/dry.p12" -cacerts -nokeys -passin env:P12_PASS > "$RUNNER_TEMP/dry-root.pem"
+                  /usr/bin/openssl x509 -in "$RUNNER_TEMP/dry-root.pem" -noout -subject
+                  grep -q "PSST CI Test Root" <(/usr/bin/openssl x509 -in "$RUNNER_TEMP/dry-root.pem" -noout -subject) || { echo "::error::not the throwaway root"; exit 1; }
+                  sudo security add-trusted-cert -d -r trustRoot -p codeSign -p basic -k /Library/Keychains/System.keychain "$RUNNER_TEMP/dry-root.pem"
+                  rm -f "$RUNNER_TEMP/dry.p12"
+
+            - name: "[prod] Signing + notarization credentials (D69)"
+              id: signing
+              env:
+                  P12: ${{ secrets.PSST_MAC_DRYRUN_P12_BASE64 }}
+                  P12_PASS: ${{ secrets.PSST_MAC_DRYRUN_P12_PASSWORD }}
+                  ASC_KEY: ZHJ5LXJ1bgo= # "dry-run" — no real key in a dry run
+                  ASC_KEY_ID: DRYRUN0000
+                  ASC_ISSUER: 00000000-0000-0000-0000-dry-run
+                  TEAM: MHV67VMY8T
+              run: $PROD "Signing + notarization credentials (D69)"
+
+            - name: "[dry run] no notarization (electron-builder skips it when APPLE_API_* are empty)"
+              run: |
+                  [ "${{ steps.signing.outputs.signed }}" = true ] || { echo "::error::production signing step did not report signed=true"; exit 1; }
+                  printf 'APPLE_API_KEY=\nAPPLE_API_KEY_ID=\nAPPLE_API_ISSUER=\n' >> "$GITHUB_ENV"
+                  mkdir -p "$RUNNER_TEMP/shim"
+                  cat > "$RUNNER_TEMP/shim/xcrun" <<'EOF'
+                  #!/bin/bash
+                  case "$1" in
+                      notarytool) echo "[dry run] xcrun notarytool $2: skipped, nothing sent to Apple" >&2
+                          [ "$2" = submit ] && echo '{"id":"dry-run","status":"Accepted","message":"DRY RUN - not notarized"}'
+                          exit 0 ;;
+                      stapler) echo "[dry run] xcrun stapler $2: skipped (no notarization ticket in a dry run)"; exit 0 ;;
+                  esac
+                  exec /usr/bin/xcrun "$@"
+                  EOF
+                  chmod +x "$RUNNER_TEMP/shim/xcrun"
+
+            - name: "[prod] Build app (electron-builder signs psst.app)"
+              working-directory: apps/desktop
+              env:
+                  CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.signing.outputs.signed == 'true' && 'true' || 'false' }}
+                  CSC_KEY_PASSWORD: ${{ steps.signing.outputs.signed == 'true' && secrets.PSST_MAC_DRYRUN_P12_PASSWORD || '' }}
+                  VARIANT_PATH: psst/build.json
+              run: $PROD "Build app" "needs.web.outputs.build=$DRY_BUILD" "needs.web.outputs.date=${{ steps.web.outputs.date }}"
+
+            - name: "[prod] Sign, notarize and staple DMG (notarytool/stapler shimmed)"
+              working-directory: apps/desktop
+              run: PATH="$RUNNER_TEMP/shim:$PATH" $PROD "Sign, notarize and staple DMG"
+
+            - name: "[prod] Verify signature + notarization (line by line; spctl must reject a non-Apple, unnotarized build)"
+              working-directory: apps/desktop
+              run: |
+                  ( cd "$GITHUB_WORKSPACE" && python3 .psst-ci/scripts/desktop/workflow-step.py .psst-ci/.github/workflows/web-desktop.yml desktop-mac "Verify signature + notarization" ) > "$RUNNER_TEMP/verify.sh"
+                  set +e
+                  R="$RUNNER_TEMP/report.md"
+                  { echo "### macOS signing dry run (throwaway cert, D69)"; echo; echo "| production check | result | expected in dry run |"; echo "|---|---|---|"; } > "$R"
+                  export PATH="$RUNNER_TEMP/shim:$PATH"
+                  first=1; fails=0
+                  while IFS= read -r line; do
+                      [ -n "$line" ] || continue
+                      if [ $first = 1 ]; then eval "$line"; first=0; continue; fi   # APP=…; DMG=…
+                      out="$(eval "$line" 2>&1)"; rc=$?
+                      echo "\$ $line"; echo "$out"; echo "→ exit $rc"; echo
+                      case "$line" in
+                          spctl*) exp="rejected (not Apple-anchored, not notarized)"; [ $rc != 0 ] && res="rejected ✔" || res="accepted ?!" ;;
+                          *stapler*) exp="skipped (no ticket)"; res="skipped" ;;
+                          *) exp="pass"; [ $rc = 0 ] && res="pass ✔" || { res="FAIL ✘"; fails=$((fails+1)); } ;;
+                      esac
+                      printf '| `%s` | %s | %s |\n' "$(echo "$line" | cut -c1-90 | tr '|' '/')" "$res" "$exp" >> "$R"
+                  done < "$RUNNER_TEMP/verify.sh"
+                  {
+                      echo; echo '```'
+                      codesign -dvv dist/mac-universal/psst.app 2>&1 | grep -E 'Authority|TeamIdentifier|flags|Timestamp|Identifier='
+                      codesign -d --entitlements - --xml dist/mac-universal/psst.app 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null | grep -o '<key>[^<]*</key>' | tr '\n' ' '; echo
+                      codesign -dvv "$(ls dist/psst-*.dmg)" 2>&1 | grep -E 'Authority|TeamIdentifier'
+                      echo '```'
+                  } >> "$R"
+                  cat "$R" >> "$GITHUB_STEP_SUMMARY"; cat "$R"
+                  [ $fails = 0 ] || { echo "::error::$fails production codesign check(s) failed"; exit 1; }
+
+            - name: "[prod] Clean up signing material"
+              if: always()
+              run: $PROD "Clean up signing material"
+
+            - name: "[prod] Check output"
+              working-directory: apps/desktop
+              run: $PROD "Check output" "needs.web.outputs.build=$DRY_BUILD" "needs.web.outputs.date=${{ steps.web.outputs.date }}"
+
+            - name: "[dry run] remove the throwaway root and the build (nothing is published)"
+              if: always()
+              run: |
+                  sudo security remove-trusted-cert -d "$RUNNER_TEMP/dry-root.pem" 2>/dev/null || true
+                  sudo security delete-certificate -c "PSST CI Test Root (throwaway, not Apple)" /Library/Keychains/System.keychain 2>/dev/null || true
+                  rm -rf apps/desktop/dist apps/desktop/out "$RUNNER_TEMP/dry-root.pem"
+
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              if: always()
+              with:
+                  name: macos-signing-dryrun-report
+                  path: ${{ runner.temp }}/report.md
+                  if-no-files-found: ignore
+                  retention-days: 14
