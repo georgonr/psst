@@ -1,0 +1,74 @@
+# PSST (D69): download the macOS DMG published on https://app.macet.eu/download over HTTPS on a Mac, give it the
+# quarantine attribute exactly like a browser download, and ask Gatekeeper about the DMG and the app inside it.
+# Called by web-desktop.yml after every publish; can also be run by hand. With expect_signed (or when the page's
+# latest.json says the build is signed) every check must pass, otherwise the results are only reported.
+name: macOS Gatekeeper check
+on:
+    workflow_dispatch:
+        inputs:
+            expect_signed:
+                description: "Fail unless the published DMG passes Gatekeeper (signed + notarized)"
+                type: boolean
+                default: false
+    workflow_call:
+        inputs:
+            expect_signed:
+                type: boolean
+                default: false
+permissions:
+    contents: read
+jobs:
+    gatekeeper:
+        name: Gatekeeper (spctl, codesign, stapler) on downloaded DMG
+        runs-on: macos-15
+        steps:
+            - name: Download DMG from app.macet.eu over HTTPS (quarantined)
+              id: dl
+              run: |
+                  BASE=https://app.macet.eu/download
+                  mkdir -p "$RUNNER_TEMP/dl" && cd "$RUNNER_TEMP/dl"
+                  curl -fsSL --retry 3 -o latest.json "$BASE/latest.json"
+                  read -r FILE SHA SIGNED < <(python3 -c "import json; e=json.load(open('latest.json'))['macos']; print(e['file'], e['sha256'], str(bool(e.get('signed'))).lower())")
+                  curl -fSL --retry 3 --proto '=https' -o "$FILE" "$BASE/files/$FILE"
+                  GOT="$(shasum -a 256 "$FILE" | cut -d' ' -f1)"
+                  [ "$GOT" = "$SHA" ] || { echo "::error::SHA-256 mismatch: $GOT != $SHA"; exit 1; }
+                  # what Safari/Chrome set on a downloaded file
+                  xattr -w com.apple.quarantine "0083;$(printf %x "$(date +%s)");Safari;$(uuidgen)" "$FILE"
+                  xattr -l "$FILE"
+                  echo "dmg=$RUNNER_TEMP/dl/$FILE" >> "$GITHUB_OUTPUT"
+                  echo "page_signed=$SIGNED" >> "$GITHUB_OUTPUT"
+                  echo "### Gatekeeper check of $FILE (page says signed: $SIGNED)" >> "$GITHUB_STEP_SUMMARY"
+
+            - name: Gatekeeper checks
+              env:
+                  DMG: ${{ steps.dl.outputs.dmg }}
+                  STRICT: ${{ inputs.expect_signed || steps.dl.outputs.page_signed == 'true' }}
+              run: |
+                  FAIL=0
+                  check() {   # check "<label>" cmd…
+                      local label="$1"; shift
+                      echo "::group::$label"
+                      if OUT="$("$@" 2>&1)"; then R=PASS; else R=FAIL; FAIL=1; fi
+                      echo "$OUT"; echo "::endgroup::"
+                      echo "- **$R** $label — $(echo "$OUT" | head -3 | tr '\n' ' ')" >> "$GITHUB_STEP_SUMMARY"
+                      echo "$R  $label"
+                  }
+                  check "spctl -a -vvv -t install (DMG)" spctl -a -vvv -t install "$DMG"
+                  check "spctl -a -vvv -t open --context context:primary-signature (DMG)" spctl -a -vvv -t open --context context:primary-signature "$DMG"
+                  check "codesign --verify (DMG)" codesign --verify --strict --verbose=2 "$DMG"
+                  check "stapler validate (DMG)" xcrun stapler validate "$DMG"
+                  MNT="$(mktemp -d)"
+                  hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$MNT" "$DMG" >/dev/null
+                  APP="$MNT/psst.app"
+                  ls -la "$MNT"
+                  check "spctl -a -vvv (app)" spctl -a -vvv -t exec "$APP"
+                  check "codesign --verify --deep --strict (app)" codesign --verify --deep --strict --verbose=2 "$APP"
+                  check "stapler validate (app)" xcrun stapler validate "$APP"
+                  codesign -dvv "$APP" 2>&1 | grep -E 'Authority|TeamIdentifier|Signature|flags' || true
+                  hdiutil detach "$MNT" >/dev/null || true
+                  if [ "$FAIL" = 1 ]; then
+                      if [ "$STRICT" = true ]; then echo "::error::Gatekeeper rejects the published macOS DMG"; exit 1; fi
+                      echo "::warning::published macOS DMG is not signed/notarized — Gatekeeper rejects it (expected until the Developer ID certificate exists, D69)"
+                  else
+                      echo "All Gatekeeper checks passed" >> "$GITHUB_STEP_SUMMARY"
+                  fi

@@ -129,10 +129,15 @@ jobs:
                   path: smoke
                   retention-days: 30
 
+    # D69: signed with a Developer ID Application certificate and notarized by Apple as soon as the secret
+    # PSST_MAC_CERT_P12_BASE64 (+ PSST_MAC_CERT_PASSWORD) exists; until then the build stays unsigned (warning, no failure).
+    # Notarization uses the existing App Store Connect API key secrets (APP_STORE_CONNECT_API_KEY_*, *_ISSUER_ID).
     desktop-mac:
-        name: Desktop macOS (universal, unsigned)
+        name: Desktop macOS (universal)
         needs: web
         runs-on: macos-15
+        outputs:
+            signed: ${{ steps.signing.outputs.signed }}
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
               with:
@@ -178,12 +183,94 @@ jobs:
                   pnpm run asar-webapp
                   ls -la webapp.asar
 
-            - name: Build app (unsigned)
+            - name: Signing + notarization credentials (D69)
+              id: signing
+              env:
+                  P12: ${{ secrets.PSST_MAC_CERT_P12_BASE64 }}
+                  P12_PASS: ${{ secrets.PSST_MAC_CERT_PASSWORD }}
+                  ASC_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+                  ASC_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+                  ASC_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+                  TEAM: ${{ secrets.APPLE_TEAM_ID }}
+              run: |
+                  if [ -z "$P12" ]; then
+                      echo "signed=false" >> "$GITHUB_OUTPUT"
+                      echo "::warning title=macOS build is NOT signed::secret PSST_MAC_CERT_P12_BASE64 is missing, Gatekeeper will block the DMG (D69, docs/build/macos-signing.md)"
+                      echo "macOS: **unsigned** (no Developer ID certificate secret, D69)" >> "$GITHUB_STEP_SUMMARY"
+                      exit 0
+                  fi
+                  for v in P12_PASS ASC_KEY ASC_KEY_ID ASC_ISSUER TEAM; do
+                      [ -n "${!v}" ] || { echo "::error::secret for $v missing (needed for signing/notarization)"; exit 1; }
+                  done
+                  install -m 600 /dev/null "$RUNNER_TEMP/devid.p12"; printf '%s' "$P12" | base64 --decode > "$RUNNER_TEMP/devid.p12"
+                  install -m 600 /dev/null "$RUNNER_TEMP/asc.p8"; printf '%s' "$ASC_KEY" | base64 --decode > "$RUNNER_TEMP/asc.p8"
+                  # Own keychain for signing the DMG and for a clear check of what the certificate is
+                  KC="$RUNNER_TEMP/psst-sign.keychain-db"; KCP="$(uuidgen)"
+                  security create-keychain -p "$KCP" "$KC"
+                  security set-keychain-settings -lut 21600 "$KC"
+                  security unlock-keychain -p "$KCP" "$KC"
+                  security import "$RUNNER_TEMP/devid.p12" -k "$KC" -P "$P12_PASS" -T /usr/bin/codesign -T /usr/bin/security
+                  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KCP" "$KC" >/dev/null
+                  security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+                  security find-identity -v -p codesigning "$KC"
+                  ID="$(security find-identity -v -p codesigning "$KC" | grep -o '"Developer ID Application: [^"]*('"$TEAM"')"' | head -1 | tr -d '"')"
+                  [ -n "$ID" ] || { echo "::error::PSST_MAC_CERT_P12_BASE64 holds no valid 'Developer ID Application: … ($TEAM)' identity"; exit 1; }
+                  {
+                      echo "CSC_LINK=$RUNNER_TEMP/devid.p12"
+                      echo "APPLE_TEAM_ID=$TEAM"
+                      echo "APPLE_API_KEY=$RUNNER_TEMP/asc.p8"
+                      echo "APPLE_API_KEY_ID=$ASC_KEY_ID"
+                      echo "APPLE_API_ISSUER=$ASC_ISSUER"
+                      echo "PSST_SIGN_KEYCHAIN=$KC"
+                      echo "PSST_SIGN_IDENTITY=$ID"
+                  } >> "$GITHUB_ENV"
+                  echo "signed=true" >> "$GITHUB_OUTPUT"
+                  echo "macOS: signed with **$ID**, notarized (D69)" >> "$GITHUB_STEP_SUMMARY"
+
+            # Signed run: electron-builder signs psst.app (hardened runtime, build/entitlements.mac.plist: JIT, camera,
+            # microphone, library validation off), notarizes it with the API key (APPLE_API_*) and staples the ticket.
+            - name: Build app
               working-directory: apps/desktop
               run: pnpm run build --universal --publish never -m dmg zip -c.buildVersion=${{ needs.web.outputs.build }} -c.extraMetadata.psstBuild=${{ needs.web.outputs.build }} -c.extraMetadata.psstBuildDate=${{ needs.web.outputs.date }}
               env:
-                  CSC_IDENTITY_AUTO_DISCOVERY: "false"
+                  CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.signing.outputs.signed == 'true' && 'true' || 'false' }}
+                  CSC_KEY_PASSWORD: ${{ steps.signing.outputs.signed == 'true' && secrets.PSST_MAC_CERT_PASSWORD || '' }}
                   VARIANT_PATH: psst/build.json
+
+            # The DMG itself: Developer ID signature, notarization (notarytool, API key) and stapled ticket, so that
+            # Gatekeeper accepts the downloaded (quarantined) DMG even offline.
+            - name: Sign, notarize and staple DMG
+              if: steps.signing.outputs.signed == 'true'
+              working-directory: apps/desktop
+              run: |
+                  DMG="$(ls dist/psst-*.dmg)"
+                  codesign --force --timestamp --keychain "$PSST_SIGN_KEYCHAIN" --sign "$PSST_SIGN_IDENTITY" "$DMG"
+                  xcrun notarytool submit "$DMG" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" \
+                      --wait --timeout 90m --output-format json | tee "$RUNNER_TEMP/notary.json"
+                  SUB="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['id'])" "$RUNNER_TEMP/notary.json")"
+                  STATUS="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['status'])" "$RUNNER_TEMP/notary.json")"
+                  xcrun notarytool log "$SUB" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" || true
+                  [ "$STATUS" = Accepted ] || { echo "::error::notarization of the DMG: $STATUS"; exit 1; }
+                  xcrun stapler staple "$DMG"
+
+            - name: Verify signature + notarization
+              if: steps.signing.outputs.signed == 'true'
+              working-directory: apps/desktop
+              run: |
+                  APP=dist/mac-universal/psst.app; DMG="$(ls dist/psst-*.dmg)"
+                  codesign --verify --deep --strict --verbose=2 "$APP"
+                  codesign -dvv "$APP" 2>&1 | grep -E 'Authority|TeamIdentifier|flags|Timestamp'
+                  spctl -a -vvv -t exec "$APP"
+                  xcrun stapler validate "$APP"
+                  codesign --verify --strict --verbose=2 "$DMG"
+                  spctl -a -vvv -t open --context context:primary-signature "$DMG"
+                  xcrun stapler validate "$DMG"
+
+            - name: Clean up signing material
+              if: always()
+              run: |
+                  [ -z "${PSST_SIGN_KEYCHAIN:-}" ] || security delete-keychain "$PSST_SIGN_KEYCHAIN" || true
+                  rm -f "$RUNNER_TEMP/devid.p12" "$RUNNER_TEMP/asc.p8"
 
             - name: Check output
               working-directory: apps/desktop
@@ -306,6 +393,25 @@ jobs:
                   ls -la out/*
                   scripts/release/upload-download.sh windows "$(ls out/windows/psst-windows-*-b*.msi)" "$NOTE"
                   scripts/release/upload-download.sh macos "$(ls out/macos/psst-macos-*-b*.dmg)" "$NOTE"
+            # D69: only a Developer ID-signed + notarized DMG loses the "how to open an unsigned app" note on the page
+            - name: Mark macOS build as signed on the download page
+              if: needs.desktop-mac.outputs.signed == 'true'
+              env:
+                  PSST_DL_KEY: ${{ runner.temp }}/dl_key
+                  PSST_DL_KNOWN_HOSTS: ${{ runner.temp }}/dl_known_hosts
+              run: |
+                  DMG="$(ls out/macos/psst-macos-*-b*.dmg)"
+                  ssh -i "$PSST_DL_KEY" -o IdentitiesOnly=yes -o BatchMode=yes -o UserKnownHostsFile="$PSST_DL_KNOWN_HOSTS" -o StrictHostKeyChecking=yes \
+                      psst-dl@204.168.160.131 signed macos "${{ needs.web.outputs.build }}" "$(sha256sum "$DMG" | cut -d' ' -f1)"
             - name: Clean up key
               if: always()
               run: rm -f "$RUNNER_TEMP/dl_key"
+
+    # D69: download the published DMG over HTTPS on a Mac exactly like a user (quarantine attribute) and run Gatekeeper.
+    # Fails only if this build was signed; an unsigned build just reports what Gatekeeper says.
+    verify-mac-download:
+        name: Gatekeeper check of the published DMG
+        needs: [desktop-mac, publish-downloads]
+        uses: ./.github/workflows/macos-gatekeeper.yml
+        with:
+            expect_signed: ${{ needs.desktop-mac.outputs.signed == 'true' }}

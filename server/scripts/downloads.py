@@ -4,6 +4,7 @@
 Runs as the dedicated user `psst-dl`, either as the forced command of its SSH key (CI and local build scripts):
 
     ssh psst-dl@<server> put <platform> <file name> <sha256> <build> <YYYYMMDD> <note-base64>  < file
+    ssh psst-dl@<server> signed macos <build> <sha256>     (D69: build is Developer ID-signed + notarized)
     ssh psst-dl@<server> status
     ssh psst-dl@<server> render
 
@@ -73,9 +74,23 @@ HOWTO = {
                 "New versions install over the old one; your chats stay."),
     "windows": ("Run the installer. If Windows SmartScreen shows <i>“Windows protected your PC”</i>, click "
                 "<b>More info</b> → <b>Run anyway</b>."),
-    "macos": ("Open the DMG and drag <b>psst</b> to Applications. The first time, <b>right-click psst → Open</b> → Open. "
-              "On macOS 15 and newer, if it is still blocked: System Settings → Privacy &amp; Security → <b>Open Anyway</b>."),
+    # signed + notarized build (CI ran `signed macos …` after notarization and stapling were verified)
+    "macos": "Open the DMG and drag <b>psst</b> to Applications, then open it from Applications.",
 }
+
+# D69: until the macOS build is signed with a Developer ID certificate and notarized by Apple, Gatekeeper blocks it
+# ("Move to Trash"). Shown only while latest.json has no "signed": true for macOS — the next signed build removes it.
+MACOS_UNSIGNED = """<div class="warn" lang="sk"><b>Táto verzia pre macOS ešte nie je podpísaná ani notarizovaná Apple</b>, preto ju
+macOS pri prvom spustení zablokuje (hlásenie <i>„psst“ nie je možné otvoriť</i> s tlačidlom <i>Presunúť do koša</i>).
+Aplikácia je v poriadku — skontrolovať ju môžete podľa SHA-256 vyššie. Ako ju otvoriť:
+<ol><li>Otvorte stiahnutý DMG a presuňte <b>psst</b> do priečinka <b>Aplikácie</b>.</li>
+<li>Spustite psst z Aplikácií. Keď sa objaví hlásenie, kliknite na <b>Hotovo</b> (nie <i>Presunúť do koša</i>).</li>
+<li>Otvorte <b>Systémové nastavenia → Súkromie a bezpečnosť</b>, posuňte sa nadol do časti <b>Bezpečnosť</b>
+a pri texte <i>„psst“ bola zablokovaná…</i> kliknite na <b>Napriek tomu otvoriť</b> (Open Anyway). Potvrďte heslom alebo Touch ID.</li>
+<li>Spustite psst znova a v okne zvoľte <b>Otvoriť</b>. Ďalej sa už otvára normálne.</li></ol>
+Na macOS 14 a starších stačí namiesto krokov 2–4 kliknúť na psst pravým tlačidlom (Control + klik) → <b>Otvoriť</b> → <b>Otvoriť</b>;
+na macOS 15 a novších táto cesta už nefunguje, použite Systémové nastavenia. Po stiahnutí novej verzie môže byť potrebné
+postup zopakovať. Keď bude aplikácia podpísaná, tento postup odpadne.</div>"""
 
 CSS = """
 :root{--bg:#f5f7fa;--card:#fff;--fg:#11151c;--mut:#5f6773;--acc:#0f86c6;--accfg:#fff;--bd:#e2e6eb;--code:#eef1f5}
@@ -92,6 +107,8 @@ header{display:flex;align-items:center;gap:14px;margin-bottom:8px}header h1{font
 padding:12px 16px;border-radius:12px}.btn:hover{filter:brightness(1.07)}
 .sha{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:8px;border-radius:8px;word-break:break-all;color:var(--mut)}
 .how{font-size:14px;color:var(--fg)}.soon{color:var(--mut);font-weight:600}
+.warn{font-size:14px;background:var(--code);border-left:4px solid #d08a00;padding:10px 12px;border-radius:8px}
+.warn ol{margin:6px 0;padding-left:20px}.warn li{margin:3px 0}
 footer{margin-top:28px;color:var(--mut);font-size:14px}a{color:var(--acc)}
 """
 
@@ -111,7 +128,9 @@ def render(state):
             f'<a class="btn" href="files/{html.escape(e["file"])}" download>Download for {p["name"]}</a>'
             f'<div class="meta">{html.escape(e["file"])}</div>'
             f'<div class="sha" title="SHA-256">SHA-256: {e["sha256"]}</div>'
-            f'<div class="how">{HOWTO[key]}</div></section>')
+            f'<div class="how">{HOWTO[key]}</div>'
+            + (MACOS_UNSIGNED if key == "macos" and not e.get("signed") else "")
+            + '</section>')
     cards.append('<section class="card" id="ios"><h2>iPhone &amp; iPad</h2><p class="soon">Coming soon</p>'
                  '<div class="how">The iOS app is on its way to TestFlight.</div></section>')
     updated = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -183,14 +202,30 @@ def cmd_put(platform, name, sha, build, date, note_b64=""):
     print(f"published {platform} b{build}: https://{APP_DOMAIN}/download/files/{name}")
 
 
+def cmd_signed(platform, build, sha):
+    """D69: CI marks the published macOS build as Developer ID-signed + notarized (after verifying it), which drops
+    the "how to open an unsigned app" note from the page. Only the exact published build/SHA-256 can be marked."""
+    if platform != "macos":
+        die("only macos builds can be marked as signed")
+    state = load()
+    e = state.get(platform)
+    if not e or e["build"] != int(build) or e["sha256"] != sha:
+        die(f"published {platform} is not b{build} with sha256 {sha}")
+    e["signed"] = True
+    save_and_render(state)
+    print(f"marked {platform} b{build} as signed + notarized")
+
+
 def main(argv):
     if argv and argv[0] == "ssh":   # forced command of the upload key
         argv = shlex.split(os.environ.get("SSH_ORIGINAL_COMMAND", ""))
     if not argv:
-        die("usage: put|status|render")
+        die("usage: put|signed|status|render")
     cmd, rest = argv[0], argv[1:]
     if cmd == "put" and len(rest) in (5, 6):
         cmd_put(*rest)
+    elif cmd == "signed" and len(rest) == 3:
+        cmd_signed(*rest)
     elif cmd == "status":
         print(json.dumps(load(), indent=1, sort_keys=True))
     elif cmd == "render":
