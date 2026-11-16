@@ -1,14 +1,21 @@
 // PSST — test administračnej stránky https://app.macet.eu/admin na produkcii (D56).
-//   node admin-page-test.mjs <out-dir> <accounts.json>     (accounts.json: {"<admin user>": "pw", "<plain user>": "pw"} (order matters))
+//   node admin-page-test.mjs <out-dir> <accounts.json> [<pw-user>]
+//     accounts.json: {"<admin user>": "pw", "<plain user>": "pw", "<pw-user>": "pw"} (order matters: admin first, plain second)
+//     ADMIN_TEST_ONLY=pwreset  → len prihlásenie admina + test "Nastaviť nové heslo" (bez pozvánok/registrácií)
+//     PSST_SSH=psst            → overí aj záznam v audit logu na serveri (ssh <host> sudo tail …/audit.log)
 // Overí: prihlásenie cez MAS, pozvánka → registrácia → "použitá" + priradenie, blokovanie/odblokovanie,
-// zrušenie pozvánky → registrácia neprejde, 403 pre neadmina, CSRF/Origin ochrana, geo sa nedá zablokovať.
+// zrušenie pozvánky → registrácia neprejde, 403 pre neadmina, CSRF/Origin ochrana, geo sa nedá zablokovať,
+// nové heslo (D70): heslo sa ukáže raz, audit bez hesla, prihlásenie do appky novým heslom, staré neplatí.
+// <pw-user> = čerstvý testovací účet (napr. qa-pw<MMDDHHMM>), heslo v accounts.json; po teste ho deaktivujte.
 // Na konci vypíše JSON {codes, user} pre upratovanie.
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
-import { registerViaMas } from "./psst-auth.mjs";
+import { execFileSync } from "node:child_process";
+import { loginViaMas, MAS_URL_RE, registerViaMas } from "./psst-auth.mjs";
 
-const [out, accFile] = process.argv.slice(2);
+const [out, accFile, PWUSER] = process.argv.slice(2);
+const ONLY = process.env.ADMIN_TEST_ONLY || "";
 fs.mkdirSync(out, { recursive: true });
 const acc = JSON.parse(fs.readFileSync(accFile, "utf8"));
 const [ADM, PLAIN] = Object.keys(acc); // first = admin account, second = plain account
@@ -51,7 +58,7 @@ const sec = (page, title) => page.locator("section").filter({ has: page.locator(
 const row = (page, text) => sec(page, "Pozvánky").locator("tr", { hasText: text }).first();
 const mrow = (page, text) => sec(page, "Členovia").locator("tr", { hasText: text }).first();
 const sfx = Date.now() % 100000;
-const newUser = `qa-inv${sfx}`;
+const newUser = ONLY === "pwreset" ? null : `qa-inv${sfx}`;
 const codes = [];
 
 // 1) admin login
@@ -66,6 +73,7 @@ check("session cookie: Secure, HttpOnly, SameSite=Strict, Path=/admin, ≤ 30 mi
 const html = await adm.page.content();
 check("v prehliadači nie je admin token (len náhodné ID session + CSRF)", !/mct_|mat_|Bearer|client_secret/.test(html));
 
+if (ONLY !== "pwreset") {
 // 2) invite A → registration
 const invA = await newInvite(adm.page, "test A");
 codes.push(invA.code);
@@ -126,6 +134,66 @@ check("neadmin → 403", pl.status() === 403 && /Prístup zamietnutý/.test(awai
 await shot(pl.page, "6-forbidden");
 const direct = await pl.ctx.request.get(A, { maxRedirects: 0 });
 check("neadmin bez session → presmerovanie na prihlásenie", [302, 303, 307].includes(direct.status()), String(direct.status()));
+} // ONLY
+
+// 8) nové heslo pre člena (D70)
+if (PWUSER) {
+    const oldPw = acc[PWUSER];
+    await adm.page.setViewportSize({ width: 1280, height: 900 });
+    await adm.page.goto(A);
+    const geoRow2 = await sec(adm.page, "Členovia").locator("tr").filter({ has: adm.page.locator("b", { hasText: /^geo$/ }) }).first().innerHTML();
+    check("geo: bez tlačidla Nastaviť nové heslo", !/Nastaviť nové heslo/.test(geoRow2));
+    const adminRows = await sec(adm.page, "Členovia").locator("tr", { hasText: "(admin)" }).allInnerTexts();
+    check("admin účty: bez tlačidla Nastaviť nové heslo", adminRows.every((t) => !/Nastaviť nové heslo/.test(t)), `${adminRows.length} admin riadkov`);
+    const form = mrow(adm.page, PWUSER).locator('form[action$="/password"]');
+    const action = await form.getAttribute("action");
+    const bad = await adm.ctx.request.post("https://app.macet.eu" + action, { form: { csrf: "zly" }, headers: { Origin: "https://app.macet.eu" }, maxRedirects: 0 });
+    check("nové heslo: POST bez platného CSRF → 403", bad.status() === 403, String(bad.status()));
+    let confirmText = "";
+    const onDialog = (d) => { confirmText = d.message(); };
+    adm.page.on("dialog", onDialog);
+    await form.locator('button:has-text("Nastaviť nové heslo")').click();
+    await adm.page.waitForSelector("#newpw", { timeout: 20000 });
+    adm.page.off("dialog", onDialog);
+    check("nové heslo: pred resetom potvrdenie", confirmText.includes(PWUSER) && /ostanú prihlásené/.test(confirmText), confirmText);
+    const newPw = (await adm.page.locator("#newpw").innerText()).trim();
+    const box = await adm.page.locator("#pwreset").innerText();
+    check("nové heslo: 4 skupiny, čitateľné", /^[a-z2-9]{4}(-[a-z2-9]{4}){3}$/.test(newPw), newPw.replace(/[a-z2-9]/g, "x"));
+    check("nové heslo: tlačidlo Kopírovať + pokyny (raz, bezpečne, zmeniť v Nastaveniach účtu, relácie ostávajú)",
+        /Kopírovať/.test(box) && /iba teraz/.test(box) && /bezpečne/.test(box) && /Nastaveniach účtu/.test(box) && /ostávajú prihlásené/.test(box),
+        box.replace(/\s+/g, " ").replace(newPw, "<heslo>").slice(0, 160));
+    await shot(adm.page, "7-password-reset");
+    await adm.page.goto(A);
+    check("nové heslo: po obnovení stránky sa už nezobrazí", (await adm.page.locator("#newpw").count()) === 0 && !(await adm.page.content()).includes(newPw));
+    if (process.env.PSST_SSH) {
+        const log = execFileSync("ssh", [process.env.PSST_SSH, "sudo tail -n 200 /opt/psst/server/data/admin/audit.log"], { encoding: "utf8" });
+        const recs = log.trim().split("\n").map((l) => { try { return JSON.parse(l); } catch { return {}; } });
+        const rec = recs.reverse().find((r) => r.action === "user_password_reset" && r.target === PWUSER);
+        check("audit log: user_password_reset (kto/kedy/komu), bez hesla",
+            rec && rec.user === ADM && rec.ts && !log.includes(newPw), rec ? JSON.stringify({ ...rec, ip: "…" }) : "chýba");
+    }
+    const c1 = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const p1 = await c1.newPage();
+    await p1.goto("https://app.macet.eu/#/login");
+    let loginOk = true, loginErr = "";
+    await loginViaMas(p1, PWUSER, newPw).catch((e) => { loginOk = false; loginErr = String(e).slice(0, 150); });
+    check("prihlásenie do appky (Element Web → MAS) novým heslom → zoznam miestností", loginOk && (await p1.locator(".mx_LeftPanel, .mx_RoomListPanel").count()) > 0, loginErr || p1.url());
+    await shot(p1, "8-login-new-password");
+    await c1.close();
+    const c2 = await browser.newContext({ viewport: { width: 1280, height: 860 } });
+    const p2 = await c2.newPage();
+    await p2.goto("https://app.macet.eu/#/login");
+    await p2.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().click({ timeout: 90000 });
+    await p2.waitForURL(MAS_URL_RE, { timeout: 60000 });
+    await p2.fill('input[name="username"]', PWUSER);
+    await p2.fill('input[name="password"]', oldPw);
+    await p2.locator("button[type=submit]").first().click();
+    await p2.waitForTimeout(4000);
+    const still = MAS_URL_RE.test(p2.url()) && (await p2.locator('input[name="password"]').count()) > 0;
+    check("staré heslo už neplatí (MAS prihlásenie odmietne)", still, (await p2.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 120));
+    await shot(p2, "9-old-password-rejected");
+    await c2.close();
+}
 
 await browser.close();
 const fails = res.filter((x) => !x.ok).length;

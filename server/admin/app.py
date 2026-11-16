@@ -3,6 +3,7 @@
 - prihlásenie výhradne cez MAS (OIDC authorization code + PKCE), prístup len pre účty s admin právom v MAS
 - pozvánky = registračné tokeny MAS (tie isté, ktoré vyžaduje registrácia v appkách), cez MAS admin API
 - blokovanie = MAS lock/unlock (+ príznak locked v Synapse, ako scripts/members.sh)
+- nové heslo = MAS admin API set-password, náhodné dočasné heslo sa ukáže raz (D70); relácie člena ostávajú
 - admin tokeny/tajomstvá len v kontajneri (súbory zo server/secrets), nikdy v prehliadači
 - session na serveri (cookie len náhodné ID), CSRF token, rate limiting, audit log (JSON lines)
 """
@@ -384,6 +385,15 @@ async def index(req: Request, created: str = ""):
         syn = {}
 
     out = []
+    flash = s.pop("pw_flash", None)   # nové heslo: zobrazí sa len raz, nikde sa neukladá
+    if flash:
+        out.append(f'<section class="ok" id="pwreset"><h2>Nové heslo pre {esc(flash["name"])}</h2>'
+                   f'<p>Dočasné heslo: <code id="newpw">{esc(flash["pw"])}</code> '
+                   f'<button class="sec" onclick="cp(\'newpw\',this)">Kopírovať</button></p>'
+                   f'<p>Heslo sa zobrazuje <b>iba teraz</b> — po obnovení stránky ho už neuvidíte. Odovzdajte ho členovi bezpečne '
+                   f'(osobne alebo telefonicky, nie do verejnej miestnosti). Po prihlásení si ho má hneď zmeniť v Nastaveniach účtu '
+                   f'(<a href="{esc(MAS_PUBLIC)}/account">{esc(MAS_PUBLIC.split("://", 1)[-1])}/account</a>).</p>'
+                   f'<p class="mut">Doterajšie heslo už neplatí. Zariadenia, na ktorých je člen prihlásený, ostávajú prihlásené.</p></section>')
     if created:
         t = next((x for x in tokens if x["id"] == created), None)
         if t:
@@ -432,11 +442,14 @@ async def index(req: Request, created: str = ""):
             st, cls = "aktívny", "free"
         btn = ""
         if name not in PROTECTED and not a.get("admin") and not a.get("deactivated_at"):
+            btn = (f'<form class="inline" method="post" action="/admin/users/{esc(u["id"])}/password" '
+                   f'onsubmit="return confirm(\'Nastaviť nové heslo pre {esc(name)}? Doterajšie heslo prestane platiť, prihlásené zariadenia ostanú prihlásené.\')">'
+                   f'<input type="hidden" name="csrf" value="{esc(s["csrf"])}"><button class="sec">Nastaviť nové heslo</button></form> ')
             if a.get("locked_at"):
-                btn = (f'<form class="inline" method="post" action="/admin/users/{esc(u["id"])}/unlock"><input type="hidden" name="csrf" value="{esc(s["csrf"])}">'
+                btn += (f'<form class="inline" method="post" action="/admin/users/{esc(u["id"])}/unlock"><input type="hidden" name="csrf" value="{esc(s["csrf"])}">'
                        f'<button class="sec">Odblokovať</button></form>')
             else:
-                btn = (f'<form class="inline" method="post" action="/admin/users/{esc(u["id"])}/lock" onsubmit="return confirm(\'Zablokovať {esc(name)}?\')">'
+                btn += (f'<form class="inline" method="post" action="/admin/users/{esc(u["id"])}/lock" onsubmit="return confirm(\'Zablokovať {esc(name)}?\')">'
                        f'<input type="hidden" name="csrf" value="{esc(s["csrf"])}"><button class="danger">Zablokovať</button></form>')
         (gone if a.get("deactivated_at") else rows).append(
             f'<tr><td data-l="Meno"><b>{esc(name)}</b>{" <span class=mut>(admin)</span>" if a.get("admin") else ""}</td>'
@@ -446,7 +459,8 @@ async def index(req: Request, created: str = ""):
     folded = (f'<details><summary>Deaktivované účty ({len(gone)})</summary><div class="tbl"><table>{head}{"".join(gone)}</table></div></details>'
               if gone else "")
     out.append(f'<section><h2>Členovia</h2><div class="tbl"><table>{head}{"".join(rows)}</table></div>{folded}'
-               '<p class="mut">Zablokovanie je vratné: účet sa nedá použiť ani prihlásiť, správy a miestnosti ostávajú.</p></section>')
+               '<p class="mut">Zablokovanie je vratné: účet sa nedá použiť ani prihlásiť, správy a miestnosti ostávajú. '
+               'Nové heslo: vygeneruje sa dočasné heslo a zobrazí sa raz; prihlásené zariadenia člena ostávajú prihlásené.</p></section>')
     out.append("""<script>function cp(id,b){navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{const t=b.innerText;b.innerText='Skopírované';setTimeout(()=>b.innerText=t,1500)})}</script>""")
     return HTMLResponse(page("Správa", "".join(out), s["user"], s["csrf"]))
 
@@ -519,6 +533,35 @@ async def lock_user(req: Request, uid: str):
 @app.post("/admin/users/{uid}/unlock")
 async def unlock_user(req: Request, uid: str):
     return await set_lock(req, uid, False)
+
+
+PW_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"   # bez l/1/o/0/i — čitateľné aj na telefóne
+
+
+def temp_password() -> str:
+    # 4 skupiny po 4 znaky z 31 znakov ≈ 79 bitov náhody, napr. "k7mq-x3pr-9tbn-w4hz"
+    return "-".join("".join(secrets.choice(PW_ALPHABET) for _ in range(4)) for _ in range(4))
+
+
+@app.post("/admin/users/{uid}/password")
+async def reset_password(req: Request, uid: str):
+    s, r = await require_admin(req)
+    if r:
+        return r
+    if await check_csrf(req, s) is None:
+        return PlainTextResponse("Neplatný CSRF token.", status_code=403)
+    u = (await mas("GET", f"/users/{uid}"))["data"]["attributes"]
+    name = u["username"]
+    # rovnaké pravidlá ako pri blokovaní: chránené účty, admini (vrátane servisného) a vlastný účet nie
+    if name in PROTECTED or name in SERVICE_USERS or u.get("admin") or name == s["user"] or u.get("deactivated_at"):
+        audit(s["user"], client_ip(req), "password_reset_refused", target=name)
+        return PlainTextResponse(f"Účtu {name} sa nedá nastaviť nové heslo.", status_code=403)
+    pw = temp_password()
+    # relácie člena sa zámerne neukončujú (D70) — MAS set-password ich nechá platné
+    await mas("POST", f"/users/{uid}/set-password", json={"password": pw, "skip_password_check": True})
+    audit(s["user"], client_ip(req), "user_password_reset", target=name)   # nikdy nie samotné heslo
+    s["pw_flash"] = {"name": name, "pw": pw}
+    return RedirectResponse("/admin#pwreset", status_code=303)
 
 
 @app.get("/admin/healthz")
