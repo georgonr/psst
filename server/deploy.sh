@@ -157,7 +157,7 @@ set_env() { # set_env KEY VALUE — prepíše/doplní hodnotu v .env
   else printf '%s=%s\n' "$1" "$2" >> .env; fi
 }
 umask 077
-mkdir -p data secrets secrets/mas secrets/apns secrets/fcm secrets/admin
+mkdir -p data secrets secrets/mas secrets/apns secrets/fcm secrets/admin downloads/files   # downloads/ before compose up (bind mount would be created as root)
 [ -f .env ] || { log "vytváram server/.env s novými tajomstvami"; printf '# PSST server — vygenerované %s. NECOMMITOVAŤ. Zálohovať!\n' "$(date -u +%FT%TZ)" > .env; }
 for k in $ENV_KEYS; do grep -q "^${k}=" .env || printf '%s=%s\n' "$k" "$(default_for "$k")" >> .env; done
 # hodnoty z príkazového riadka majú prednosť (zmena IP/e-mailu/Team ID pri opakovanom nasadení)
