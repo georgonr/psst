@@ -178,6 +178,11 @@ ALL_DOMAINS="$(printf "%s\n" "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUT
 [ -s secrets/mas/encryption ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/encryption
 [ -s secrets/mas/rsa.pem ] || openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out secrets/mas/rsa.pem 2>/dev/null
 [ -s secrets/mas/ec.pem ] || openssl ecparam -name prime256v1 -genkey -noout -out secrets/mas/ec.pem 2>/dev/null
+# Web Push (D76): VAPID kľúč (P-256) vzniká len tu na serveri; verejná časť ide webu cez /psst-push.json
+mkdir -p secrets/webpush
+[ -s secrets/webpush/vapid_private.pem ] || openssl ecparam -name prime256v1 -genkey -noout -out secrets/webpush/vapid_private.pem 2>/dev/null
+VAPID_PUBLIC_KEY="$(openssl ec -in secrets/webpush/vapid_private.pem -pubout -outform DER 2>/dev/null | tail -c 65 | base64 | tr '+/' '-_' | tr -d '=\n')"
+[ "${#VAPID_PUBLIC_KEY}" = 87 ] || die "secrets/webpush/vapid_private.pem: neplatný VAPID kľúč"
 [ -s secrets/mas/mas_shared_secret ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/mas_shared_secret
 # administrácia (D56): tajomstvo MAS klienta + heslo read-only DB roly psst_admin_ro
 [ -s secrets/admin/client_secret ] || openssl rand -hex 32 | tr -d "\n" > secrets/admin/client_secret
@@ -321,6 +326,17 @@ else
   [ -n "$APNS_KEY" ] && warn "APNs kľúč je nahraný, ale chýba --apple-team-id → iOS push vypnutý"
   log "iOS push: vypnutý (secrets/apns/AuthKey_<KEY_ID>.p8 + --apple-team-id)"
 fi
+# Web Push (D76): psst web v prehliadači (Chrome/Edge/Firefox/Safari) cez Sygnal webpush + VAPID kľúč zo
+# secrets/webpush. allowed_endpoints: Sygnal posiela len známym push službám prehliadačov (nie na ľubovoľné URL).
+WEB_PUSH_APP_ID="${WEB_PUSH_APP_ID:-eu.macet.psst.web}"
+SYG_APPS+="$(printf '  %s:\n    type: webpush\n    vapid_private_key: /webpush/vapid_private.pem\n    vapid_contact_email: %s\n    ttl: 3600\n    allowed_endpoints:\n      - "fcm.googleapis.com"\n      - "*.push.services.mozilla.com"\n      - "*.notify.windows.com"\n      - "web.push.apple.com"\n ' \
+  "$WEB_PUSH_APP_ID" "${LETSENCRYPT_EMAIL:-admin@${MATRIX_DOMAIN}}")"$'\n'
+printf '{\n    "app_id": "%s",\n    "vapid_public_key": "%s",\n    "gateway_url": "https://%s/_matrix/push/v1/notify"\n}\n' \
+  "$WEB_PUSH_APP_ID" "$VAPID_PUBLIC_KEY" "$MATRIX_DOMAIN" > data/config/app-default/psst-push.json.tmp
+if [ -f data/config/app-default/psst-push.json ]; then cat data/config/app-default/psst-push.json.tmp > data/config/app-default/psst-push.json; rm -f data/config/app-default/psst-push.json.tmp
+else mv data/config/app-default/psst-push.json.tmp data/config/app-default/psst-push.json; fi
+chmod 644 data/config/app-default/psst-push.json
+log "Web push: Sygnal webpush ($WEB_PUSH_APP_ID), verejný VAPID kľúč na https://$APP_DOMAIN/psst-push.json"
 if [ -n "$SYG_APPS" ]; then
   { sed '/__SYGNAL_APPS__/,$d' templates/sygnal/sygnal.yaml; printf '%s' "$SYG_APPS" | sed 's/^ $//'; } > data/config/sygnal/sygnal.tmp
   install -m 644 data/config/sygnal/sygnal.tmp data/config/sygnal/sygnal.yaml; rm -f data/config/sygnal/sygnal.tmp
@@ -328,9 +344,11 @@ if [ -n "$SYG_APPS" ]; then
   if [ "$(id -u)" = 0 ]; then
     [ -s "$FCM_KEY" ] && { chown root:root "$FCM_KEY"; chmod 600 "$FCM_KEY"; }
     [ -n "$APNS_KEY" ] && { chown root:root "$APNS_KEY"; chmod 600 "$APNS_KEY"; }
+    chown -R root:root secrets/webpush; chmod 700 secrets/webpush; chmod 600 secrets/webpush/vapid_private.pem
   else
     [ -s "$FCM_KEY" ] && chmod 644 "$FCM_KEY"
     [ -n "$APNS_KEY" ] && chmod 644 "$APNS_KEY"
+    chmod 755 secrets/webpush; chmod 644 secrets/webpush/vapid_private.pem
   fi
   PROFILES="sygnal"
 fi

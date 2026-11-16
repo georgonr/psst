@@ -149,10 +149,9 @@ services:
       - "127.0.0.1:8081:8081"
     networks: [psst]
 
-  # Sygnal — vlastná Matrix push brána: Android cez FCM HTTP v1 (Firebase projekt psst-macet), iOS cez APNs.
-  # Spúšťa sa s profilom "sygnal" (deploy.sh ho zapne, keď nájde secrets/fcm/service-account.json
-  # a/alebo secrets/apns/AuthKey_<KEY_ID>.p8). Zvonka dostupný len cez nginx: https://chat…/_matrix/push/v1/notify
-  # (./deploy.sh ho zapne, keď nájde secrets/apns/AuthKey_<KEY_ID>.p8).
+  # Sygnal — vlastná Matrix push brána: Android cez FCM HTTP v1 (Firebase projekt psst-macet), iOS cez APNs,
+  # web cez Web Push (VAPID, D76). Profil "sygnal" zapína deploy.sh (web push je vždy, FCM/APNs podľa kľúčov
+  # v secrets/). Zvonka dostupný len cez nginx: https://chat…/_matrix/push/v1/notify
   sygnal:
     image: docker.io/matrixdotorg/sygnal:v0.15.1
     profiles: ["sygnal"]
@@ -164,6 +163,7 @@ services:
       - ./data/config/sygnal/sygnal.yaml:/config/sygnal.yaml:ro
       - ./secrets/apns:/apns:ro
       - ./secrets/fcm:/fcm:ro
+      - ./secrets/webpush:/webpush:ro   # VAPID kľúč pre web push (D76)
     networks: [psst]
 
   # Budíček pri žiadosti o overenie zariadenia (DECISIONS D68): nginx sem zrkadlí m.key.verification.request,
@@ -176,7 +176,7 @@ services:
     logging: *logging
     environment:
       MATRIX_DOMAIN: ${MATRIX_DOMAIN}
-      WAKE_APP_IDS: ${ANDROID_PUSH_APP_IDS:-eu.macet.psst}
+      WAKE_APP_IDS: ${ANDROID_PUSH_APP_IDS:-eu.macet.psst} ${WEB_PUSH_APP_ID:-eu.macet.psst.web}
     volumes:
       - ./secrets/admin-run:/secrets:ro   # admin_token (UID 10001, viď admin_secrets v scripts/lib.sh)
     depends_on:

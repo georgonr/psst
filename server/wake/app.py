@@ -8,9 +8,9 @@ to this service (the client's request itself goes to Synapse unchanged). For eac
   1. validate the caller's access token with Synapse (/account/whoami) → user id + requesting device,
   2. keep only targets that are the caller's own user (self-verification; never wake other people),
   3. read the user's pushers through the Synapse admin API (token stays on the server),
-  4. send one high-priority push through our Sygnal to every psst Android pusher except the requesting device,
-     with the marker room id !psst-verification:<domain>. The psst Android app shows
-     "Žiadosť o overenie — otvorte psst" for it (no message content, nothing else is fetched).
+  4. send one high-priority push through our Sygnal to every psst Android / psst web (Web Push, D76) pusher except
+     the requesting device, with the marker room id !psst-verification:<domain>. The psst Android app and the psst
+     web service worker show "Žiadosť o overenie — otvorte psst" for it (no message content, nothing else is fetched).
 
 At most one wake per user per WAKE_INTERVAL seconds. Stdlib only.
 """
@@ -82,7 +82,7 @@ def wake(auth_header: str, body: bytes):
         data = {k: v for k, v in (p.get("data") or {}).items() if k != "url"}
         devices.append({"app_id": p["app_id"], "pushkey": p["pushkey"], "pushkey_ts": p.get("ts", 0), "data": data})
     if not devices:
-        log.info("wake for %s: no psst Android pusher", _short(user))
+        log.info("wake for %s: no psst Android/web pusher", _short(user))
         return
     note = {"notification": {
         "event_id": MARKER_EVENT, "room_id": MARKER_ROOM, "type": "m.key.verification.request",

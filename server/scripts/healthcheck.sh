@@ -57,6 +57,10 @@ if [ "${COMPOSE_PROFILES:-}" = sygnal ]; then
     compose logs --no-log-prefix sygnal 2>/dev/null | grep -qiE "Unable to load|InvalidConfig|PushkinSetupException|service_account_file" \
       && bad "Sygnal hlási chybu konfigurácie (compose logs sygnal)" || ok "Sygnal FCM v1 nakonfigurovaný"
   fi
+  # Web push (D76): verejný VAPID kľúč pre web + Sygnal webpush bez chyby nastavenia
+  check "Web push: /psst-push.json (VAPID)" "https://$APP_DOMAIN/psst-push.json" '"vapid_public_key"'
+  compose logs --no-log-prefix sygnal 2>/dev/null | grep -qiE "vapid|PushkinSetupException" \
+    && bad "Sygnal webpush: chyba konfigurácie (compose logs sygnal)" || ok "Sygnal webpush nakonfigurovaný"
 fi
 
 # --- TURN/TLS na 443 (SNI turn.)
