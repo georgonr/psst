@@ -131,6 +131,11 @@ record("test_ringing", tr.playing && tr.ended && tr.ringStarted && tr.ringDurati
 
 // ---------------------------------------------------------------- 3. real changes show up
 if (PLATFORM === "windows") {
+    // raw Do-not-disturb signals next to what the app concluded (WNF quiet-hours profile, SHQueryUserNotificationState)
+    const ps = `Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class D { [DllImport("ntdll.dll")] static extern int NtQueryWnfStateData(ref ulong n, IntPtr t, IntPtr s, out uint c, byte[] b, ref uint z); [DllImport("shell32.dll")] static extern int SHQueryUserNotificationState(out int q); public static string Q() { ulong n = 0x0D83063EA3BF1C75UL; uint c; byte[] b = new byte[4]; uint z = 4; int st = NtQueryWnfStateData(ref n, IntPtr.Zero, IntPtr.Zero, out c, b, ref z); int q; SHQueryUserNotificationState(out q); return "wnf_status=" + st + " size=" + z + " value=" + BitConverter.ToInt32(b, 0) + " quns=" + q; } }'; [D]::Q()`;
+    const diag = sh(`powershell -NoProfile -EncodedCommand ${Buffer.from(ps, "utf16le").toString("base64")}`).trim();
+    const regs = sh('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings"').replace(/\s+/g, " ").slice(0, 400);
+    record("win_dnd_raw", "info", `${diag} | ${regs} | edition ${sh("powershell -NoProfile -Command (Get-CimInstance Win32_OperatingSystem).Caption").trim()}`);
     const key = "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\eu.macet.psst";
     const before = sh(`reg query "${key}" /v Enabled`);
     sh(`reg add "${key}" /v Enabled /t REG_DWORD /d 0 /f`);
