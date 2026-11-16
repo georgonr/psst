@@ -49,6 +49,8 @@ wait_healthy postgres 120 || die "PostgreSQL nenaštartoval"
 compose exec -T postgres psql -U synapse -d synapse -qc "DROP DATABASE IF EXISTS mas" >/dev/null
 compose exec -T postgres psql -U synapse -d synapse -qc "CREATE DATABASE mas ENCODING 'UTF8' LC_COLLATE 'C' LC_CTYPE 'C' TEMPLATE template0" >/dev/null
 compose exec -T postgres pg_restore -U synapse -d synapse --no-owner --clean --if-exists < "$B/synapse.dump" || warn "pg_restore synapse hlásil varovania"
+# rola administrácie (D56) musí existovať pred obnovou MAS — inak sa jej GRANT-y zahodia; heslo nastaví deploy.sh
+compose exec -T postgres psql -U synapse -d synapse -qc "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'psst_admin_ro') THEN CREATE ROLE psst_admin_ro LOGIN; END IF; END \$\$" >/dev/null
 compose exec -T postgres pg_restore -U synapse -d mas --no-owner < "$B/mas.dump" || warn "pg_restore mas hlásil varovania"
 cmp -s "$B/signing.key" <(compose run --rm --no-deps -T --entrypoint cat synapse "/data/${MATRIX_DOMAIN}.signing.key") \
   && log "podpisový kľúč obnovený (zhoda)" || die "podpisový kľúč sa nezhoduje so zálohou!"
@@ -57,4 +59,5 @@ admin_secrets   # administrácia (D56): kópie tajomstiev pre UID 10001
 compose up -d --remove-orphans
 wait_healthy synapse 300 || die "Synapse nenaštartoval"
 for svc in nginx element-call livekit lk-jwt-service; do wait_healthy "$svc" 120 || warn "$svc ešte nie je healthy"; done
-log "obnova hotová — overte: scripts/healthcheck.sh"
+[ -d downloads ] || { mkdir -p downloads/files; chmod 755 downloads downloads/files; }
+log "obnova hotová — spustite deploy.sh (heslo DB roly administrácie, stránka /download) a overte: scripts/healthcheck.sh"

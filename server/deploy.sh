@@ -420,7 +420,10 @@ if [ "$(id -u)" = 0 ] && [ "$LOCAL_TEST" = 0 ]; then
   fi
   sudo -u psst-dl env APP_DOMAIN="$APP_DOMAIN" PSST_DOWNLOADS="$PWD/downloads" python3 scripts/downloads.py render >/dev/null
 else
-  mkdir -p downloads/files; PSST_DOWNLOADS="$PWD/downloads" APP_DOMAIN="$APP_DOMAIN" python3 scripts/downloads.py render >/dev/null || true
+  # (lokálny test / bez roota) nginx v kontajneri musí stránku čítať — umask 077 z vrchu skriptu by ju skryl
+  mkdir -p downloads/files; chmod 755 downloads downloads/files
+  (umask 022; PSST_DOWNLOADS="$PWD/downloads" APP_DOMAIN="$APP_DOMAIN" python3 scripts/downloads.py render >/dev/null) || true
+  chmod -R a+rX downloads
 fi
 # administrácia: read-only prístup k 2 tabuľkám MAS (kto sa ktorou pozvánkou zaregistroval) + Synapse admin token
 compose exec -T postgres psql -U synapse -d mas -v ON_ERROR_STOP=1 -q >/dev/null <<SQL || warn "DB rola psst_admin_ro: zlyhalo"
