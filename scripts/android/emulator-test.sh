@@ -45,6 +45,10 @@ dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over ou
     if printf '%s' "$t" | grep -q "isn't responding"; then
       # "Wait" lets the overloaded launcher ANR again right away; "Close app" restarts it (our app is not affected)
       log "INFO: dismissing system ANR dialog"; xy="$($CHECK tap "$OUT/_anr.xml" "Close app" || $CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
+    elif printf '%s' "$t" | grep -qE "^(Notifications & calls|Upozornenia a hovory)$"; then
+      # D74: the notifications & calls screen opens itself when something required is missing → Back (twice:
+      # it may already have opened a system settings page)
+      log "INFO: psst notifications & calls screen → Back"; adb shell input keyevent KEYCODE_BACK; sleep 1; continue
     elif printf '%s' "$t" | grep -qE "^(Full-screen calls|Reliable calls and messages|Message notifications|Messages on the lock screen|New psst version)$"; then
       log "INFO: psst prompt: $(printf '%s' "$t" | grep -E "^(Full-screen calls|Reliable calls and messages|Message notifications|Messages on the lock screen|New psst version)$") → Later"
       xy="$($CHECK tap "$OUT/_anr.xml" "Later" || $CHECK tap "$OUT/_anr.xml" "LATER")" || return 0
@@ -117,6 +121,9 @@ else
   fail "APK install failed"; exit 1
 fi
 adb shell pm list packages | grep -q "package:${PKG}$" && pass "package present" || fail "package not present"
+# grant what a user grants on the notifications & calls screen (D72/D74), so the smoke test starts on the app itself
+adb shell appops set "$PKG" USE_FULL_SCREEN_INTENT allow >/dev/null 2>&1 || true
+adb shell dumpsys deviceidle whitelist +"$PKG" >/dev/null 2>&1 || true
 
 # (c) element.io links must not resolve to psst any more; app.macet.eu should
 for url in "https://mobile.element.io/element/?account_provider=matrix.org" "https://app.element.io/#/room/#a:matrix.org"; do
