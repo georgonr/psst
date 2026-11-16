@@ -1,45 +1,45 @@
 {
  "web": {
-  "build": 22,
+  "build": 25,
   "date": "20261116",
-  "note": "Web Push: notifications with the web tab closed / in the background (D76)",
+  "note": "Nastavenia → Upozornenia a hovory: skutočný stav upozornení, zvuku, zvonenia, mikrofónu, kamery (desktop aj tray, spustenie po prihlásení, Nerušiť), test upozornenia a zvonenia; otvorí sa samo, keď chýbajú upozornenia (D75); obsahuje aj Web Push (D76)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261116-b22.tar.gz",
-    "sha256": "87e6cc29e9b508b42c37d5c603680f1064ba3a515ac106d84cf97f2f8a47006b"
+    "name": "psst-web-20261116-b25.tar.gz",
+    "sha256": "11a110465c0ed6b300c25d09471529fd6af867cbd547e451c022245b0ff7f2c2"
    }
   ]
  },
  "macos": {
-  "build": 22,
+  "build": 25,
   "date": "20261116",
-  "note": "Web Push: notifications with the web tab closed / in the background (D76)",
+  "note": "Nastavenia → Upozornenia a hovory: skutočný stav upozornení, zvuku, zvonenia, mikrofónu, kamery (desktop aj tray, spustenie po prihlásení, Nerušiť), test upozornenia a zvonenia; otvorí sa samo, keď chýbajú upozornenia (D75); obsahuje aj Web Push (D76)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261116-b22.dmg",
-    "sha256": "0acfe2488f22452e3f988f7fc663f9b2599a26906a74afcc72bebcc1606a5cf7"
+    "name": "psst-macos-20261116-b25.dmg",
+    "sha256": "5a01ea97deedc6996f9a0e005b73ebde8bbf95cd3b81d528ee7e39ccb1c29636"
    },
    {
-    "name": "psst-macos-20261116-b22.zip",
-    "sha256": "e93121905ba8134bdc018c8e1eaaf5a9e83cd721ebddd4d4706cbb9725e72d02"
+    "name": "psst-macos-20261116-b25.zip",
+    "sha256": "8e0b6935532b750248c922c4adec674e773647dd59059081b4811386923242df"
    }
   ]
  },
  "windows": {
-  "build": 22,
+  "build": 25,
   "date": "20261116",
-  "note": "Web Push: notifications with the web tab closed / in the background (D76)",
+  "note": "Nastavenia → Upozornenia a hovory: skutočný stav upozornení, zvuku, zvonenia, mikrofónu, kamery (desktop aj tray, spustenie po prihlásení, Nerušiť), test upozornenia a zvonenia; otvorí sa samo, keď chýbajú upozornenia (D75); obsahuje aj Web Push (D76)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261116-b22-setup.exe",
-    "sha256": "485d2d72afcdcfed914930f595a1d058739f2af2949786b9a5d586759de6ab04"
+    "name": "psst-windows-20261116-b25-setup.exe",
+    "sha256": "d2f480747276418a5cc9a0556b334101c4e078c1832a6ce87e260fa7def2ddce"
    },
    {
-    "name": "psst-windows-20261116-b22.msi",
-    "sha256": "5b3ef82de0c7fa314053c2103a023363acd86082f91801f922d01a85b8248744"
+    "name": "psst-windows-20261116-b25.msi",
+    "sha256": "b06a08d6f99473987cac4b1b78cf5d0874f8a449e44a0caeea98ec34323dd8f6"
    }
   ]
  },
