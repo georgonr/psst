@@ -33,11 +33,13 @@ async function login(user, password) {
         await sleep(1000);
     }
     await sleep(4000);
+    const uid = await p.evaluate(() => window.mxMatrixClientPeg?.get()?.getUserId() ?? null).catch(() => null);
+    if (!uid) throw new Error(`login of ${user} failed (no Matrix client after the MAS form; wrong password?)`);
     return p;
 }
 
 const b = await login(A.b.user, A.b.password);
-log(`partner ${A.b.user} signed in`);
+log(`partner ${A.b.user} signed in (${await b.evaluate(() => window.mxMatrixClientPeg.get().getUserId())})`);
 await b.evaluate(() => {
     const c = window.mxMatrixClientPeg.get();
     window.__seen = [];
