@@ -552,7 +552,16 @@ export async function logoutUi(p, shot = async () => {}) {
     if (!ok) await shot(p, "logout-stuck");
     return ok;
 }
+/** Decrypted share of older encrypted events; waits (≤ 2 min) while keys still arrive from backup / key sharing. */
 async function decryptedHistory(p) {
+    let h = await decryptedHistoryOnce(p);
+    for (let i = 0; i < 12 && h.enc && h.ok < h.enc; i++) {
+        await sleep(10000);
+        h = await decryptedHistoryOnce(p);
+    }
+    return h;
+}
+async function decryptedHistoryOnce(p) {
     return p.evaluate(async () => {
         const c = window.mxMatrixClientPeg.get();
         let enc = 0, ok = 0; const failed = [];
@@ -561,7 +570,7 @@ async function decryptedHistory(p) {
             for (const e of r.getLiveTimeline().getEvents()) if (e.isEncrypted()) {
                 enc++;
                 const cc = e.getClearContent();
-                if (!e.isDecryptionFailure() && cc && Object.keys(cc).length) ok++;
+                if (e.isRedacted() || (!e.isDecryptionFailure() && cc && Object.keys(cc).length)) ok++;
                 else failed.push(`${r.name}|${e.getClearType?.() || e.getType()}|${e.getSender()?.split(":")[0]}|${e.decryptionFailureReason ?? ""}`);
             }
         }
