@@ -132,8 +132,19 @@ if (!process.env.PSST_AUDIT_ONLY_ACCOUNT) {
 }
 
 // ---- notifications in a background tab / with the app closed
-record("notif_background", "upstream", "web: notifikácia príde, kým je karta otvorená (aj na pozadí); Element Web nemá Web Push");
-record("notif_closed", "upstream", "web: po zatvorení karty nič nepríde — Element Web nepodporuje Web Push (upstream)");
+// Web Push (D76) needs real Chrome (FCM): run scripts/web/webpush-test.mjs first and pass its results.json in
+// PSST_WEBPUSH_RESULT; headless Chromium here cannot subscribe to push.
+const WP = process.env.PSST_WEBPUSH_RESULT ? Object.fromEntries(JSON.parse(fs.readFileSync(process.env.PSST_WEBPUSH_RESULT, "utf8")).map((r) => [r.id, r])) : null;
+if (WP) {
+    const st = (...ids) => (ids.every((i) => WP[i]?.status === "ok") ? "ok" : "fail");
+    const n = (i) => WP[i]?.note ?? "chýba";
+    record("notif_background", st("web.background_tab_single_notification", "web.notification_tab_closed"), `Web Push (Chrome): appka v karte na pozadí → práve 1 notifikácia; karta zatvorená → ${n("web.notification_tab_closed")}`);
+    record("notif_closed", st("web.notification_tab_closed", "web.pusher_on_server(client API)"), `Web Push (Chrome, karta zatvorená, prehliadač beží): notifikácia service workera ${n("web.notification_tab_closed")}; pusher ${n("web.pusher_on_server(client API)")}`);
+    record("verify_wakeup", st("web.verification_wakeup"), `žiadosť o overenie pri zatvorenej karte → ${n("web.verification_wakeup")}`);
+} else {
+    record("notif_background", "na", "Web Push (D76) overuje scripts/web/webpush-test.mjs v skutočnom Chrome — spusti ho a nastav PSST_WEBPUSH_RESULT");
+    record("notif_closed", "na", "Web Push (D76) overuje scripts/web/webpush-test.mjs v skutočnom Chrome — spusti ho a nastav PSST_WEBPUSH_RESULT");
+}
 record("notif_lock", "na", "web: zamknutá obrazovka je vec OS/prehliadača");
 
 // ---- account flows (shared with the desktop audit): recovery key, QR, emoji verification, logout, re-login

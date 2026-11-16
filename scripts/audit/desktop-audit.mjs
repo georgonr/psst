@@ -183,7 +183,16 @@ try {
     const v = r.joined ? await remoteVideo(me, 1) : { playing: 0 };
     const paths = await icePaths(me);
     const udp = paths.some((x) => /\/udp/.test(x.local) && !/relay/.test(x.local));
-    record("call_udp_blocked", r.joined && v.playing >= 1 && !udp ? "ok" : "fail", `UDP zablokované firewallom: pripojenie ${r.joined}, video ${v.playing}, ICE ${JSON.stringify(paths.slice(0, 3))}`);
+    const ok = r.joined && v.playing >= 1 && !udp;
+    let diag = "";
+    if (!ok) {
+        await me.screenshot({ path: path.join(OUT, `${PLATFORM}-call-udp-blocked.png`) }).catch(() => {});
+        await partner.screenshot({ path: path.join(OUT, `${PLATFORM}-call-udp-blocked-partner.png`) }).catch(() => {});
+        const dlg = await me.locator(".mx_Dialog").first().innerText().catch(() => "");
+        const vis = await me.evaluate(() => `${document.visibilityState}/${document.hasFocus()}`).catch(() => "?");
+        diag = `; toast ${r.seen}, okno ${vis}${dlg ? `, dialóg „${dlg.replace(/\s+/g, " ").slice(0, 80)}“` : ""}`;
+    }
+    record("call_udp_blocked", ok ? "ok" : "fail", `UDP zablokované firewallom: pripojenie ${r.joined}, video ${v.playing}, ICE ${JSON.stringify(paths.slice(0, 3))}${diag}`);
     await hangUp(me, partner);
     execSync(unblock, { stdio: "inherit" });
 } catch (e) { record("call_udp_blocked", "fail", String(e.message).slice(0, 200)); }
