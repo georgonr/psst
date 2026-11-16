@@ -1,0 +1,85 @@
+# PSST feature audit of the desktop apps (docs/FEATURE-MATRIX.md, DECISIONS D64): the Windows MSI and the macOS DMG
+# from a "Web + Desktop" run, installed on GitHub runners and driven over CDP (scripts/audit/desktop-audit.mjs)
+# against production chat.macet.eu. Partner and third member are Element Web sessions on the same runner.
+# Test accounts only: secret PSST_AUDIT_DESKTOP_ACCOUNTS = {"windows": {a,b,c}, "macos": {a,b,c}} (deleted afterwards).
+name: Desktop audit
+on:
+    workflow_dispatch:
+        inputs:
+            run_id:
+                description: "Web + Desktop run id (empty = latest successful)"
+                required: false
+permissions:
+    contents: read
+    actions: read
+jobs:
+    audit:
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - platform: windows
+                      os: windows-latest
+                    - platform: macos
+                      os: macos-latest
+        runs-on: ${{ matrix.os }}
+        timeout-minutes: 75
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+              with:
+                  persist-credentials: false
+            - name: Download build
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  run="${{ inputs.run_id }}"
+                  [ -n "$run" ] || run=$(gh run list -R "$GITHUB_REPOSITORY" --workflow web-desktop.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+                  gh run download "$run" -R "$GITHUB_REPOSITORY" -n "psst-desktop-${{ matrix.platform }}" -D dl
+                  ls -la dl
+                  echo "Testing run $run" >> "$GITHUB_STEP_SUMMARY"
+            - name: Install (Windows MSI)
+              if: matrix.platform == 'windows'
+              shell: pwsh
+              run: |
+                  $msi = Get-ChildItem dl -Recurse -Filter *.msi | Select-Object -First 1
+                  $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$($msi.FullName)`"", '/qn' -Wait -PassThru
+                  if ($p.ExitCode -ne 0) { throw "msiexec exit $($p.ExitCode)" }
+                  $exe = Get-ChildItem "$env:LOCALAPPDATA\Programs", "$env:ProgramFiles" -Recurse -Filter psst.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+                  "BIN=$($exe.FullName)" >> $env:GITHUB_ENV
+                  "Installed $($msi.Name)" >> $env:GITHUB_STEP_SUMMARY
+            - name: Install (macOS DMG)
+              if: matrix.platform == 'macos'
+              run: |
+                  dmg=$(find dl -name '*.dmg' | head -1)
+                  hdiutil attach "$dmg" -nobrowse -mountpoint /Volumes/psst
+                  cp -R /Volumes/psst/psst.app /Applications/
+                  hdiutil detach /Volumes/psst
+                  xattr -dr com.apple.quarantine /Applications/psst.app || true
+                  echo "BIN=/Applications/psst.app/Contents/MacOS/psst" >> "$GITHUB_ENV"
+                  echo "Installed $(basename "$dmg")" >> "$GITHUB_STEP_SUMMARY"
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24
+            - name: Playwright
+              run: |
+                  mkdir -p audit && cp -R scripts/audit/* audit/
+                  cd audit && npm init -y >/dev/null && npm i playwright@1.64.1 >/dev/null && npx playwright install chromium >/dev/null
+            - name: Run audit
+              env:
+                  ACCOUNTS: ${{ secrets.PSST_AUDIT_DESKTOP_ACCOUNTS }}
+              run: |
+                  [ -n "$ACCOUNTS" ] || { echo "::error::secret PSST_AUDIT_DESKTOP_ACCOUNTS missing"; exit 1; }
+                  node -e 'const a=JSON.parse(process.env.ACCOUNTS)[process.argv[1]]; require("fs").writeFileSync(process.argv[2], JSON.stringify(a))' "${{ matrix.platform }}" "$RUNNER_TEMP/acc.json"
+                  cd audit
+                  node desktop-audit.mjs "$BIN" "$GITHUB_WORKSPACE/audit-results" "$RUNNER_TEMP/acc.json" "${{ matrix.platform }}" || true
+                  rm -f "$RUNNER_TEMP/acc.json"
+                  cat "$GITHUB_WORKSPACE/audit-results/${{ matrix.platform }}-result.md" >> "$GITHUB_STEP_SUMMARY" || true
+            - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+              if: always()
+              with:
+                  name: psst-audit-${{ matrix.platform }}
+                  path: audit-results/
+                  retention-days: 14
