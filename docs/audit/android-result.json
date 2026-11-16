@@ -1,0 +1,227 @@
+[
+ {
+  "id": "login",
+  "status": "ok",
+  "note": "prihlásenie cez MAS v Chrome Custom Tab → zoznam konverzácií"
+ },
+ {
+  "id": "logout",
+  "status": "ok",
+  "note": "Nastavenia → Remove this device → úvodná obrazovka (overené 2×)"
+ },
+ {
+  "id": "verify_emoji",
+  "status": "ok",
+  "note": "nové Android zariadenie ↔ web (overené zariadenie): emoji zhodné na oboch, web potvrdil cross-signing; po overení sa zaregistroval pusher"
+ },
+ {
+  "id": "verify_unverified_state",
+  "status": "ok",
+  "note": "nové prihlásenie zostane na „Confirm your digital identity“, kým sa neoverí; push sa registruje až po overení"
+ },
+ {
+  "id": "notif_background",
+  "status": "ok",
+  "note": "b18: vyskakovacie okno (heads-up) pri appke na pozadí, kanál PSST_MESSAGES_V4 importance HIGH, MessagingStyle + Quick reply"
+ },
+ {
+  "id": "notif_lock",
+  "status": "ok",
+  "note": "b18: správa na zamknutej obrazovke (PIN zámok v emulátore)"
+ },
+ {
+  "id": "dm",
+  "status": "ok",
+  "note": "šifrovaná DM založená z Androidu (Start chat): odoslanie aj príjem dešifrované na oboch stranách (web partner)"
+ },
+ {
+  "id": "receipts",
+  "status": "ok",
+  "note": "„Previous message read by …“ po prečítaní partnerom"
+ },
+ {
+  "id": "typing",
+  "status": "ok",
+  "note": "„QA android b is typing“"
+ },
+ {
+  "id": "reaction",
+  "status": "ok",
+  "note": "rýchla reakcia 👍 z menu správy → m.reaction u partnera"
+ },
+ {
+  "id": "reply",
+  "status": "ok",
+  "note": "odpoveď cez menu správy → m.in_reply_to u partnera"
+ },
+ {
+  "id": "edit",
+  "status": "ok",
+  "note": "úprava (m.replace) → partner vidí „android ping 1 EDITED“"
+ },
+ {
+  "id": "delete",
+  "status": "ok",
+  "note": "zmazanie (Remove) → u partnera redaction"
+ },
+ {
+  "id": "mention",
+  "status": "ok",
+  "note": "výber z návrhov @… → m.mentions + zvýraznenie u partnera"
+ },
+ {
+  "id": "voice",
+  "status": "ok",
+  "note": "nahrávanie podržaním tlačidla (mikrofón emulátora) → m.audio s org.matrix.msc3245.voice, šifrované"
+ },
+ {
+  "id": "file",
+  "status": "ok",
+  "note": "príloha zo Súborov → šifrovaný m.file, partner ho stiahne (authenticated media)"
+ },
+ {
+  "id": "image",
+  "status": "ok",
+  "note": "obrázok (PNG) → šifrovaný m.image 320×240 s náhľadom"
+ },
+ {
+  "id": "video",
+  "status": "ok",
+  "note": "video (MP4) → šifrovaný m.video, trvanie 2 s"
+ },
+ {
+  "id": "notif_open",
+  "status": "ok",
+  "note": "appka otvorená na zozname konverzácií → systémová notifikácia (kanál Messages) + odznak"
+ },
+ {
+  "id": "notif_closed",
+  "status": "ok",
+  "note": "proces appky ukončený (am kill) → FCM push appku zobudil, notifikácia so správou prišla"
+ },
+ {
+  "id": "group",
+  "status": "ok",
+  "note": "súkromná skupina založená v Androide (3 členovia, šifrovaná): správy oboma smermi dešifrované"
+ },
+ {
+  "id": "invite",
+  "status": "ok",
+  "note": "pozvánky pri zakladaní skupiny doručené obom; pred opravou servera (D65) appka mylne písala „This Matrix ID can't be found“"
+ },
+ {
+  "id": "members",
+  "status": "ok",
+  "note": "Roles & permissions → partner moderátor (PL 50), Remove user → tretí odstránený"
+ },
+ {
+  "id": "public",
+  "status": "ok",
+  "note": "kanál partnera nájdený v Room directory, Join → pripojený, staršiu správu vidí"
+ },
+ {
+  "id": "search",
+  "status": "upstream",
+  "note": "Element X Android nemá vyhľadávanie v správach (len hľadanie miestností podľa mena) — upstream, obchádzka: web/desktop"
+ },
+ {
+  "id": "search_public",
+  "status": "upstream",
+  "note": "Element X Android nemá vyhľadávanie v správach — upstream"
+ },
+ {
+  "id": "leave",
+  "status": "ok",
+  "note": "Room details → Leave room → u partnera membership leave"
+ },
+ {
+  "id": "block",
+  "status": "ok",
+  "note": "profil → Block user → m.ignored_user_list na serveri, nová správa blokovaného sa nezobrazí"
+ },
+ {
+  "id": "call_video",
+  "status": "ok",
+  "note": "prichádzajúci video hovor zazvonil (heads-up Incoming call, kanál zvonenia), prijatý → obraz aj zvuk oboma smermi (web partner: video+audio, ICE UDP 7882)"
+ },
+ {
+  "id": "screenshare",
+  "status": "upstream",
+  "note": "Element Call v Element X Android nemá tlačidlo zdieľania obrazovky (len mikrofón, kamera, reakcie) — upstream; prijímať zdieľanie od iných vie"
+ },
+ {
+  "id": "call_voice",
+  "status": "ok",
+  "note": "hlasový hovor spustený z Androidu → web prijal, zvuk tečie (ICE UDP 7882); 1× chyba „Sorry, an error occurred“ pri štarte hneď po skončení predošlého hovoru, druhý pokus OK"
+ },
+ {
+  "id": "call_group",
+  "status": "ok",
+  "note": "skupinový hovor (3 účastníci: Android + 2× web): Android sa pripojil cez Join, vidí video oboch; odosielanie videa z Androidu emulátor neoverí (nemá prednú kameru)"
+ },
+ {
+  "id": "call_udp_blocked",
+  "status": "ok",
+  "note": "UDP zablokované v emulátore (iptables, zahodených 65 UDP paketov) → hovor sa pripojil a video od partnera beží cez TCP (LiveKit 7881 / TURN-TLS 443)"
+ },
+ {
+  "id": "profile",
+  "status": "ok",
+  "note": "Edit profile: meno + avatar z galérie → Save; iný účet cez API vidí nové meno aj avatar"
+ },
+ {
+  "id": "password",
+  "status": "ok",
+  "note": "Nastavenia → Manage account & devices → MAS Change password; nové heslo funguje, staré nie"
+ },
+ {
+  "id": "sessions",
+  "status": "ok",
+  "note": "Manage account & devices → MAS Devices: zoznam zariadení (model, posledná aktivita) s „Remove device“; Element X nemá vlastný zoznam (zámer upstreamu pri MAS)"
+ },
+ {
+  "id": "recovery",
+  "status": "ok",
+  "note": "Encryption → Get recovery key → Generate → uložený; záloha kľúčov zapnutá"
+ },
+ {
+  "id": "key_backup_restore",
+  "status": "ok",
+  "note": "odhlásenie → prihlásenie → „Use recovery key“ → zariadenie overené, staré šifrované správy (aj prílohy) čitateľné"
+ },
+ {
+  "id": "history_new_device",
+  "status": "ok",
+  "note": "nové prihlásenie (nové zariadenie) po obnovení kľúčom vidí celú staršiu históriu DM"
+ },
+ {
+  "id": "qr_login",
+  "status": "ok",
+  "note": "„Sign in with QR code“ → sken QR z webu (Link new device) → 2 číslice + overovací kód v MAS → Grant access → prihlásený a overený; po oprave D66 aj pri 96 s trvaní (predtým limit 60 s → „sign in was not completed in time“)"
+ },
+ {
+  "id": "verify_qr",
+  "status": "upstream",
+  "note": "Element X Android pri overovaní ponúka len emoji (Compare emojis), QR overenie nemá — upstream; QR slúži na prihlásenie nového zariadenia"
+ },
+ {
+  "id": "register",
+  "status": "ok",
+  "note": "Create account → MAS registrácia (meno, heslo, podmienky) → pozývací token → zobrazované meno → súhlas → appka; pri existujúcej MAS relácii v prehliadači treba najprv „Use another account“"
+ },
+ {
+  "id": "download_page",
+  "status": "ok",
+  "note": "stránka ponúka APK arm64 b23 (SHA-256 overené po nahratí cez HTTPS); aktualizácia b13 → b18 → b20 → b23 prešla so zachovaním prihlásenia/kanálov"
+ },
+ {
+  "id": "admin",
+  "status": "na",
+  "note": "admin stránka je webová (app.macet.eu/admin), testovaná v stĺpci Web"
+ },
+ {
+  "id": "update_check",
+  "status": "ok",
+  "note": "b20 ponúkol „New psst version – build 21“ (app.macet.eu/download/latest.json); tlačidlo Download otváralo psst namiesto prehliadača (App Link na celú doménu) → opravené v b23: /download/ otvorí prehliadač, odkazy /#/… ďalej psst (overené, App Links stále „verified“)"
+ }
+]

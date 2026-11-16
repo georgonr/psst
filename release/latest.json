@@ -1,69 +1,69 @@
 {
  "web": {
-  "build": 12,
-  "date": "20261115",
-  "note": "Help & About shows build number and date; desktop checks app.macet.eu/download for new builds.",
+  "build": 15,
+  "date": "20261116",
+  "note": "macOS build carries the build number (About, update check); force_verification also blocks sessions that lost verification (D62).",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261115-b12.tar.gz",
-    "sha256": "222ae099336bf3f99ed83f350afd2ad09b7a8ebe4d8d35ea8d4304d7e3013337"
+    "name": "psst-web-20261116-b15.tar.gz",
+    "sha256": "eed03e09ebbf967716929ea7aa2097f654fd159723efb383bdb17610777c9b8e"
    }
   ]
  },
  "macos": {
-  "build": 12,
-  "date": "20261115",
-  "note": "Help & About shows build number and date; desktop checks app.macet.eu/download for new builds.",
+  "build": 15,
+  "date": "20261116",
+  "note": "macOS build carries the build number (About, update check); force_verification also blocks sessions that lost verification (D62).",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261115-b12.dmg",
-    "sha256": "a1b2906852e58e55d5303f341d5d439e1ce2c37fc107370d1a38c14eb81422ad"
+    "name": "psst-macos-20261116-b15.dmg",
+    "sha256": "52ce9b359339a92733ce49b1f5c3e20f77afd2fa6a40df25df1137d298d636e1"
    },
    {
-    "name": "psst-macos-20261115-b12.zip",
-    "sha256": "0b84e93dca54ac976d1b8962f58f554ec25ff36360f7737dbbeb6c1760e82d4f"
+    "name": "psst-macos-20261116-b15.zip",
+    "sha256": "5c079b57c02ada44e9d82b92b697ea357d3c2c008e539604cccc2a6957cabab5"
    }
   ]
  },
  "windows": {
-  "build": 12,
-  "date": "20261115",
-  "note": "Help & About shows build number and date; desktop checks app.macet.eu/download for new builds.",
+  "build": 15,
+  "date": "20261116",
+  "note": "macOS build carries the build number (About, update check); force_verification also blocks sessions that lost verification (D62).",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261115-b12-setup.exe",
-    "sha256": "de387410d5bfefc154f5af810f96d194d1cb97ed5e4a1bb09212f7f71c6202e8"
+    "name": "psst-windows-20261116-b15-setup.exe",
+    "sha256": "484923bbf50679d74fa0b73a0fe008312d982d6bd95b0007f76debb547fd7695"
    },
    {
-    "name": "psst-windows-20261115-b12.msi",
-    "sha256": "fbde5fcf6f02d0359736bf593ebaebf19f3038935c9cee6644281e93d248e9a3"
+    "name": "psst-windows-20261116-b15.msi",
+    "sha256": "b5df7c1a9a5fa07da59a588b26edaf918d5f0c7cb919a5137152d699e45fa000"
    }
   ]
  },
  "android": {
-  "build": 15,
-  "date": "20261115",
-  "note": "Version name without parentheses (correct device name in session lists); QR sign-in supported by the server.",
+  "build": 23,
+  "date": "20261116",
+  "note": "Setup wizard returns to psst and finishes by itself; new message channel (pop-up, lock screen); update check; app.macet.eu pages other than permalinks open in the browser.",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261115-b15-arm64.apk",
-    "sha256": "8c1681e47a35bda69e09b065637ecb019d13cf29f1548eb1214536fc9e49368b"
+    "name": "psst-android-20261116-b23-arm64.apk",
+    "sha256": "1a4949c910c715b90aba244f2191c54308681da97080f0237b08c7e71697510d"
    },
    {
-    "name": "psst-android-20261115-b15-armv7.apk",
-    "sha256": "e60dc9b965cc9a1ad911c6ee41a6e35aa94876bddc9635459459774e30cd9738"
+    "name": "psst-android-20261116-b23-armv7.apk",
+    "sha256": "ff9081191d2bd244c3b2ddde1feea3e5d2b5908ef82333c680d0f71fe8fa4f1b"
    },
    {
-    "name": "psst-android-20261115-b15-x86_64.apk",
-    "sha256": "7085a938ed5d2c70ccfc549ae1579757f5c28f5d6b568010108df6034405075b"
+    "name": "psst-android-20261116-b23-x86_64.apk",
+    "sha256": "bc4696d14cdf10c5bad7a69dee287c75d839bed0c18154b9302e95caa9520683"
    },
    {
-    "name": "psst-android-20261115-b15.aab",
-    "sha256": "ad52344bbbe74136ec18e78850eaeeeede57474f46eab230f91be4439f1a0379"
+    "name": "psst-android-20261116-b23.aab",
+    "sha256": "0ec8ca07af8381d7ba1b6208f08a5ce74df8ecfbe014f62d27cdefb46b27bc5d"
    }
   ]
  }

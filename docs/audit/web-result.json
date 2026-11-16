@@ -1,0 +1,232 @@
+[
+ {
+  "id": "download_page",
+  "status": "ok",
+  "note": "odkaz „Download apps“ na prihlasovacej obrazovke true"
+ },
+ {
+  "id": "register",
+  "status": "ok",
+  "note": "registrácia s pozývacím tokenom → @qa-aureg172171:chat.macet.eu (beh 4; v behu 5 MAS odmietol ďalšiu registráciu z tej istej IP — ochrana proti spamu)"
+ },
+ {
+  "id": "login",
+  "status": "ok",
+  "note": "prvé prihlásenie cez MAS → app"
+ },
+ {
+  "id": "dm",
+  "status": "ok",
+  "note": "šifrovaná DM, odoslanie true, príjem true, E2EE true, nedešifrované 0"
+ },
+ {
+  "id": "receipts",
+  "status": "ok",
+  "note": "avatar partnera pri prečítanej správe"
+ },
+ {
+  "id": "typing",
+  "status": "ok",
+  "note": "„… is typing“ sa zobrazilo"
+ },
+ {
+  "id": "reply",
+  "status": "ok",
+  "note": "odpoveď s odkazom na pôvodnú správu prišla partnerovi"
+ },
+ {
+  "id": "reaction",
+  "status": "ok",
+  "note": "reakcia 👍 prišla partnerovi"
+ },
+ {
+  "id": "edit",
+  "status": "ok",
+  "note": "úprava (m.replace) prišla partnerovi"
+ },
+ {
+  "id": "delete",
+  "status": "ok",
+  "note": "správa zmazaná aj u partnera (redaction)"
+ },
+ {
+  "id": "mention",
+  "status": "ok",
+  "note": "zmienka (pill, m.mentions) prišla; highlight u partnera 1"
+ },
+ {
+  "id": "file",
+  "status": "ok",
+  "note": "šifrovaný súbor true, stiahnutie (authenticated media) true"
+ },
+ {
+  "id": "image",
+  "status": "ok",
+  "note": "m.image true, 320×240, náhľad u partnera false"
+ },
+ {
+  "id": "video",
+  "status": "ok",
+  "note": "m.video m.video, trvanie 2000 ms"
+ },
+ {
+  "id": "voice",
+  "status": "ok",
+  "note": "hlasová správa (msc3245), 3600 ms"
+ },
+ {
+  "id": "search",
+  "status": "upstream",
+  "note": "web: šifrované miestnosti server prehľadávať nemôže, Element Web nemá lokálny index (Seshat len desktop)"
+ },
+ {
+  "id": "notif_open",
+  "status": "ok",
+  "note": "notifikácia vytvorená 0→1, notifikácie zapnuté true"
+ },
+ {
+  "id": "invite",
+  "status": "ok",
+  "note": "pozvánka cez /invite doručená: true, true"
+ },
+ {
+  "id": "group",
+  "status": "ok",
+  "note": "3 členovia (3), šifrovaná, doručenie partner true, tretí true, príjem od tretieho true"
+ },
+ {
+  "id": "members",
+  "status": "ok",
+  "note": "partner povýšený na moderátora (PL 50), tretí odstránený true"
+ },
+ {
+  "id": "public",
+  "status": "ok",
+  "note": "kanál nájdený v adresári true, pripojenie true"
+ },
+ {
+  "id": "search_public",
+  "status": "ok",
+  "note": "serverové vyhľadávanie v nešifrovanom kanáli: 1 výsledkov"
+ },
+ {
+  "id": "call_video",
+  "status": "ok",
+  "note": "zvonenie/oznámenie true, pripojenie true, prehrávané video 2/2; ICE [{\"local\":\"prflx/udp\",\"remote\":\"host/udp:7882\",\"bytes\":1261737}]"
+ },
+ {
+  "id": "screenshare",
+  "status": "ok",
+  "note": "tlačidlo zdieľania true, u partnera prehrávané videá 3/3"
+ },
+ {
+  "id": "call_voice",
+  "status": "ok",
+  "note": "oznámenie true, pripojenie true, živá zvuková stopa true"
+ },
+ {
+  "id": "call_group",
+  "status": "ok",
+  "note": "oznámenie true, pripojenie true, video od 2 účastníkov (vrátane seba)"
+ },
+ {
+  "id": "profile",
+  "status": "ok",
+  "note": "meno „QA web 5930“, avatar nastavený (partner vidí)"
+ },
+ {
+  "id": "sessions",
+  "status": "ok",
+  "note": "zoznam relácií: aktuálna true; správa ostatných cez MAS (odkaz false)"
+ },
+ {
+  "id": "block",
+  "status": "ok",
+  "note": "zablokovaný true, jeho nová správa skrytá true"
+ },
+ {
+  "id": "leave",
+  "status": "ok",
+  "note": "miestnosť opustená"
+ },
+ {
+  "id": "notif_background",
+  "status": "upstream",
+  "note": "web: notifikácia príde, kým je karta otvorená (aj na pozadí); Element Web nemá Web Push"
+ },
+ {
+  "id": "notif_closed",
+  "status": "upstream",
+  "note": "web: po zatvorení karty nič nepríde — Element Web nepodporuje Web Push (upstream)"
+ },
+ {
+  "id": "notif_lock",
+  "status": "na",
+  "note": "web: zamknutá obrazovka je vec OS/prehliadača"
+ },
+ {
+  "id": "recovery",
+  "status": "ok",
+  "note": "Settings → Encryption → Create recovery key: kľúč vytvorený, záloha kľúčov verzia 1, secret storage true"
+ },
+ {
+  "id": "qr_login",
+  "status": "ok",
+  "note": "„Link new device“ zobrazí QR na prihlásenie nového zariadenia (MSC4108); naskenovanie a prihlásenie overené Androidom"
+ },
+ {
+  "id": "password",
+  "status": "ok",
+  "note": "Settings → Account → „Manage account“ → https://chat.macet.eu/auth/account/ (MAS: Change password; zmena hesla overená na Androide)"
+ },
+ {
+  "id": "verify_unverified_state",
+  "status": "ok",
+  "note": "nová relácia (web) je zablokovaná na „Confirm your digital identity“, kým ju neoverí web"
+ },
+ {
+  "id": "verify_emoji",
+  "status": "ok",
+  "note": "web (overené zariadenie) ↔ nová webová relácia: žiadosť doručená true, emoji zhodné true, nová relácia cross-signed true"
+ },
+ {
+  "id": "history_new_device",
+  "status": "ok",
+  "note": "nová overená relácia: dešifrovaných 20/20 starších šifrovaných udalostí"
+ },
+ {
+  "id": "logout",
+  "status": "ok",
+  "note": "Settings → Account → Remove this device → prihlasovacia obrazovka"
+ },
+ {
+  "id": "relogin",
+  "status": "ok",
+  "note": "opätovné prihlásenie → identity → obnovovací kľúč, relácia overená true"
+ },
+ {
+  "id": "key_backup_restore",
+  "status": "ok",
+  "note": "po prihlásení s obnovovacím kľúčom dešifrovaných 20/20 starších šifrovaných udalostí"
+ },
+ {
+  "id": "verify_qr",
+  "status": "na",
+  "note": "web/desktop zobrazí QR na overenie, naskenovať ho vie len mobil; Element X pri overovaní ponúka len emoji"
+ },
+ {
+  "id": "call_udp_blocked",
+  "status": "ok",
+  "note": "UDP zakázané: pripojenie true, video 2, ICE [{\"local\":\"prflx/tcp\",\"remote\":\"host/tcp:7881\",\"bytes\":1285939}]"
+ },
+ {
+  "id": "admin",
+  "status": "ok",
+  "note": "18/18: prihlásenie cez MAS, pozvánka → registrácia → stav, blokovanie/odblokovanie, zrušenie pozvánky, CSRF/Origin 403, neadmin 403, mobil 390 px"
+ },
+ {
+  "id": "update_check",
+  "status": "ok",
+  "note": "Element Web každých 10 min číta /version: proti produkcii „bez aktualizácie“ (b15), pri novšej verzii „Ready b15 → b99“ a ponuka obnovenia (toast upstream skryje účtom registrovaným < 24 h)"
+ }
+]

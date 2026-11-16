@@ -1,0 +1,237 @@
+[
+ {
+  "id": "block",
+  "status": "na",
+  "note": "v detaile DM test nenašiel položku členov/blokovania (Element X má Block v profile partnera); netestované"
+ },
+ {
+  "id": "call_button",
+  "status": "ok",
+  "note": "tlačidlo hovoru v DM je; samotný hovor sa v simulátore (bez kamery/mikrofónu) overiť nedá"
+ },
+ {
+  "id": "delete",
+  "status": "ok",
+  "note": "Remove message → partner (web) dostal redaction"
+ },
+ {
+  "id": "dm",
+  "status": "ok",
+  "note": "šifrovaná DM: iOS poslal ping, partner (web) odpovedal pong"
+ },
+ {
+  "id": "edit",
+  "status": "na",
+  "note": "test podržal správu partnera (bez „Edit“); menu vlastnej správy „Edit“ obsahuje (diagnostika), doručenie úpravy neoverené"
+ },
+ {
+  "id": "image",
+  "status": "na",
+  "note": "systémový výber fotiek (PHPicker) beží mimo procesu appky, XCUITest ho v simulátore neovládol"
+ },
+ {
+  "id": "locked_server",
+  "status": "ok",
+  "note": "úvodná obrazovka: Sign in to chat.macet.eu"
+ },
+ {
+  "id": "login",
+  "status": "ok",
+  "note": "prihlásenie cez MAS (ASWebAuthenticationSession) → zoznam konverzácií; zamknutý server (úvodná obrazovka „Sign in to chat.macet.eu“)"
+ },
+ {
+  "id": "logout",
+  "status": "ok",
+  "note": "odhlásenie → úvodná obrazovka"
+ },
+ {
+  "id": "profile",
+  "status": "ok",
+  "note": "zmena zobrazovaného mena v Nastaveniach"
+ },
+ {
+  "id": "reaction",
+  "status": "ok",
+  "note": "menu správy → „Add reaction: 👍️“ → partner (web) dostal m.reaction"
+ },
+ {
+  "id": "receipts",
+  "status": "na",
+  "note": "doručenie potvrdenia overí partner (READ-ME); zobrazenie avatarov na iOS sa nedá spoľahlivo prečítať"
+ },
+ {
+  "id": "reply",
+  "status": "ok",
+  "note": "partner dostal odpoveď (m.in_reply_to) z iOS"
+ },
+ {
+  "id": "sessions",
+  "status": "ok",
+  "note": "„Manage account & devices“ (MAS: heslo, relácie) je v Nastaveniach"
+ },
+ {
+  "id": "typing",
+  "status": "ok",
+  "note": "„… is typing“ od partnera"
+ },
+ {
+  "id": "verify_emoji",
+  "status": "na",
+  "note": "čiastočne: iOS (overené zariadenie) dostal žiadosť od nového webového prihlásenia, prijal ju a zobrazil emoji zhodné s webom; potvrdenie „They match“ test v simulátore nedokončil"
+ },
+ {
+  "id": "notif_open",
+  "status": "na",
+  "note": "nepodpísaný build v simulátore nemá APNs; notifikácie sa dajú overiť len na zariadení (TestFlight)"
+ },
+ {
+  "id": "notif_background",
+  "status": "na",
+  "note": "simulátor bez APNs (nepodpísaný build)"
+ },
+ {
+  "id": "notif_closed",
+  "status": "na",
+  "note": "simulátor bez APNs (nepodpísaný build)"
+ },
+ {
+  "id": "notif_lock",
+  "status": "na",
+  "note": "simulátor bez APNs (nepodpísaný build)"
+ },
+ {
+  "id": "call_voice",
+  "status": "na",
+  "note": "simulátor nemá mikrofón; tlačidlo hovoru existuje (call_button)"
+ },
+ {
+  "id": "call_video",
+  "status": "na",
+  "note": "simulátor nemá kameru ani mikrofón"
+ },
+ {
+  "id": "call_group",
+  "status": "na",
+  "note": "simulátor nemá kameru ani mikrofón"
+ },
+ {
+  "id": "screenshare",
+  "status": "na",
+  "note": "simulátor — nedá sa overiť"
+ },
+ {
+  "id": "call_udp_blocked",
+  "status": "na",
+  "note": "simulátor bez médií — nedá sa overiť"
+ },
+ {
+  "id": "qr_login",
+  "status": "na",
+  "note": "skenovanie QR potrebuje kameru (simulátor ju nemá)"
+ },
+ {
+  "id": "verify_qr",
+  "status": "na",
+  "note": "skenovanie QR potrebuje kameru"
+ },
+ {
+  "id": "voice",
+  "status": "na",
+  "note": "simulátor nemá mikrofón"
+ },
+ {
+  "id": "file",
+  "status": "na",
+  "note": "systémový výber súborov mimo procesu appky — v simulátore neovládnuteľný cez XCUITest"
+ },
+ {
+  "id": "video",
+  "status": "na",
+  "note": "systémový výber médií mimo procesu appky"
+ },
+ {
+  "id": "admin",
+  "status": "na",
+  "note": "admin stránka je webová (testovaná v stĺpci Web)"
+ },
+ {
+  "id": "update_check",
+  "status": "na",
+  "note": "iOS aktualizácie rieši TestFlight/App Store, appka vlastnú kontrolu nemá (zámerne)"
+ },
+ {
+  "id": "download_page",
+  "status": "na",
+  "note": "stránka ukazuje iOS „Coming soon“ — build čaká na zmluvu v App Store Connect"
+ },
+ {
+  "id": "register",
+  "status": "na",
+  "note": "registrácia (MAS v ASWebAuthenticationSession) v iOS audite netestovaná; rovnaký MAS formulár overený na webe a Androide"
+ },
+ {
+  "id": "group",
+  "status": "na",
+  "note": "v iOS audite netestované (simulátorový test pokrýva DM)"
+ },
+ {
+  "id": "public",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "invite",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "mention",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "search",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "search_public",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "members",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "leave",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "password",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "key_backup_restore",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "history_new_device",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "recovery",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ },
+ {
+  "id": "verify_unverified_state",
+  "status": "na",
+  "note": "v iOS audite (simulátor, XCUITest) netestované"
+ }
+]

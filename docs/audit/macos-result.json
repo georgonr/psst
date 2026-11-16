@@ -1,0 +1,242 @@
+[
+ {
+  "id": "install",
+  "status": "ok",
+  "note": "nainštalovaná appka sa spustila"
+ },
+ {
+  "id": "download_page",
+  "status": "ok",
+  "note": "odkaz „Download apps“ na prihlasovacej obrazovke true"
+ },
+ {
+  "id": "login",
+  "status": "ok",
+  "note": "prihlásenie cez MAS (systémový prehliadač → eu.macet.app://) → app"
+ },
+ {
+  "id": "about_build",
+  "status": "ok",
+  "note": "verzia 1.12.35-b15 (2026-11-16)"
+ },
+ {
+  "id": "dm",
+  "status": "ok",
+  "note": "šifrovaná DM, odoslanie true, príjem true, E2EE true, nedešifrované 0"
+ },
+ {
+  "id": "receipts",
+  "status": "ok",
+  "note": "avatar partnera pri prečítanej správe"
+ },
+ {
+  "id": "typing",
+  "status": "ok",
+  "note": "„… is typing“ sa zobrazilo"
+ },
+ {
+  "id": "reply",
+  "status": "ok",
+  "note": "odpoveď s odkazom na pôvodnú správu prišla partnerovi"
+ },
+ {
+  "id": "reaction",
+  "status": "ok",
+  "note": "reakcia 👍 prišla partnerovi"
+ },
+ {
+  "id": "edit",
+  "status": "ok",
+  "note": "úprava (m.replace) prišla partnerovi"
+ },
+ {
+  "id": "delete",
+  "status": "ok",
+  "note": "správa zmazaná aj u partnera (redaction)"
+ },
+ {
+  "id": "mention",
+  "status": "ok",
+  "note": "zmienka (pill, m.mentions) prišla; highlight u partnera 1"
+ },
+ {
+  "id": "file",
+  "status": "ok",
+  "note": "šifrovaný súbor true, stiahnutie (authenticated media) true"
+ },
+ {
+  "id": "image",
+  "status": "ok",
+  "note": "m.image true, 320×240, náhľad u partnera false"
+ },
+ {
+  "id": "video",
+  "status": "ok",
+  "note": "m.video m.video, trvanie 2000 ms"
+ },
+ {
+  "id": "voice",
+  "status": "ok",
+  "note": "hlasová správa (msc3245), 3520 ms"
+ },
+ {
+  "id": "search",
+  "status": "ok",
+  "note": "výsledok nájdený"
+ },
+ {
+  "id": "notif_open",
+  "status": "ok",
+  "note": "notifikácia vytvorená 0→1, notifikácie zapnuté true"
+ },
+ {
+  "id": "invite",
+  "status": "ok",
+  "note": "pozvánka cez /invite doručená: true, true"
+ },
+ {
+  "id": "group",
+  "status": "ok",
+  "note": "3 členovia (3), šifrovaná, doručenie partner true, tretí true, príjem od tretieho true"
+ },
+ {
+  "id": "members",
+  "status": "ok",
+  "note": "partner povýšený na moderátora (PL 50), tretí odstránený true"
+ },
+ {
+  "id": "public",
+  "status": "ok",
+  "note": "kanál nájdený v adresári true, pripojenie true"
+ },
+ {
+  "id": "search_public",
+  "status": "ok",
+  "note": "serverové vyhľadávanie v nešifrovanom kanáli: 1 výsledkov"
+ },
+ {
+  "id": "call_video",
+  "status": "ok",
+  "note": "zvonenie/oznámenie true, pripojenie true, prehrávané video 2/2; ICE [{\"local\":\"prflx/udp\",\"remote\":\"host/udp:7882\",\"bytes\":313030}]"
+ },
+ {
+  "id": "screenshare",
+  "status": "ok",
+  "note": "tlačidlo zdieľania true, u partnera prehrávané videá 2/2"
+ },
+ {
+  "id": "call_voice",
+  "status": "ok",
+  "note": "oznámenie true, pripojenie true, živá zvuková stopa true"
+ },
+ {
+  "id": "call_group",
+  "status": "ok",
+  "note": "oznámenie true, pripojenie true, video od 2 účastníkov (vrátane seba)"
+ },
+ {
+  "id": "profile",
+  "status": "ok",
+  "note": "meno „QA macos 7800“, avatar nastavený (partner vidí)"
+ },
+ {
+  "id": "sessions",
+  "status": "ok",
+  "note": "zoznam relácií: aktuálna true; správa ostatných cez MAS (odkaz false)"
+ },
+ {
+  "id": "block",
+  "status": "ok",
+  "note": "zablokovaný true, jeho nová správa skrytá true"
+ },
+ {
+  "id": "leave",
+  "status": "ok",
+  "note": "miestnosť opustená"
+ },
+ {
+  "id": "recovery",
+  "status": "ok",
+  "note": "Settings → Encryption → Create recovery key: kľúč vytvorený, záloha kľúčov verzia 1, secret storage true"
+ },
+ {
+  "id": "qr_login",
+  "status": "ok",
+  "note": "„Link new device“ zobrazí QR na prihlásenie nového zariadenia (MSC4108); naskenovanie a prihlásenie overené Androidom"
+ },
+ {
+  "id": "password",
+  "status": "ok",
+  "note": "Settings → Account → „Manage account“ → https://chat.macet.eu/auth/account/ (MAS: Change password; zmena hesla overená na Androide)"
+ },
+ {
+  "id": "verify_unverified_state",
+  "status": "ok",
+  "note": "nová relácia (web) je zablokovaná na „Confirm your digital identity“, kým ju neoverí macos"
+ },
+ {
+  "id": "verify_emoji",
+  "status": "ok",
+  "note": "macos (overené zariadenie) ↔ nová webová relácia: žiadosť doručená true, emoji zhodné true, nová relácia cross-signed true"
+ },
+ {
+  "id": "history_new_device",
+  "status": "ok",
+  "note": "nová overená relácia: dešifrovaných 20/20 starších šifrovaných udalostí"
+ },
+ {
+  "id": "logout",
+  "status": "ok",
+  "note": "Settings → Account → Remove this device → prihlasovacia obrazovka"
+ },
+ {
+  "id": "relogin",
+  "status": "ok",
+  "note": "opätovné prihlásenie → identity → obnovovací kľúč, relácia overená true"
+ },
+ {
+  "id": "key_backup_restore",
+  "status": "ok",
+  "note": "po prihlásení s obnovovacím kľúčom dešifrovaných 20/20 starších šifrovaných udalostí"
+ },
+ {
+  "id": "notif_closed",
+  "status": "ok",
+  "note": "okno zatvorené (appka v Docku), notifikácia 0→1"
+ },
+ {
+  "id": "notif_lock",
+  "status": "na",
+  "note": "zamknutá obrazovka OS sa na CI runneri nedá overiť"
+ },
+ {
+  "id": "call_udp_blocked",
+  "status": "ok",
+  "note": "UDP zablokované firewallom: pripojenie true, video 2, ICE [{\"local\":\"prflx/tcp\",\"remote\":\"host/tcp:7881\",\"bytes\":638898}]"
+ },
+ {
+  "id": "update_check",
+  "status": "ok",
+  "note": "psst update check: installed b15, available b15"
+ },
+ {
+  "id": "notif_background",
+  "status": "ok",
+  "note": "appka skrytá (⌘W, v Docku) → notifikácia (notif_closed)"
+ },
+ {
+  "id": "register",
+  "status": "na",
+  "note": "registrácia beží v MAS v systémovom prehliadači; v desktop audite netestovaná (formulár MAS overený na webe a Androide)"
+ },
+ {
+  "id": "verify_qr",
+  "status": "na",
+  "note": "QR na overenie vie naskenovať len mobil; Element X pri overovaní ponúka len emoji"
+ },
+ {
+  "id": "admin",
+  "status": "na",
+  "note": "admin stránka je webová (testovaná v stĺpci Web)"
+ }
+]

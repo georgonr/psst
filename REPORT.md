@@ -1,3 +1,60 @@
+# PSST — report (2026-11-16, dávka 11: tri chyby z telefónov + audit funkcií)
+
+Rozhodnutia: D61 (Android sprievodca + kanál správ), D62 (neoverená relácia na webe/desktope), D63 (Android kontrola
+verzie), D64 (audit), D65 (adresár členov, nešifrované kanály), D66 (QR relácia 5 min). Celá matica:
+[docs/FEATURE-MATRIX.md](docs/FEATURE-MATRIX.md).
+
+## Tri chyby (Samsung A05, build b13)
+
+| Chyba | Príčina | Oprava | Overenie |
+|---|---|---|---|
+| 1. Sprievodca: po „Otvoriť nastavenia" sa nevráti, batéria nepríde | nastavenia otvárané s `FLAG_ACTIVITY_NEW_TASK` → One UI ich nechá v úlohe Nastavení, „Späť" nevedie do psst | otvárané v úlohe psst; `onResume` zistí skutočný stav a pokračuje: upozornenia+pop-up → zamknutá obrazovka → celá obrazovka → batéria | emulátor Android 14: všetky 4 kroky za sebou, každý sa po „Späť" vráti a sám pokračuje |
+| 2. Správy len pípnu, bez pop-upu a zamknutej obrazovky | kanál si pamätal staré nastavenia; dôležitosť/viditeľnosť na zamknutej obrazovke appka po vytvorení kanála zmeniť nemôže; One UI má vlastné prepínače | nový kanál `PSST_MESSAGES_V4` (HIGH, „Správy"), staré zmazané; sprievodca kontroluje povolené upozornenia, pop-up kanála aj upozornenia na zamknutej obrazovke | emulátor: heads-up aj zamknutá obrazovka (PIN); aktualizácia b13→b18→b20, starý kanál zmazaný |
+| 3a. Telefón nedostane notifikáciu o žiadosti o overenie | **obmedzenie protokolu**: žiadosť je to-device správa, Matrix push existuje len pre udalosti v miestnostiach; Element X ju ukáže len otvorený (limit 1 min); neoverené zariadenie push vôbec nemá | bez zmeny kódu; postup: overovať z nového zariadenia („Use another device") pri otvorenej appke na starom; návrh rozšírenia v D62 | reprodukované: push sa neposlal, pri otvorenej appke žiadosť hneď s odpočtom 1 min |
+| 3b. Počítač sa tváril ako overený | po resete identity na inom zariadení (Element X „Can't confirm?") upstream ukáže len odložiteľný toast a appka ide ďalej | `force_verification` blokuje aj reláciu, ktorá overenie stratila (štart aj počas behu) | produkcia: reset z Androidu → web sa hneď prepne na „Confirm your digital identity" → overenie telefónom (emoji) → späť v appke |
+
+## Audit funkcií — súhrn (celá matica: docs/FEATURE-MATRIX.md)
+
+| platforma | ✅ funguje | ❌ nefunguje | 🟠 upstream | ⚪ nedá sa tu overiť |
+|---|---|---|---|---|
+| Web | 40 | 0 | 3 | 2 |
+| Windows | 41 | 0 | 0 | 4 |
+| macOS | 41 | 0 | 0 | 4 |
+| Android | 40 | 0 | 4 | 1 |
+| iOS | 9 | 0 | 0 | 36 |
+
+Spolu 225 buniek: ✅ 171 · ❌ 0 · 🟠 7 · ⚪ 47 (iOS: simulátor bez APNs, kamery a mikrofónu; zvyšok dôvod v bunke).
+
+Testované na produkcii, len na nových testovacích účtoch `qa-au*` (po audite deaktivované, testovacie miestnosti
+zmazané). Web: Playwright; Windows/macOS: MSI/DMG b15 na GitHub runneroch (workflow *Desktop audit*); Android:
+emulátor API 34 s Google Play services, build b13 → b23; iOS: simulátor (workflow *iOS audit*, XCUITest).
+
+**Opravené počas auditu (náš fork/build/server):**
+- Android: sprievodca nastavením (D61), kanál správ (D61), kontrola novej verzie (D63), odkaz „Download" otváral psst
+  namiesto prehliadača — App Link už len pre permalinky `/#/…` (b23).
+- Web/desktop: neoverená relácia sa tvárila ako overená (D62); macOS build nemal číslo buildu → About bez buildu
+  a nefungovala kontrola novej verzie (nx zhltol `-c.*` argumenty electron-builderu; desktop b15).
+- Server: Element X hlásil „This Matrix ID can't be found" a kontakty sa nedali nájsť menom; verejné kanály boli
+  šifrované, takže noví členovia nevideli históriu a serverové vyhľadávanie nefungovalo (D65); QR prihlásenie
+  padalo po 60 s („The sign in was not completed in time") → 5 min (D66); CI test servera: `downloads/` vytvorené
+  rootom / nečitateľné pre nginx, obnova zo zálohy bez DB roly administrácie.
+
+**Stále nefunguje (upstream, nie náš kód):**
+- Notifikácia o žiadosti o overenie zariadenia na zatvorenú/neotvorenú appku (Matrix nepushuje to-device správy;
+  Element X ukáže žiadosť len otvorený, 1 min). Obchádzka: overovať z nového zariadenia pri otvorenej appke na starom.
+- Web: žiadne notifikácie pri zatvorenej karte (Element Web nemá Web Push); vyhľadávanie v šifrovaných miestnostiach
+  na webe (Seshat len desktop) a v Element X Android (nemá vyhľadávanie v správach).
+- Element X Android: zdieľanie obrazovky v hovore (len prijímanie); overenie zariadenia QR kódom (len emoji).
+
+## Čo otestovať na skutočných zariadeniach
+- Samsung A05 (b23): sprievodca od začiatku do konca (One UI: „Späť" z nastavení), vyskakovacie okno a zamknutá
+  obrazovka pri správe; One UI „Štýl vyskakovacích upozornení" a „Skryť obsah" sú nastavenia telefónu.
+- Android: odchádzajúce video z telefónu v hovore (emulátor nemá prednú kameru).
+- Windows/macOS: viditeľný toast/notifikácia a zvonenie (CI nemá zvuk ani skutočnú plochu); zamknutá obrazovka.
+- iOS (po TestFlighte): notifikácie (APNs), hovory, QR, súbory/fotky, overenie zariadenia do konca.
+- Overenie zariadenia: po resete identity na telefóne sa počítač musí sám prepnúť na „Confirm your digital identity".
+
+
 # PSST — report (2026-11-15, dávka 10: Windows, QR prihlásenie, stránka na stiahnutie)
 
 Rozhodnutia: D58 (QR), D59 (stránka + automatika + aktualizácie desktopu), D60 (Windows E2E).
