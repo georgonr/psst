@@ -143,7 +143,8 @@ def render(state):
 Prefer the browser? <a href="https://{APP_DOMAIN}/">Open psst on the web</a>.</p>
 <div class="grid">{''.join(cards)}</div>
 <footer>Updated {updated} · <a href="latest.json">latest.json</a> ·
-<a href="https://{APP_DOMAIN}/privacy.html">Privacy</a> · <a href="https://{APP_DOMAIN}/terms.html">Terms</a></footer>
+<a href="https://{APP_DOMAIN}/privacy.html">Privacy</a> · <a href="https://{APP_DOMAIN}/terms.html">Terms</a> ·
+<a href="https://github.com/georgonr/psst">Source code (AGPL-3.0)</a></footer>
 </div></body></html>"""
 
 
