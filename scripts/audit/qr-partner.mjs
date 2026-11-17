@@ -1,7 +1,8 @@
 // PSST audit helper for QR code device verification (D81, docs/android-qr-verification.md): Element Web sessions
 // (app.macet.eu, or psst desktop over CDP) driven step by step while the Android side is driven over adb.
 //   node qr-partner.mjs <accounts-file> <out-dir> [cdp-url]
-// <accounts-file>: lines "<user> <password>" (qa-* test accounts only). With [cdp-url] the FIRST account's session is
+// <accounts-file>: lines "<user> <password>" (qa-* test accounts only); "<user>#2" in a command = another session of
+// that user in its own browser profile. With [cdp-url] the FIRST account's session is
 // the psst desktop app already running with --remote-debugging-port (signed in there by this script if needed).
 // Browser profiles persist in <out-dir>/profiles (a restart keeps the same devices).
 // Commands written to <out-dir>/NEXT, result in <out-dir>/DONE + log.txt:
@@ -28,7 +29,8 @@ if (!Object.keys(acc).every((u) => /^qa-[a-z0-9-]+$/.test(u))) throw new Error("
 const APP = ".mx_LeftPanel, .mx_RoomListPanel";
 const P = {};
 
-async function signInIfNeeded(p, user) {
+async function signInIfNeeded(p, profile) {
+    const user = profile.split("#")[0]; // "qa-v1#2" = a second session (own browser profile) of qa-v1
     for (let i = 0; i < 30; i++) { if (await p.locator(`${APP}, button:has-text("Continue"), button:has-text("Use recovery key")`).count()) break; await sleep(1000); }
     if (await p.locator(`${APP}, button:has-text("Use recovery key"), button:has-text("Use another device")`).count()) return;
     await p.evaluate(() => { location.hash = "#/login"; });
@@ -138,7 +140,7 @@ async function qrShot(user, file) {
 
 async function verifyOther(user) {
     const p = await open(user);
-    await settingsTab(p, "Sessions");
+    await settingsTab(p, "Devices").catch(async () => { await settingsTab(p, "Sessions"); });
     await clickText(p, "^Verify session$|^Verify$");
     log(`${user}: verify session clicked`);
 }
