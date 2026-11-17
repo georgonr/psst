@@ -1,0 +1,126 @@
+diff --git a/crates/matrix-sdk-search/src/index/mod.rs b/crates/matrix-sdk-search/src/index/mod.rs
+index a8cdb00..25837a4 100644
+--- a/crates/matrix-sdk-search/src/index/mod.rs
++++ b/crates/matrix-sdk-search/src/index/mod.rs
+@@ -172,7 +172,16 @@ impl fmt::Debug for RoomIndex {
+ 
+ impl RoomIndex {
+     pub(crate) fn new_with(index: Index, schema: RoomMessageSchema, room_id: &RoomId) -> RoomIndex {
+-        let query_parser = QueryParser::for_index(&index, schema.default_search_fields());
++        // PSST: the body tokenizer must be registered on every `Index` instance
++        // before it is written to or queried.
++        index.tokenizers().register(crate::schema::BODY_TOKENIZER, crate::schema::body_analyzer());
++        let mut query_parser = QueryParser::for_index(&index, schema.default_search_fields());
++        // PSST: every single word of the query also matches longer words that
++        // start with it (`cisl` finds `čísla`): a prefix automaton with edit
++        // distance 0. Multi-term phrases stay exact.
++        for field in schema.default_search_fields() {
++            query_parser.set_field_fuzzy(field, true, 0, false);
++        }
+         Self {
+             index,
+             schema,
+@@ -757,6 +766,54 @@ mod tests {
+         Ok(())
+     }
+ 
++    /// PSST: diacritics and case are ignored both ways, and a word prefix
++    /// matches the whole word.
++    #[test]
++    fn test_search_folds_diacritics_and_matches_prefixes() -> Result<(), Box<dyn Error>> {
++        let room_id = room_id!("!room_id:localhost");
++        let mut index = RoomIndexBuilder::new_in_memory(room_id).build();
++        let f = EventFactory::new().room(room_id).sender(user_id!("@user_id:localhost"));
++
++        let cislo = event_id!("$cislo:localhost");
++        let stastny = event_id!("$stastny:localhost");
++        let plain = event_id!("$plain:localhost");
++        for (id, body) in [
++            (cislo, "Moje telefónne Číslo je 0905"),
++            (stastny, "Šťastný nový rok, ľúbim ťa"),
++            (plain, "cislo bez diakritiky"),
++        ] {
++            index_message(
++                &mut index,
++                f.text_msg(body).event_id(id).into_any_sync_message_like_event(),
++            )?;
++        }
++
++        let ids = |query: &str| -> HashSet<_> {
++            index
++                .search(query, 10, None)
++                .unwrap_or_else(|err| panic!("search {query} failed: {err}"))
++                .events
++                .into_iter()
++                .map(|(_, id)| id)
++                .collect()
++        };
++        let set = |ids: &[&EventId]| -> HashSet<_> { ids.iter().map(|id| (*id).to_owned()).collect() };
++
++        assert_eq!(ids("cislo"), set(&[cislo, plain]));
++        assert_eq!(ids("číslo"), set(&[cislo, plain]));
++        assert_eq!(ids("CISLO"), set(&[cislo, plain]));
++        assert_eq!(ids("stastny"), set(&[stastny]));
++        assert_eq!(ids("Šťast"), set(&[stastny]));
++        assert_eq!(ids("cis"), set(&[cislo, plain]));
++        assert_eq!(ids("lubim"), set(&[stastny]));
++        assert_eq!(ids("+tel +cis"), set(&[cislo]));
++        assert_eq!(ids("+diakritiky +moje"), set(&[]));
++        assert_eq!(ids("telefon"), set(&[cislo]));
++        assert_eq!(ids("rokx"), set(&[]));
++
++        Ok(())
++    }
++
+     #[test]
+     fn test_search_empty_index() -> Result<(), Box<dyn Error>> {
+         let room_id = room_id!("!room_id:localhost");
+diff --git a/crates/matrix-sdk-search/src/schema.rs b/crates/matrix-sdk-search/src/schema.rs
+index 80aa610..bbd7d70 100644
+--- a/crates/matrix-sdk-search/src/schema.rs
++++ b/crates/matrix-sdk-search/src/schema.rs
+@@ -14,9 +14,28 @@
+ 
+ use tantivy::{
+     DateTime, TantivyDocument,
+-    schema::{DateOptions, DateTimePrecision, Field, INDEXED, STORED, STRING, Schema, TEXT},
++    schema::{
++        DateOptions, DateTimePrecision, Field, INDEXED, IndexRecordOption, STORED, STRING, Schema,
++        TextFieldIndexing, TextOptions,
++    },
++    tokenizer::{AsciiFoldingFilter, LowerCaser, RemoveLongFilter, SimpleTokenizer, TextAnalyzer},
+ };
+ 
++/// PSST: name of the tokenizer used for message bodies: the tantivy default
++/// (split on non-alphanumerics, drop tokens over 40 bytes, lowercase) plus
++/// ASCII folding, so `cislo` finds `číslo` and `stastny` finds `šťastný`.
++/// The same analyzer runs on the query, so diacritics are ignored both ways.
++pub(crate) const BODY_TOKENIZER: &str = "psst_folded";
++
++/// PSST: the analyzer registered as [`BODY_TOKENIZER`] on every index.
++pub(crate) fn body_analyzer() -> TextAnalyzer {
++    TextAnalyzer::builder(SimpleTokenizer::default())
++        .filter(RemoveLongFilter::limit(40))
++        .filter(LowerCaser)
++        .filter(AsciiFoldingFilter)
++        .build()
++}
++
+ use crate::{
+     error::{IndexError, IndexSchemaError},
+     index::IndexableEvent,
+@@ -51,7 +70,13 @@ impl MatrixSearchIndexSchema for RoomMessageSchema {
+         let mut schema = Schema::builder();
+         let event_id_field = schema.add_text_field("event_id", STORED | STRING);
+         let original_event_id_field = schema.add_text_field("original_event_id", STRING);
+-        let body_field = schema.add_text_field("body", TEXT);
++        // PSST: folded body tokenizer instead of TEXT's "default" (same positions).
++        let body_options = TextOptions::default().set_indexing_options(
++            TextFieldIndexing::default()
++                .set_tokenizer(BODY_TOKENIZER)
++                .set_index_option(IndexRecordOption::WithFreqsAndPositions),
++        );
++        let body_field = schema.add_text_field("body", body_options);
+ 
+         let date_options =
+             DateOptions::from(INDEXED).set_fast().set_precision(DateTimePrecision::Seconds);

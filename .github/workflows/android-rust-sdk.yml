@@ -1,0 +1,153 @@
+# PSST: native matrix-rust-sdk library for psst Android with the message-search patch (docs/android-search.md, D80).
+#
+# Builds libmatrix_sdk_ffi.so from matrix-rust-sdk at the commit of the official Kotlin release (pins.env) plus
+# scripts/android/rust-sdk/psst-search.patch, then swaps those .so files into the OFFICIAL sdk-android AAR from Maven
+# Central. The patch does not touch the FFI surface, and the job proves it: the Kotlin bindings generated here must be
+# identical to the official sources jar, otherwise nothing is released.
+# Result: GitHub release "android-rust-sdk-<version>-psst<rev>" with the AAR and its SHA-256; the Android workflow
+# downloads it by tag and checks the hash (forks/android libraries/rustsdk/psst-rust-sdk.properties).
+name: Android Rust SDK (psst patch)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - scripts/android/rust-sdk/**
+      - .github/workflows/android-rust-sdk.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-rust-sdk
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: "libmatrix_sdk_ffi.so: ${{ matrix.target }}"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    strategy:
+      fail-fast: true
+      matrix:
+        target: [ aarch64-linux-android, armv7-linux-androideabi, x86_64-linux-android ]
+    env:
+      NDK_VERSION: 29.0.14206865
+    steps:
+      - name: Checkout psst
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read pins
+        run: cat scripts/android/rust-sdk/pins.env | grep -E '^[A-Z_]+=' >> "$GITHUB_ENV"
+      - name: Checkout matrix-rust-sdk at the pinned commit and apply the psst patch
+        run: |
+          git init -q rust-sdk && cd rust-sdk
+          git remote add origin https://github.com/matrix-org/matrix-rust-sdk.git
+          git fetch -q --depth 1 origin "$RUST_SDK_REF"
+          git checkout -q FETCH_HEAD
+          git apply --verbose ../scripts/android/rust-sdk/psst-search.patch
+      - name: NDK
+        run: |
+          NDK="$ANDROID_HOME/ndk/$NDK_VERSION"
+          [ -d "$NDK" ] || { echo "NDK $NDK_VERSION missing"; ls "$ANDROID_HOME/ndk"; exit 1; }
+          echo "ANDROID_NDK_HOME=$NDK" >> "$GITHUB_ENV"
+          echo "LLVM_OBJCOPY=$NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-objcopy" >> "$GITHUB_ENV"
+      - name: Rust toolchain, cargo-ndk, protoc
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add ${{ matrix.target }}
+          sudo apt-get update -q && sudo apt-get install -y -q protobuf-compiler
+          cargo install cargo-ndk --locked
+      - name: Unit tests of the patched search crate
+        if: matrix.target == 'x86_64-linux-android'
+        working-directory: rust-sdk
+        run: cargo test -p matrix-sdk-search --lib
+      - name: Build (small-release-stripped, as the official release)
+        working-directory: rust-sdk
+        env:
+          RUSTFLAGS: "-Clink-args=-Wl,--build-id"
+        run: |
+          cargo xtask kotlin build-android-library --profile small-release-stripped \
+            --only-target ${{ matrix.target }} --src-dir "$GITHUB_WORKSPACE/out/src/main" --package full-sdk
+          find "$GITHUB_WORKSPACE/out/src/main/jniLibs" -type f ! -name libmatrix_sdk_ffi.so -delete
+          so=$(find "$GITHUB_WORKSPACE/out/src/main/jniLibs" -name libmatrix_sdk_ffi.so)
+          "$LLVM_OBJCOPY" --strip-debug --strip-unneeded "$so"
+          ls -l "$so"
+      - name: Upload .so
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: so-${{ matrix.target }}
+          path: out/src/main/jniLibs/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload generated Kotlin bindings
+        if: matrix.target == 'x86_64-linux-android'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: kotlin-bindings
+          path: out/src/main/kotlin/
+          if-no-files-found: error
+          retention-days: 7
+
+  aar:
+    name: Patched AAR → GitHub release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout psst
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read pins
+        run: cat scripts/android/rust-sdk/pins.env | grep -E '^[A-Z_]+=' >> "$GITHUB_ENV"
+      - name: Download .so files
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: so-*
+          merge-multiple: true
+          path: jniLibs/
+      - name: Download generated bindings
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: kotlin-bindings
+          path: bindings/
+      - name: Official AAR + sources, FFI identity check, swap the native libraries
+        run: |
+          set -euo pipefail
+          base="https://repo1.maven.org/maven2/org/matrix/rustcomponents/sdk-android/$SDK_VERSION/sdk-android-$SDK_VERSION"
+          curl -fsSL "$base.aar" -o official.aar
+          curl -fsSL "$base-sources.jar" -o official-sources.jar
+          mkdir official-src aar
+          (cd official-src && unzip -o -q ../official-sources.jar)   # layout: main/<package path>/*.kt
+          # The Kotlin side of the official AAR must be exactly what our patched build generates.
+          for f in $(cd bindings && find . -name '*.kt'); do
+            diff -q "bindings/$f" "official-src/main/$f" || { echo "FFI bindings differ: $f"; exit 1; }
+          done
+          echo "bindings identical: $(cd bindings && find . -name '*.kt' | wc -l) files"
+          (cd aar && unzip -o -q ../official.aar)
+          ls aar/jni
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            test -f "jniLibs/$abi/libmatrix_sdk_ffi.so"
+            cp "jniLibs/$abi/libmatrix_sdk_ffi.so" "aar/jni/$abi/libmatrix_sdk_ffi.so"
+          done
+          rm -rf aar/jni/x86   # psst ships armeabi-v7a, arm64-v8a, x86_64 only
+          name="sdk-android-$SDK_VERSION-psst$PSST_REV.aar"
+          (cd aar && zip -q -r -X "../$name" .)
+          sha256sum "$name" | tee "$name.sha256"
+          echo "AAR=$name" >> "$GITHUB_ENV"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="android-rust-sdk-$SDK_VERSION-psst$PSST_REV"
+          notes="matrix-rust-sdk $RUST_SDK_REF + scripts/android/rust-sdk/psst-search.patch (diacritics folding + word-prefix search), native libraries swapped into the official sdk-android $SDK_VERSION AAR. Built by workflow run ${{ github.run_id }}."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$AAR" "$AAR.sha256" --clobber
+          else
+            gh release create "$tag" "$AAR" "$AAR.sha256" --title "$tag" --notes "$notes" --prerelease
+          fi
