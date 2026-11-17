@@ -56,19 +56,18 @@ Captured with `logcat -b events` (`notification_enqueue`, `notification_alert`) 
    - lock screen notification style "Icons only";
    - per-category "Show as pop-up" when "Notification categories" is enabled (One UI 6.1+).
    - The diagnostics report dumps every readable `global/secure/system` setting matching notif / heads_up / popup / lock_screen / edge_lighting / brief, so the next report shows them.
-3. **System ranking that differs from the channel.** The effective importance, a conversation sub-channel, a lock-screen override, or suppressed visual effects can only be seen with notification-listener access.
-   - The diagnostics screen offers that access as an option. It then logs a `RANK` line for every psst notification: `imp`, `ch`, `conv`, `lockVis`, `suppressed`, `ambient`, `intercepted`.
+3. **System ranking that differs from the channel.** A conversation can get its own sub-channel with its own importance and sound. The report shows it as a `CHANNEL` line under every active psst notification (read with `getNotificationChannel(channel, shortcutId)`).
+   - Per-notification ranking (`suppressed` visual effects, `intercepted` by DND, lock-screen override) needs a `NotificationListenerService`. psst no longer has one (DECISIONS.md D83): Google Play Protect blocks installing sideloaded apps that declare it. The DND filter and the lock state are still logged for every posted notification.
 
 ## What the user's report from the phone will tell
 
-To produce it: Settings → Notifications → "Diagnostika upozornení (psst)" → (optionally) "Povoliť prístup k upozorneniam" → receive a real message → "Uložiť a odoslať".
+To produce it: Settings → Notifications → "Diagnostika upozornení (psst)" → receive a real message → "Uložiť a odoslať".
 
 The `== log` section then shows, for every push:
 
 - when it arrived and how long it took to resolve;
 - whether the result was a real message or a FALLBACK (with cause);
 - every posted notification with its channel, the channel importance at that moment, `onlyAlertOnce`, group alert behaviour, summary flag, conversation flag, lock state, and DND filter;
-- with listener access, how One UI ranked it.
 
 The two self-tests separate the message shape from the phone settings:
 
