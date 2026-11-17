@@ -99,6 +99,12 @@ EXPECTED_SHA256="$(keytool -list -v -keystore "$KS_FILE" -storepass:env PSST_STO
 [ -n "$EXPECTED_SHA256" ] || die "could not read the certificate of alias $KEY_ALIAS"
 echo "Release certificate SHA-256: $EXPECTED_SHA256"
 
+# Play Protect blocks sideloaded apps with SMS / notification listener / accessibility (D83): refuse to sign them
+mapfile_list=()
+while IFS= read -r -d '' f; do mapfile_list+=("$f"); done < <(find "$IN_DIR" -type f \( -name '*-unsigned.apk' -o -name '*.aab' \) -print0)
+[ ${#mapfile_list[@]} -eq 0 ] || AAPT2="$AAPT2" python3 "$REPO_ROOT/scripts/android/check-manifest.py" "${mapfile_list[@]}" \
+  || die "manifest check failed (DECISIONS.md D83) — not signing"
+
 mkdir -p "$OUT_DIR"
 SIGNED=()
 

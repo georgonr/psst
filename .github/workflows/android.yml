@@ -111,6 +111,15 @@ jobs:
             got=$(unzip -p app/build/outputs/apk/gplay/release/app-gplay-$abi-release-unsigned.apk "lib/$abi/libmatrix_sdk_ffi.so" | sha256sum | cut -d' ' -f1)
             echo "$abi aar=$want apk=$got"; [ "$want" = "$got" ]
           done
+      - name: Checkout psst (manifest check script)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: psst-ci
+          sparse-checkout: scripts/android
+          persist-credentials: false
+      - name: No SMS / notification listener / accessibility in the merged manifest (Play Protect, D83)
+        # Google Play Protect blocks installing sideloaded apps that declare any of them; also checks the literal label
+        run: python3 psst-ci/scripts/android/check-manifest.py app/build/outputs/apk/gplay/release/*.apk
       - name: List outputs
         run: |
           ls -la app/build/outputs/apk/gplay/release/
@@ -177,6 +186,14 @@ jobs:
         uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
       - name: Bundle unsigned gplay release AAB
         run: ./gradlew :app:bundleGplayRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: Checkout psst (manifest check script)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: psst-ci
+          sparse-checkout: scripts/android
+          persist-credentials: false
+      - name: No SMS / notification listener / accessibility in the merged manifest (Play Protect, D83)
+        run: python3 psst-ci/scripts/android/check-manifest.py app/build/outputs/bundle/gplayRelease/*.aab
       - name: List outputs
         run: ls -la app/build/outputs/bundle/gplayRelease/
       - name: Upload unsigned AAB
