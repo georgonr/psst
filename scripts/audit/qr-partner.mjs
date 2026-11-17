@@ -14,6 +14,7 @@
 //   click <user> <regex>            click the first visible button / link whose text matches
 //   verify-other <user>             Settings → Sessions: "Verify session" on the newest other session
 //   texts <user>                    visible dialog / toast texts → log
+//   mas-approve <user> <code>       QR login: in that session's MAS tab, enter the code and grant access
 //   eval <user> <file.js>           evaluate an async function expression from file → <out-dir>/eval.json
 //   quit
 import { chromium } from "playwright";
@@ -51,7 +52,11 @@ async function open(user) {
     let p;
     if (cdpUrl && user === lines[0][0]) {
         const b = await chromium.connectOverCDP(cdpUrl);
-        p = b.contexts()[0].pages().find((x) => !x.url().startsWith("devtools")) ?? b.contexts()[0].pages()[0];
+        for (let i = 0; i < 60 && !p; i++) {
+            p = b.contexts().flatMap((c) => c.pages()).find((x) => x.url().startsWith("vector://"));
+            if (!p) await sleep(1000);
+        }
+        if (!p) throw new Error("desktop main window not found");
         log(`${user}: desktop app at ${p.url()}`);
     } else {
         const ctx = await chromium.launchPersistentContext(`${out}/profiles/${user}`, { viewport: { width: 1280, height: 900 } });
@@ -169,6 +174,36 @@ for (;;) {
         if (verb === "click") log(`clicked "${await clickText(await open(a1), [a2, ...rest].join(" "))}"`);
         if (verb === "verify-other") await verifyOther(a1);
         if (verb === "texts") await texts(a1);
+        if (verb === "mas-approve") {
+            const pages = (await open(a1)).context().pages();
+            const m = pages.find((x) => /chat\.macet\.eu/.test(x.url()));
+            if (!m) throw new Error(`no MAS tab: ${pages.map((x) => x.url()).join(", ")}`);
+            await m.bringToFront();
+            for (let i = 0; i < 15; i++) {
+                const real = a1.split("#")[0];
+                if (await m.locator('input[name="username"]').count()) {
+                    await m.fill('input[name="username"]', real); await m.fill('input[name="password"]', acc[real]);
+                } else {
+                    const inp = m.locator("input:not([type=hidden])");
+                    if (a2 && await inp.count()) await inp.first().fill(a2).catch(() => {});
+                }
+                const b = m.locator('button:has-text("Grant"), button:has-text("Allow"), button:has-text("Continue"), button:has-text("Approve"), button[type=submit]');
+                log(`mas controls: ${JSON.stringify(await m.locator("button, input[type=submit], a").evaluateAll((els) => els.map((e) => (e.innerText || e.value || "").trim()).filter(Boolean)).catch(() => []))}`);
+                const grant = m.locator('button:has-text("Grant access"), input[type=submit][value*="Grant" i], button:has-text("Allow access")');
+                if (await grant.count() || await m.getByText("Grant access", { exact: true }).count()) {
+                    await m.locator("input[type=checkbox]").first().check().catch(() => {});
+                    await m.getByText("Grant access", { exact: true }).first().click({ force: true }).catch((e) => log(`grant click: ${e.message.split("\n")[0]}`));
+                    await sleep(3000);
+                    await m.screenshot({ path: `${out}/mas-${Date.now()}.png`, fullPage: true }).catch(() => {});
+                    log(`mas after grant: ${(await m.innerText("body").catch(() => "closed")).replace(/\s+/g, " ").slice(0, 160)}`);
+                    break;
+                }
+                if (await b.count()) await b.first().click().catch(() => {});
+                await sleep(1500);
+                if (m.isClosed() || /Access granted|device has been|You can close/i.test(await m.innerText("body").catch(() => ""))) break;
+            }
+            log(`mas: ${m.isClosed() ? "closed" : (await m.innerText("body").catch(() => "")).replace(/\s+/g, " ").slice(0, 200)}`);
+        }
         if (verb === "eval") {
             const r = await (await open(a1)).evaluate(`(${fs.readFileSync(a2, "utf8")})()`);
             fs.writeFileSync(`${out}/eval.json`, JSON.stringify(r ?? null, null, 1));
