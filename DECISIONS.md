@@ -663,3 +663,32 @@ feature `qrcode` vypnutý) a v obrazovkách Element X. Riešenie (podrobne docs/
 - **Prihlásenie QR kódom (MSC4108) nezmenené** a otestované (sken QR z webu → kód → MAS → prihlásený a overený).
 - **Obmedzenia:** Element Web/Desktop nevedia skenovať (bez kamery), s nimi vždy skenuje telefón. Element X nemá
   vstup „overiť iné moje zariadenie“ — overenie medzi dvoma telefónmi začína nový telefón (alebo web/desktop).
+
+## Prezentačná stránka psst.macet.eu (2026-11-17, šestnásta dávka)
+
+**D82 — Statická prezentačná stránka na `psst.macet.eu`, bez cudzích zdrojov.** `pst.macet.eu` smeruje na cudzí server
+(195.181.248.25), `psst.macet.eu` na náš (204.168.160.131) → použitá `psst.macet.eu`.
+- **Zdroj** `server/www/`: texty SK/EN v `build.py` (generuje `sk/`, `en/`, koreň a `404.html`), CSS, `lang.js`,
+  písmo Inter (OFL, rovnaké súbory ako v Element Call), logo, ikony. Žiadne cudzie písma/skripty/analytika/cookies;
+  CSP `default-src 'none'` + len `'self'` (overené: žiadna požiadavka mimo domény, žiadne chyby CSP).
+- **Jazyk:** koreň `/` presmeruje podľa uloženej voľby (localStorage `psst-lang`), inak podľa jazyka prehliadača
+  (sk/cs → SK, inak EN); bez JS ostanú odkazy Slovenčina/English. Prepínač v hlavičke voľbu uloží. Samostatné URL
+  `/sk/` a `/en/` s `hreflang`, `canonical`, OG/Twitter náhľadom (`og-sk.png`, `og-en.png`) pre každý jazyk.
+- **Texty pravdivé:** obsah šifrovaný medzi zariadeniami, server ho neprečíta; sekcia „Čo server vidí a čo nie“
+  (kto s kým a kedy, názvy a členovia skupín, pripojenie; notifikácie doručuje Google/Apple bez obsahu). Žiadna
+  anonymita, „100 %“ ani superlatívy. Prístup len na pozvánku, bez formulára/kontaktu. Pätička len
+  „Powered by GG & TT“. Odkaz na zdrojový kód (AGPL) je na stránke `/download` (pätička) a v appkách, nie tu.
+- **Snímky** zo skutočnej appky (web + Android emulátor) s testovacími účtami qa-* a vymyslenými menami/správami
+  (Eva, Tomáš, Mária); účty a miestnosti boli po nasadení zmazané.
+- **Nasadenie bez výpadku:** vlastný certifikát `psst-web` (zdieľaný `psst` pre app/chat/call/push sa nemení),
+  obnovuje ho existujúci kontajner certbot. Obsah sa kopíruje do už pripojeného `/srv/app-default/www` — nový
+  bind mount by vyžadoval znovuvytvorenie kontajnera nginx (výpadok všetkých služieb vrátane TURN). Vhost
+  `templates/nginx/www.conf` sa zapne až s certifikátom; `WEB_DOMAIN` v `.env` je voliteľné. `deploy.sh` odteraz
+  pri zmene konfigurácie nginx robí `nginx -t` + graceful reload namiesto reštartu a reštartuje admin len pri zmene
+  jeho tajomstiev (predtým každé nasadenie krátko prerušilo /admin). Overené sondou počas nasadenia: 954 požiadaviek
+  na app/chat/call/push/download bez chyby, žiadny kontajner nebol znovu vytvorený.
+- **Indexovanie:** `psst.macet.eu` indexovateľná (robots + sitemap). `app.macet.eu/robots.txt` povolí len
+  `/download/` a právne texty, web app (prihlasovacia stránka) a `/admin` majú `X-Robots-Tag: noindex, nofollow`,
+  rovnako prihlásenie MAS na `chat.macet.eu/auth/`; `chat.macet.eu/robots.txt` zakazuje všetko. Predtým
+  `app…/robots.txt` vracal HTML web appky.
+- **Healthcheck:** obe jazykové verzie + platnosť certifikátu `psst-web`.
