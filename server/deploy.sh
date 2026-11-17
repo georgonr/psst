@@ -219,6 +219,7 @@ render() { # render <template> <output>
       -e "s|__LIVEKIT_USE_EXTERNAL_IP__|${LIVEKIT_USE_EXTERNAL_IP}|g" \
       -e "s|__LIVEKIT_NODE_IP_LINE__|  node_ip: ${LIVEKIT_NODE_IP}|g" \
       -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
+      -e "s|__WEB_DOMAIN__|${WEB_DOMAIN:-}|g" \
       -e "s|__ADMIN_CLIENT_ID__|${ADMIN_CLIENT_ID}|g" -e "s|__ADMIN_CLIENT_SECRET__|${ADMIN_CLIENT_SECRET}|g" \
       "$1" > "$2.tmp"
   if grep -q '__[A-Z_]*__' "$2.tmp"; then die "nevyplnený placeholder v $2: $(grep -o '__[A-Z_]*__' "$2.tmp" | sort -u | tr '\n' ' ')"; fi
@@ -297,6 +298,17 @@ grep -q 'DOPLNIT_KONTAKT' data/config/app-default/legal/terms.html && warn "Podm
 mkdir -p data/config/app-default/.well-known
 render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
 render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
+# prezentačná stránka WEB_DOMAIN (D82): statické súbory z www/ do už pripojeného /srv/app-default/www
+# (na APP_DOMAIN nie je dosiahnuteľná — tam sa z app-default servíruje len config.json, .well-known a legal).
+# Vhost sa zapne až s vlastným certifikátom "psst-web" (krok 6) — bez neho by nginx nenaštartoval.
+WEB_CERT=data/certbot/conf/live/psst-web/fullchain.pem
+if [ -n "${WEB_DOMAIN:-}" ]; then
+  python3 www/build.py >/dev/null
+  rsync -a --delete --chmod=D755,F644 --exclude build.py www/ data/config/app-default/www/
+  if [ -s "$WEB_CERT" ]; then render templates/nginx/www.conf data/config/nginx/www.conf; else rm -f data/config/nginx/www.conf; fi
+else
+  rm -rf data/config/app-default/www data/config/nginx/www.conf
+fi
 
 # Sygnal (vlastná push brána): Android cez FCM HTTP v1, iOS cez APNs — každé len ak je nahraný kľúč
 APNS_KEY="$(ls secrets/apns/AuthKey_*.p8 2>/dev/null | head -1 || true)"
@@ -413,7 +425,12 @@ if [ -n "$CFG_BEFORE" ]; then
   RESTART="$(printf '%s\n' $RESTART | sort -u | tr '\n' ' ')"
   if [ -n "${RESTART// }" ]; then
     log "zmenená konfigurácia → reštartujem:$RESTART"
-    for svc in $RESTART; do compose ps --status running --services 2>/dev/null | grep -qx "$svc" && compose restart "$svc" >/dev/null; done
+    for svc in $RESTART; do
+      compose ps --status running --services 2>/dev/null | grep -qx "$svc" || continue
+      # nginx: overiť a graceful reload (bežiace spojenia vrátane TURN/TLS a hovorov sa neprerušia); reštart len keď test zlyhá
+      if [ "$svc" = nginx ] && compose exec -T nginx nginx -t >/dev/null 2>&1; then compose exec -T nginx nginx -s reload >/dev/null; continue; fi
+      compose restart "$svc" >/dev/null
+    done
   fi
 fi
 wait_healthy synapse 300 || { compose logs --tail=80 synapse mas; die "Synapse nenaštartoval"; }
@@ -454,8 +471,10 @@ GRANT USAGE ON SCHEMA public TO psst_admin_ro;
 GRANT SELECT ON user_registrations, user_registration_tokens TO psst_admin_ro;
 SQL
 [ -s secrets/admin_token ] || PSST_QUIET=1 scripts/members.sh list >/dev/null 2>&1 || warn "Synapse admin token sa nepodarilo vydať"
+ADM_BEFORE="$(cat secrets/admin-run/* 2>/dev/null | cksum)"
 admin_secrets
-compose up -d admin >/dev/null && compose restart admin >/dev/null
+# reštart admina len pri zmene jeho tajomstiev (inak by každé nasadenie znamenalo výpadok /admin)
+compose up -d admin >/dev/null && { [ "$ADM_BEFORE" = "$(cat secrets/admin-run/* 2>/dev/null | cksum)" ] || compose restart admin >/dev/null; }
 compose exec -T nginx nginx -s reload >/dev/null 2>&1 || true
 
 # ----------------------------------------------------------------- 6. Let's Encrypt
@@ -473,6 +492,21 @@ if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
   else
     make_selfsigned; compose exec -T nginx nginx -s reload || true
     die "Let's Encrypt zlyhal (DNS záznamy? port 80 v cloud firewalle?) — opravte a spustite ./deploy.sh znova"
+  fi
+fi
+
+# prezentačná stránka (D82): samostatný certifikát "psst-web", aby sa zdieľaný "psst" nemenil; obnovu robí
+# kontajner certbot (certbot renew obnoví všetky certifikáty), nginx ich načíta pri periodickom reloade
+if [ "$LETSENCRYPT" = 1 ] && [ -n "${WEB_DOMAIN:-}" ] && [ ! -s "$WEB_CERT" ]; then
+  log "žiadam certifikát Let's Encrypt pre: $WEB_DOMAIN (psst-web)"
+  STAGING_ARG=""; [ "$STAGING" = 1 ] && STAGING_ARG="--staging"
+  if compose run --rm --no-deps -T --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name psst-web \
+       -d "$WEB_DOMAIN" --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email --non-interactive --key-type ecdsa $STAGING_ARG; then
+    render templates/nginx/www.conf data/config/nginx/www.conf
+    if compose exec -T nginx nginx -t >/dev/null 2>&1; then compose exec -T nginx nginx -s reload >/dev/null; log "https://$WEB_DOMAIN zapnutá"
+    else rm -f data/config/nginx/www.conf; warn "nginx -t zlyhal s vhostom $WEB_DOMAIN — vhost vypnutý"; fi
+  else
+    warn "certifikát pre $WEB_DOMAIN sa nepodarilo vydať (DNS?) — prezentačná stránka zostáva vypnutá, ostatné služby bežia"
   fi
 fi
 

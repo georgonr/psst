@@ -24,7 +24,7 @@ fi
 
 # --- HTTPS cez nginx (domény → 127.0.0.1, ako keby prišli zvonka)
 K=""; [ -f data/certbot/conf/live/psst/.psst-dummy ] && K="-k"
-RES=""; for d in "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN"; do RES+=" --resolve $d:443:127.0.0.1"; done
+RES=""; for d in "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" ${WEB_DOMAIN:-}; do RES+=" --resolve $d:443:127.0.0.1"; done
 get() { curl -sS $K $RES --max-time 10 "$@"; }
 check() { # check <popis> <url> <grep-vzor>
   local body; body="$(get "$2" 2>&1)" || { bad "$1 ($2: $body)"; return; }
@@ -44,6 +44,16 @@ check "stránka na stiahnutie /download" "https://$APP_DOMAIN/download/" "Downlo
 get -o /dev/null -w '%{http_code} %{redirect_url}' "https://$APP_DOMAIN/admin/login" | grep -q "^303 .*/authorize" \
   && ok "administrácia /admin (prihlásenie cez MAS)" || bad "administrácia /admin"
 check "Element Call"                                "https://$CALL_DOMAIN/" "<html"
+# prezentačná stránka (D82): obe jazykové verzie + vlastný certifikát psst-web (curl bez -k overí reťazec)
+if [ -n "${WEB_DOMAIN:-}" ]; then
+  check "prezentačná stránka SK ($WEB_DOMAIN)" "https://$WEB_DOMAIN/sk/" "Stiahnuť aplikáciu"
+  check "prezentačná stránka EN ($WEB_DOMAIN)" "https://$WEB_DOMAIN/en/" "Download the app"
+  wend="$(openssl x509 -enddate -noout -in data/certbot/conf/live/psst-web/fullchain.pem 2>/dev/null | cut -d= -f2)"
+  if [ -n "$wend" ]; then
+    wleft=$(( ( $(date -d "$wend" +%s 2>/dev/null || date -j -f '%b %d %T %Y %Z' "$wend" +%s) - $(date +%s) ) / 86400 ))
+    [ "$wleft" -ge 14 ] && ok "certifikát $WEB_DOMAIN platí ešte $wleft dní" || bad "certifikát $WEB_DOMAIN vyprší o $wleft dní"
+  else bad "certifikát $WEB_DOMAIN chýba (data/certbot/conf/live/psst-web)"; fi
+fi
 code="$(get -o /dev/null -w '%{http_code}' "https://$NTFY_DOMAIN/")"
 [ "$code" = 301 ] && ok "push doména len presmeruje (ntfy zrušený)" || bad "https://$NTFY_DOMAIN/ vrátil $code (očakávané 301)"
 get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/livekit/jwt/healthz" | grep -q 200 && ok "lk-jwt-service" || bad "lk-jwt-service (/livekit/jwt/healthz)"
