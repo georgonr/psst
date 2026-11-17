@@ -323,5 +323,60 @@
   "id": "search_lifecycle",
   "status": "ok",
   "note": "b37: po reštarte hľadá hneď (index zostáva, prechod sa neopakuje); aktualizácia b29→b35 (starý index zmazaný a postavený znova, 56/56) a b35→b36→b37; odhlásenie → prihlásenie s kľúčom na obnovenie → 56/56 do ~1,5 min"
+ },
+ {
+  "id": "verify_qr",
+  "status": "ok",
+  "note": "b42 (dávka 15, D81): štandardné Matrix QR overenie s webom aj medzi telefónmi; emoji ako náhrada"
+ },
+ {
+  "id": "qr_android_scans",
+  "status": "ok",
+  "note": "b39/b41/b42: Android naskenoval QR z dialógu Element Web („Scan this unique code“), web „Confirm that you see a green shield“ → obe strany „Device verified“, krížový podpis potvrdený zo servera (web vidí Android ako overený)"
+ },
+ {
+  "id": "qr_android_android",
+  "status": "ok",
+  "note": "b41: dva emulátory — nový B naskenoval QR overeného A (A sa pýta „ukazuje zelený štít?“ → potvrdené) aj opačne A naskenoval QR B; obe strany overené"
+ },
+ {
+  "id": "qr_directions",
+  "status": "ok",
+  "note": "začal nový Android (Použiť iné zariadenie), začala nová webová relácia (Android odpovedal), začal overený web cez Devices → Verify device (nový Android na obrazovke FTUE — upstream to zahadzoval, opravené; po overení FTUE pokračuje)"
+ },
+ {
+  "id": "qr_emoji_fallback",
+  "status": "ok",
+  "note": "„Porovnať emoji“ na každej obrazovke; emoji overenie dokončené s webom; žiadosť len s m.sas.v1 (ako Element X iOS) → bez QR, rovno emoji"
+ },
+ {
+  "id": "qr_camera",
+  "status": "ok",
+  "note": "povolenie kamery sa zobrazí až po „Naskenovať QR kód“; „Nepovoliť“ → hláška + Otvoriť nastavenia, emoji pokračuje k úspechu"
+ },
+ {
+  "id": "qr_errors",
+  "status": "ok",
+  "note": "cudzí QR (URL) → „Toto nie je QR kód na overenie“; QR iného overenia → „kľúče sa nezhodujú“, overenie pokračuje; vypršanie (10 min) → „Čas na overenie vypršal“; zrušenie na webe → „Druhé zariadenie overenie zrušilo“"
+ },
+ {
+  "id": "qr_result",
+  "status": "ok",
+  "note": "nové zariadenie po QR overení dešifruje 5 správ poslaných pred jeho prihlásením (záloha kľúčov), server vidí zariadenia ako krížovo podpísané"
+ },
+ {
+  "id": "qr_regressions",
+  "status": "ok",
+  "note": "emoji overenie OK; push budíček pri žiadosti (appka zabitá) → notifikácia „Verification request“; prihlásenie QR kódom → MAS „Access granted“ → prihlásený a overený; vyhľadávanie „tajne“ → 5/5"
+ },
+ {
+  "id": "qr_desktop",
+  "status": "na",
+  "note": "psst desktop sa prihlasuje cez systémový prehliadač tohto Macu — automatizácia by zasahovala do prehliadača používateľa, preto netestované; desktop obsahuje ten istý Element Web (b27) ako otestovaný web, QR protokol je identický"
+ },
+ {
+  "id": "qr_update",
+  "status": "ok",
+  "note": "b37 → b39 aktualizácia na emulátore A, čistá inštalácia na emulátore B; b41 → b42 aktualizácia"
  }
 ]

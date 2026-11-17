@@ -1,3 +1,45 @@
+# PSST — report (2026-11-17, dávka 15: overenie zariadenia QR kódom na Androide)
+
+**Samsung A05 nebol pripojený** (adb: len emulátory). Testované na dvoch emulátoroch Android 14 s kamerou, ktorej
+obraz bol QR kód z druhého zariadenia. Rozhodnutie D81, upstream vs. psst: [docs/android-qr-verification.md](docs/android-qr-verification.md).
+
+**Upstream:** Rust crypto a `matrix-sdk` majú štandardné QR overenie hotové. Chýbalo:
+- vo FFI pre Kotlin (len emoji, feature `qrcode` vypnutý),
+- v obrazovkách Element X.
+
+Navyše nové neoverené zariadenie zahadzovalo žiadosť, ktorú začalo už overené zariadenie.
+
+**Doprogramované:**
+- záplata FFI (len doplnky) v spoločnom psst build SDK s vyhľadávaním (`android-rust-sdk-26.11.05-psst3`, AAR z oficiálneho projektu);
+- na obrazovkách overenia: náš QR kód, „Naskenovať QR kód“ a vždy „Porovnať emoji“;
+- chybové hlášky; povolenie kamery až pri skenovaní;
+- žiadosť sa zobrazí aj nad FTUE a FTUE potom pokračuje; texty SK/EN.
+
+| Bod | Výsledok |
+|---|---|
+| 1. Android skenuje web | ✅ QR z dialógu Element Web → zelený štít → „Device verified“ na oboch stranách |
+| 1. Android skenuje desktop | ⚪ netestované: desktop sa prihlasuje cez systémový prehliadač tohto Macu; desktop obsahuje ten istý web b27 |
+| 2. Android ↔ Android | ✅ obe role (A ukáže a B skenuje, aj opačne) |
+| 3. Oba smery začatia | ✅ začne nový Android; začne nový web a odpovie Android; začne overený web a odpovie nový Android (oprava FTUE) |
+| 4. Emoji ako náhrada | ✅ vždy ponúknuté, overenie emoji dokončené; druhá strana len s emoji → rovno emoji |
+| 5. Kamera | ✅ povolenie až pri skenovaní; odmietnutie → hláška, Otvoriť nastavenia, emoji |
+| 6. Chyby | ✅ cudzí QR, QR iného overenia (nezhoda kľúčov), vypršanie po 10 min, zrušenie druhou stranou |
+| 7. Výsledok | ✅ krížový podpis potvrdený zo servera; nové zariadenie dešifruje staršie správy zo zálohy |
+| 8. Regresia | ✅ emoji, push budíček pri žiadosti, prihlásenie QR kódom (až po „Access granted“), vyhľadávanie |
+| 9. SK/EN | ✅ obe jazykové verzie na emulátoroch |
+| Aktualizácia / čistá inštalácia | ✅ b37 → b39 (A), čistá inštalácia (B), b41 → b42 |
+
+**Build:** Android **b42** (26.11.0-b42+2026-11-17) je na stránke na stiahnutie. b38–b41 boli medzibuildy počas testov.
+Matica: 285 buniek — ✅ 213 · ❌ 1 · 🟠 2 · ⚪ 69.
+
+**Pozor — účet @mac:** pri pokuse prihlásiť psst desktop sa otvoril Firefox na tomto Macu. V ňom niekto o 15:58 UTC
+zaregistroval účet `@mac` pozývacím tokenom z 15. 11. Moja automatizácia Firefox neovláda, preto som účet nechal tak.
+Ak ho nepoznáte, deaktivujte ho v administrácii.
+
+**Testovacie účty:** qa-v1, qa-v2 a qa-v3 sú deaktivované a ich miestnosti zmazané. Dočasný druhý emulátor je odstránený.
+
+---
+
 # PSST — report (2026-11-17, dávka 14: vyhľadávanie v správach na Androide)
 
 **Samsung A05 nebol pripojený** (adb: len emulátor). Android testovaný v emulátore Android 14 (Google APIs, x86_64).

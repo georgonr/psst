@@ -90,6 +90,18 @@ ROWS = [
         ("search_speed", "Rýchlosť hľadania a indexovania, záťaž"),
         ("search_lifecycle", "Po reštarte appky, po aktualizácii zo staršieho buildu, po odhlásení a novom prihlásení"),
     ], ("android",)),
+    ("Android: overenie zariadenia QR kódom (dávka 15, D81)", [
+        ("qr_android_scans", "Android naskenuje QR kód z webu (app.macet.eu) a zariadenie je overené"),
+        ("qr_android_android", "Android ↔ Android: jeden ukáže QR, druhý naskenuje (obe role)"),
+        ("qr_directions", "Začne nové zariadenie aj už overené zariadenie"),
+        ("qr_emoji_fallback", "Vždy aj „Porovnať emoji“; druhá strana len s emoji → rovno emoji"),
+        ("qr_camera", "Povolenie kamery až pri skenovaní, pri odmietnutí hláška a pokračovanie cez emoji"),
+        ("qr_errors", "Cudzí/neplatný QR, kód iného overenia, vypršaný čas, zrušenie druhou stranou — hláška a cesta ďalej"),
+        ("qr_result", "Po overení: obe strany overené aj na serveri, nové zariadenie dešifruje staršie správy"),
+        ("qr_regressions", "Emoji, budíček pri žiadosti, prihlásenie QR kódom, vyhľadávanie — fungujú ďalej"),
+        ("qr_desktop", "Android ↔ psst desktop (Windows/macOS)"),
+        ("qr_update", "Aktualizácia z b37 a čistá inštalácia"),
+    ], ("android",)),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}

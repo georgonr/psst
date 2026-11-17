@@ -642,3 +642,24 @@ Diakritiku ani začiatok slova nevie Kotlin obísť (regex aj prefix sú v parse
   istým pravidlom. Nové správy sa indexujú priebežne pri prijatí.
 - **Obmedzenia:** história ~3 mesiace (upstream limit backfillu); indexuje sa len dešifrovaná správa; predpona len
   pre jednotlivé slová; hľadanie v miestnosti filtruje globálny prúd výsledkov (pri psst počte miestností dosť rýchle).
+
+## Android: overenie zariadenia QR kódom (2026-11-17, pätnásta dávka)
+
+**D81 — Štandardné Matrix QR overenie: Rust FFI rozšírené, obrazovky doplnené.** Rust crypto aj `matrix-sdk` majú QR
+overenie (`m.qr_code.show.v1` / `m.qr_code.scan.v1` / `m.reciprocate.v1`) hotové; chýbalo vo FFI pre Kotlin (len SAS,
+feature `qrcode` vypnutý) a v obrazovkách Element X. Riešenie (podrobne docs/android-qr-verification.md):
+- **Záplata FFI** `scripts/android/rust-sdk/psst-qr-verification.patch` — len doplnky (QR delegát, `qr_options`,
+  `generate_qr_code`, `scan_qr_code`, `confirm_qr_scanned`), žiadosti/prijatie ponúkajú SAS + QR ako Element Web,
+  emoji ostáva možné aj po zobrazení QR. Keďže sa menia Kotlin väzby, AAR sa už nestavia výmenou `.so`, ale
+  oficiálnym projektom `matrix-rust-components-kotlin` (rovnaký tag); CI zastaví vydanie, ak by sa väzby líšili mimo
+  `matrix_sdk_ffi.kt`. Spoločné vydanie s D80: `android-rust-sdk-26.11.05-psst3`.
+- **Obrazovky:** po prijatí žiadosti sa podľa schopností druhej strany ukáže náš QR kód, „Naskenovať QR kód“ a vždy
+  „Porovnať emoji“; ak druhá strana pozná len emoji (Element X iOS), spustí sa rovno emoji. Kamera sa pýta až pri
+  skenovaní; chybové hlášky pre cudzí/neplatný kód, kód iného overenia (nezhoda kľúčov), vypršanie, zrušenie druhou
+  stranou, nezhodu emoji. SK/EN.
+- **Upstream chyba opravená:** nové neoverené zariadenie (obrazovka „Potvrďte, že ste to vy“) zahadzovalo žiadosť o
+  overenie začatú z už overeného zariadenia (čakalo na domovskú obrazovku). Žiadosť sa teraz zobrazí aj nad FTUE a po
+  overení FTUE pokračuje.
+- **Prihlásenie QR kódom (MSC4108) nezmenené** a otestované (sken QR z webu → kód → MAS → prihlásený a overený).
+- **Obmedzenia:** Element Web/Desktop nevedia skenovať (bez kamery), s nimi vždy skenuje telefón. Element X nemá
+  vstup „overiť iné moje zariadenie“ — overenie medzi dvoma telefónmi začína nový telefón (alebo web/desktop).
