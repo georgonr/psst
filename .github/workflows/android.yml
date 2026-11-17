@@ -77,6 +77,15 @@ jobs:
           large-packages: false
           docker-images: true
           swap-storage: false
+      - name: Patched matrix-rust-sdk (psst search, D80)
+        # libraries/rustsdk/psst-rust-sdk.properties in the fork names the GitHub release of this repo built by
+        # android-rust-sdk.yml and its SHA-256; the build uses it instead of the Maven artifact.
+        run: |
+          set -euo pipefail
+          props=libraries/rustsdk/psst-rust-sdk.properties
+          tag=$(sed -n 's/^tag=//p' "$props"); file=$(sed -n 's/^file=//p' "$props"); sha=$(sed -n 's/^sha256=//p' "$props")
+          curl -fsSL "https://github.com/georgonr/psst/releases/download/$tag/$file" -o libraries/rustsdk/matrix-rust-sdk.aar
+          echo "$sha  libraries/rustsdk/matrix-rust-sdk.aar" | sha256sum -c -
       - name: Use JDK 21 (as upstream)
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
@@ -94,6 +103,14 @@ jobs:
           ls "$ANDROID_HOME/build-tools" "$ANDROID_HOME/ndk" 2>/dev/null || true
       - name: Assemble unsigned gplay release APKs
         run: ./gradlew :app:assembleGplayRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: The APKs contain the patched native library (D80)
+        run: |
+          set -euo pipefail
+          for abi in arm64-v8a armeabi-v7a x86_64; do
+            want=$(unzip -p libraries/rustsdk/matrix-rust-sdk.aar "jni/$abi/libmatrix_sdk_ffi.so" | sha256sum | cut -d' ' -f1)
+            got=$(unzip -p app/build/outputs/apk/gplay/release/app-gplay-$abi-release-unsigned.apk "lib/$abi/libmatrix_sdk_ffi.so" | sha256sum | cut -d' ' -f1)
+            echo "$abi aar=$want apk=$got"; [ "$want" = "$got" ]
+          done
       - name: List outputs
         run: |
           ls -la app/build/outputs/apk/gplay/release/
@@ -142,6 +159,15 @@ jobs:
           large-packages: false
           docker-images: true
           swap-storage: false
+      - name: Patched matrix-rust-sdk (psst search, D80)
+        # libraries/rustsdk/psst-rust-sdk.properties in the fork names the GitHub release of this repo built by
+        # android-rust-sdk.yml and its SHA-256; the build uses it instead of the Maven artifact.
+        run: |
+          set -euo pipefail
+          props=libraries/rustsdk/psst-rust-sdk.properties
+          tag=$(sed -n 's/^tag=//p' "$props"); file=$(sed -n 's/^file=//p' "$props"); sha=$(sed -n 's/^sha256=//p' "$props")
+          curl -fsSL "https://github.com/georgonr/psst/releases/download/$tag/$file" -o libraries/rustsdk/matrix-rust-sdk.aar
+          echo "$sha  libraries/rustsdk/matrix-rust-sdk.aar" | sha256sum -c -
       - name: Use JDK 21 (as upstream)
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:

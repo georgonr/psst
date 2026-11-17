@@ -606,3 +606,29 @@ do `PSST_MAC_CERT_*` sa nikdy nesmú dať testovacie hodnoty.
 - **Web — vyhľadávanie v šifrovaných miestnostiach:** Element Web nemá lokálny index (Seshat je natívny modul len pre
   desktop). Riešenie = index v prehliadači (IndexedDB + vlastný indexer) s rizikom úniku obsahu do úložiska
   prehliadača. Odhad 3+ týždne, vysoké riziko. Nerobené; obchádzka: desktop appka.
+
+## Android: vyhľadávanie v správach (2026-11-17, štrnásta dávka)
+
+**D80 — Dokončené upstreamové vyhľadávanie, nie vlastný index.** Element X v26.11 + matrix-rust-sdk už majú celý
+mechanizmus: šifrovaný tantivy index na miestnosť v telefóne (kľúč relácie), indexovanie z event cache (nové, odoslané,
+upravené, zmazané správy), dopĺňanie histórie (`run_search_backfill`, ~13 týždňov), globálne hľadanie a otvorenie
+správy. Prázdne výsledky v D79 neboli chyba indexu, ale analyzátora: predvolený tokenizér len delí slová a mení na malé
+písmená a parser hľadá celé slová — „cislo“ nikdy nenájde „číslo“, „ob“ nenájde „obed“ (overené na b29 s 930 správami).
+Diakritiku ani začiatok slova nevie Kotlin obísť (regex aj prefix sú v parseri vypnuté), preto:
+- **Malá záplata Rust SDK** (`scripts/android/rust-sdk/psst-search.patch`, 2 súbory v `matrix-sdk-search`): tokenizér
+  tela správy `psst_folded` = predvolený + `AsciiFoldingFilter` (aj pre dopyt), každé slovo dopytu = prefix
+  (`set_field_fuzzy(prefix, vzdialenosť 0)`); vlastný unit test. **FFI sa nemení** — workflow
+  `android-rust-sdk.yml` postaví len `libmatrix_sdk_ffi.so` (arm64, armv7, x86_64) z commitu oficiálneho vydania,
+  overí, že vygenerované Kotlin väzby sú bajt po bajte zhodné s oficiálnym sources jar, a vymení `.so` v
+  **oficiálnom** AAR. Výsledok je GitHub release `android-rust-sdk-26.11.05-psst1` (AAR + SHA-256); `android.yml` ho
+  stiahne podľa `libraries/rustsdk/psst-rust-sdk.properties` vo forku, overí hash a skontroluje, že APK obsahuje
+  presne tieto `.so`. Prečo nie vlastný build celého SDK: menej času v CI (~15 min), žiadna zmena Kotlin väzieb,
+  pri aktualizácii stačí zmeniť pin (docs/android-search.md).
+- **Fork** (všetko označené `PSST (D80)`): dopyt sa delí na slová rovnako ako index (`PsstSearchQuery.kt`, každé
+  slovo povinné); starý index (bez značky `psst-folded-v1`) sa raz zmaže a SDK ho postaví znova z uložených udalostí
+  a histórie; história sa indexuje aj počas používania appky (upstream len pri otvorenom hľadaní alebo na nabíjačke
+  cez Wi-Fi) — `FOREGROUND` stratégia so 6 h odstupom, zastaví sa na pozadí; úryvok so zvýraznením; riadok
+  „Staršie správy sa ešte indexujú“; nová obrazovka „Hľadať v konverzácii“ (lupa v hlavičke konverzácie aj Detail →
+  Hľadať v správach) nad upstream `createMessageSearch(roomId)`.
+- **Obmedzenia:** história ~3 mesiace (upstream limit backfillu); indexuje sa len dešifrovaná správa; predpona len
+  pre jednotlivé slová; hľadanie v miestnosti filtruje globálny prúd výsledkov (pri psst počte miestností dosť rýchle).

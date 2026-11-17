@@ -77,6 +77,19 @@ ROWS = [
         ("admin_password", "Admin: nastaviť nové heslo členovi"),
         ("install_clean", "Stiahnutý build sa nainštaluje a otvorí bez varovania"),
     ]),
+    # Android-only section: the other platforms show "–" and are not counted
+    ("Android: vyhľadávanie v správach (dávka 14, D80)", [
+        ("search_global", "Hľadanie vo všetkých konverzáciách (hlavná obrazovka → Hľadať → Správy)"),
+        ("search_room", "Hľadanie v jednej konverzácii (lupa v konverzácii / Detail → Hľadať v správach)"),
+        ("search_types", "Šifrovaná 1:1, šifrovaná skupina aj nešifrovaný verejný kanál"),
+        ("search_result", "Výsledok: odosielateľ, miestnosť, dátum, úryvok so zvýraznením; ťuknutie otvorí správu"),
+        ("search_folding", "Bez ohľadu na veľkosť písmen a diakritiku („cislo“ → „číslo“), aj začiatok slova"),
+        ("search_history", "Staršie správy: index sa dopĺňa z histórie na pozadí, stav indexovania viditeľný"),
+        ("search_live", "Nová prijatá aj odoslaná správa hneď v indexe; úprava a zmazanie sa prejavia"),
+        ("search_privacy", "Index šifrovaný v telefóne, nič na server, zmazaný pri odhlásení"),
+        ("search_speed", "Rýchlosť hľadania a indexovania, záťaž"),
+        ("search_lifecycle", "Po reštarte appky, po aktualizácii zo staršieho buildu, po odhlásení a novom prihlásení"),
+    ], ("android",)),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}
@@ -98,13 +111,17 @@ def main():
         res[k] = load(v)
     counts = {s: 0 for s in LABEL}
     lines = []
-    for section, rows in ROWS:
+    for section, rows, *only in ROWS:
+        only = only[0] if only else None
         lines.append(f"\n## {section}\n")
         lines.append("| Funkcia | " + " | ".join(n for _, n in PLATFORMS) + " |")
         lines.append("|---|" + "---|" * len(PLATFORMS))
         for rid, name in rows:
             cells = []
             for p, _ in PLATFORMS:
+                if only and p not in only:
+                    cells.append("–")
+                    continue
                 r = res.get(p, {}).get(rid)
                 if r is None:
                     cells.append("⚪ nedá sa tu overiť — netestované")
@@ -130,7 +147,7 @@ def main():
         f"🟠 {counts['upstream']} nefunguje kvôli upstreamu · ⚪ {counts['na']} nedá sa tu overiť",
         "",
         "Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje, obmedzenie upstreamu (nie náš fork/server) · "
-        "⚪ nedá sa v tomto prostredí overiť (dôvod v bunke).",
+        "⚪ nedá sa v tomto prostredí overiť (dôvod v bunke) · – riadok sa týka len inej platformy (nepočíta sa).",
     ]
     open(out_md, "w").write("\n".join(head + lines) + "\n")
     print(json.dumps(counts))
