@@ -378,5 +378,40 @@
   "id": "qr_update",
   "status": "ok",
   "note": "b37 → b39 aktualizácia na emulátore A, čistá inštalácia na emulátore B; b41 → b42 aktualizácia"
+ },
+ {
+  "id": "pp_manifest",
+  "status": "ok",
+  "note": "b43: scripts/android/check-manifest.py — b42 FAIL (BIND_NOTIFICATION_LISTENER_SERVICE z PsstNotificationListener, od b25), b43 OK (3 APK + AAB v CI, podpísané súbory aj APK stiahnuté z /download)"
+ },
+ {
+  "id": "pp_install",
+  "status": "ok",
+  "note": "b43: emulátor Android 14 s Google Play, overovanie Play Protect zapnuté → VerifyApps response=0 (povolené). Blok z Samsungu sa ani s b42 nezopakoval (rozšírená ochrana len v niektorých krajinách a z prehliadača); rozhodujúca je kontrola manifestu"
+ },
+ {
+  "id": "pp_label",
+  "status": "ok",
+  "note": "b43: application android:label=\"psst\" doslovne (aapt2 badging: label='psst'); predtým @string → dialóg pred inštaláciou ukázal triedu ElementXApplication"
+ },
+ {
+  "id": "pp_download_help",
+  "status": "ok",
+  "note": "b43: /download karta Android — 5 krokov SK + EN (Napriek tomu stiahnuť, Povoliť z tohto zdroja, Skenovať/Odoslať → Inštalovať, Samsung Automatické blokovanie, App blocked → OK + správca)"
+ },
+ {
+  "id": "pp_regressions",
+  "status": "ok",
+  "note": "b43 (emulátor A, Android 14): správa pri zhasnutom displeji → rozsvietené za 4 s, importance 4, zvuk prehraný (mSoundNotificationKey); hovor z webu pri zamknutom telefóne → IncomingCallActivity na celú obrazovku za 2 s; Upozornenia a hovory + Diagnostika (bez tlačidla prístupu k upozorneniam, riadok CHANNEL); žiadosť o overenie pri spiacom telefóne → notifikácia za 1 s; QR: telefón naskenoval QR z novej webovej relácie → overené, server: krížovo podpísané"
+ },
+ {
+  "id": "pp_search",
+  "status": "fail",
+  "note": "b43 aj b42 (dávka 16): hľadanie nevrátilo nič ani pre práve prijatú správu (emulátor A po viacerých aktualizáciách/downgrade, aj čistá inštalácia b43 na druhom emulátore); index na disku správy obsahuje. Nie je to dôsledok D83 (b42 rovnako) — treba preskúmať"
+ },
+ {
+  "id": "search_global",
+  "status": "fail",
+  "note": "dávka 16 (b42/b43): žiadne výsledky ani pre novú správu — viď riadok „Po zmene: vyhľadávanie v správach“; v b37 (dávka 14) fungovalo"
  }
 ]

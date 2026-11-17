@@ -1,3 +1,51 @@
+# PSST — report (2026-11-17, dávka 16: prezentačná stránka a Play Protect)
+
+## A) Prezentačná stránka — https://psst.macet.eu (D82)
+
+`pst.macet.eu` smeruje na cudzí server, preto `psst.macet.eu` (náš server). Statická stránka SK/EN zo `server/www/`:
+hero s dvoma tlačidlami (Stiahnuť aplikáciu → app.macet.eu/download, Prihlásiť sa → app.macet.eu), 6 funkcií,
+„Čo server vidí a čo nie“, platformy (iPhone pripravujeme), prístup len na pozvánku, pätička „Powered by GG & TT“.
+Snímky z webu a Android emulátora s vymyslenými menami (Eva, Tomáš, Mária) na testovacích účtoch.
+
+| Overenie (zvonka, HTTPS) | Výsledok |
+|---|---|
+| Certifikát | ✅ Let's Encrypt `psst-web`, platný do 2027-02-15, obnova existujúcim certbotom |
+| Jazyk | ✅ sk-SK → /sk/, en-US → /en/, prepínač si voľbu pamätá |
+| Tlačidlá | ✅ správne odkazy, viditeľné bez posúvania na 360, 390 a 1440 px, znova na konci |
+| Cudzie zdroje | ✅ 0 požiadaviek mimo domény, 0 cookies, 0 chýb CSP |
+| Hlavičky, healthcheck | ✅ HSTS, nosniff, no-referrer, DENY, prísne CSP; healthcheck SK + EN + certifikát |
+| Bez výpadku | ✅ sonda 954 požiadaviek na app/chat/call/push/download počas nasadenia bez chyby; žiadny kontajner znovu vytvorený |
+| Indexovanie | ✅ stránka indexovateľná; prihlásenie (web app, MAS) a /admin `noindex` |
+| AGPL | ✅ odkaz „Source code (AGPL-3.0)“ doplnený do pätičky /download (v appke a na webe už bol) |
+
+Zmena `deploy.sh`: pri zmene konfigurácie nginx graceful reload namiesto reštartu, admin sa reštartuje len pri zmene
+tajomstiev.
+
+## B) Play Protect blokoval inštaláciu (D83)
+
+**Príčina:** `BIND_NOTIFICATION_LISTENER_SERVICE` — služba `PsstNotificationListener`. Bol to náš kód: voliteľná
+časť diagnostiky upozornení (D67). Prvýkrát v **b25** (prvý úspešný b27), v b24 nebola. SMS ani accessibility nikde.
+
+**Zmena:** služba odstránená. Diagnostika namiesto nej vypíše efektívny kanál upozornenia. Žiadna funkcia pre
+používateľa nechýba, z diagnostiky ubudli len detaily o tom, ako systém upozornenie zaradil. Štítok aplikácie je
+doslovne „psst“. Predtým `@string`, ktorý dialóg pred inštaláciou nevedel načítať, a preto ukázal `ElementXApplication`.
+
+| Bod | Výsledok (b43) |
+|---|---|
+| Upozornenie so zvukom, rozsvietenie | ✅ displej rozsvietený za 4 s, importance 4, zvuk prehraný |
+| Hovor pri zamknutom telefóne | ✅ prichádzajúci hovor na celú obrazovku za 2 s |
+| Upozornenia a hovory + diagnostika | ✅ obe obrazovky, bez tlačidla prístupu k upozorneniam |
+| Budíček pri žiadosti o overenie | ✅ notifikácia za 1 s pri spiacom telefóne |
+| QR overenie | ✅ telefón naskenoval QR z webu → overené, krížovo podpísané na serveri |
+| Vyhľadávanie | ❌ žiadne výsledky ani pre novú správu — **rovnako v b42**, nie je to dôsledok D83; otvorené |
+| Kontrola manifestu | ✅ `check-manifest.py` v CI (APK + AAB) a pred podpisom; b42 FAIL, b43 OK, aj súbor z /download |
+| Reprodukcia | ⚪ emulátor Android 14 s Google Play: Play Protect povolil b42 aj b43 (`response=0`), blok sa nezopakoval |
+| Stránka /download | ✅ postup pri hláseniach (prehliadač, neznáme zdroje, Play Protect, Samsung Automatické blokovanie) SK + EN |
+
+**Build:** Android **b43** (26.11.0-b43+2026-11-17) je na stránke na stiahnutie. Matica: 294 buniek — ✅ 220 · ❌ 3 · 🟠 2 · ⚪ 69.
+
+**Testovacie účty:** qa-l1–3 a qa-n1–3 deaktivované, ich miestnosti (8) zmazané; skutočné účty nezmenené.
+
 # PSST — report (2026-11-17, dávka 15: overenie zariadenia QR kódom na Androide)
 
 **Samsung A05 nebol pripojený** (adb: len emulátory). Testované na dvoch emulátoroch Android 14 s kamerou, ktorej

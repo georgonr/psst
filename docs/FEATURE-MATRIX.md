@@ -7,7 +7,7 @@ Stav k 2026-11-17, testované na produkčnom serveri chat.macet.eu výhradne na 
 - **Android**: APK v emulátore (API 34, Google APIs = Google Play services, FCM), ovládané cez adb/uiautomator.
 - **iOS**: simulátor na GitHub runneri (XCUITest `PsstAuditTests`), nepodpísaný build — bez APNs, kamery a mikrofónu.
 
-**Súhrn (285 buniek):** ✅ 213 funguje · ❌ 1 nefunguje · 🟠 2 nefunguje kvôli upstreamu · ⚪ 69 nedá sa tu overiť
+**Súhrn (294 buniek):** ✅ 220 funguje · ❌ 3 nefunguje · 🟠 2 nefunguje kvôli upstreamu · ⚪ 69 nedá sa tu overiť
 
 Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje, obmedzenie upstreamu (nie náš fork/server) · ⚪ nedá sa v tomto prostredí overiť (dôvod v bunke) · – riadok sa týka len inej platformy (nepočíta sa).
 
@@ -98,7 +98,7 @@ Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje,
 
 | Funkcia | Web | Windows | macOS | Android | iOS |
 |---|---|---|---|---|---|
-| Hľadanie vo všetkých konverzáciách (hlavná obrazovka → Hľadať → Správy) | – | – | – | ✅ funguje — b37: hlavná obrazovka → Hľadať → Správy: „cislo“ 56/56, „stastny“ 41/41, „zlty“ 31/31, „dakujem“ 84/84, „pradavny“ 3/3 (najstaršie správy) — presne podľa očakávaných počtov | – |
+| Hľadanie vo všetkých konverzáciách (hlavná obrazovka → Hľadať → Správy) | – | – | – | ❌ nefunguje — dávka 16 (b42/b43): žiadne výsledky ani pre novú správu — viď riadok „Po zmene: vyhľadávanie v správach“; v b37 (dávka 14) fungovalo | – |
 | Hľadanie v jednej konverzácii (lupa v konverzácii / Detail → Hľadať v správach) | – | – | – | ✅ funguje — b37: lupa v hlavičke konverzácie (aj Detail → Hľadať v správach): skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56; len správy danej konverzácie | – |
 | Šifrovaná 1:1, šifrovaná skupina aj nešifrovaný verejný kanál | – | – | – | ✅ funguje — b37: šifrovaná 1:1 (320 správ), šifrovaná skupina s 3 členmi (310) a nešifrovaný verejný kanál (300) — všetky výsledky nájdené | – |
 | Výsledok: odosielateľ, miestnosť, dátum, úryvok so zvýraznením; ťuknutie otvorí správu | – | – | – | ✅ funguje — b37: miestnosť, odosielateľ, dátum/čas, úryvok okolo prvej zhody so zvýrazneným slovom; ťuknutie otvorí konverzáciu priamo na správe (zvýraznená, aj najstaršia správa histórie) | – |
@@ -123,3 +123,22 @@ Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje,
 | Emoji, budíček pri žiadosti, prihlásenie QR kódom, vyhľadávanie — fungujú ďalej | – | – | – | ✅ funguje — emoji overenie OK; push budíček pri žiadosti (appka zabitá) → notifikácia „Verification request“; prihlásenie QR kódom → MAS „Access granted“ → prihlásený a overený; vyhľadávanie „tajne“ → 5/5 | – |
 | Android ↔ psst desktop (Windows/macOS) | – | – | – | ⚪ nedá sa tu overiť — psst desktop sa prihlasuje cez systémový prehliadač tohto Macu — automatizácia by zasahovala do prehliadača používateľa, preto netestované; desktop obsahuje ten istý Element Web (b27) ako otestovaný web, QR protokol je identický | – |
 | Aktualizácia z b37 a čistá inštalácia | – | – | – | ✅ funguje — b37 → b39 aktualizácia na emulátore A, čistá inštalácia na emulátore B; b41 → b42 aktualizácia | – |
+
+## Prezentačná stránka psst.macet.eu (dávka 16, D82)
+
+| Funkcia | Web | Windows | macOS | Android | iOS |
+|---|---|---|---|---|---|
+| Stránka SK/EN: jazyk podľa prehliadača, prepínač, tlačidlá Stiahnuť / Prihlásiť sa, bez cudzích zdrojov | ✅ funguje — 2026-11-17: https://psst.macet.eu — / → /sk/ (sk-SK) alebo /en/ (en-US), prepínač SK/EN si voľbu pamätá (localStorage), obe tlačidlá viditeľné bez posúvania na 360/390/1440 px a znova na konci, odkazy app.macet.eu/download/ a app.macet.eu/, 0 požiadaviek mimo domény, 0 cookies, 0 chýb CSP, alt texty, skip link | – | – | – | – |
+| HTTPS s vlastným certifikátom, bezpečnostné hlavičky, healthcheck, nasadenie bez výpadku | ✅ funguje — Let's Encrypt certifikát psst-web (do 2027-02-15, obnova certbot kontajnerom), HSTS/nosniff/no-referrer/X-Frame-Options DENY + prísne CSP; healthcheck SK+EN+certifikát; sonda počas nasadenia: 954 požiadaviek na app/chat/call/push/download bez chyby, žiadny kontajner znovu nevytvorený | – | – | – | – |
+| Vyhľadávače: stránka indexovateľná, prihlásenie a /admin noindex | ✅ funguje — psst.macet.eu robots + sitemap; app.macet.eu/robots.txt povolí len /download/ a právne texty, web app a /admin X-Robots-Tag noindex, MAS prihlásenie noindex, chat.macet.eu/robots.txt Disallow | – | – | – | – |
+
+## Android: inštalácia a Play Protect (dávka 16, D83)
+
+| Funkcia | Web | Windows | macOS | Android | iOS |
+|---|---|---|---|---|---|
+| V manifeste nie je SMS, notification listener ani accessibility; kontrola v CI a pred podpisom | – | – | – | ✅ funguje — b43: scripts/android/check-manifest.py — b42 FAIL (BIND_NOTIFICATION_LISTENER_SERVICE z PsstNotificationListener, od b25), b43 OK (3 APK + AAB v CI, podpísané súbory aj APK stiahnuté z /download) | – |
+| Play Protect pustí inštaláciu (emulátor s Google Play) | – | – | – | ✅ funguje — b43: emulátor Android 14 s Google Play, overovanie Play Protect zapnuté → VerifyApps response=0 (povolené). Blok z Samsungu sa ani s b42 nezopakoval (rozšírená ochrana len v niektorých krajinách a z prehliadača); rozhodujúca je kontrola manifestu | – |
+| Názov aplikácie v systémových dialógoch je „psst“ | – | – | – | ✅ funguje — b43: application android:label="psst" doslovne (aapt2 badging: label='psst'); predtým @string → dialóg pred inštaláciou ukázal triedu ElementXApplication | – |
+| Stránka /download: postup pri hláseniach Play Protect a Samsung (SK/EN) | – | – | – | ✅ funguje — b43: /download karta Android — 5 krokov SK + EN (Napriek tomu stiahnuť, Povoliť z tohto zdroja, Skenovať/Odoslať → Inštalovať, Samsung Automatické blokovanie, App blocked → OK + správca) | – |
+| Po zmene: upozornenie so zvukom, rozsvietenie, hovor cez zamknutú obrazovku, Upozornenia a hovory, diagnostika, budíček, QR overenie | – | – | – | ✅ funguje — b43 (emulátor A, Android 14): správa pri zhasnutom displeji → rozsvietené za 4 s, importance 4, zvuk prehraný (mSoundNotificationKey); hovor z webu pri zamknutom telefóne → IncomingCallActivity na celú obrazovku za 2 s; Upozornenia a hovory + Diagnostika (bez tlačidla prístupu k upozorneniam, riadok CHANNEL); žiadosť o overenie pri spiacom telefóne → notifikácia za 1 s; QR: telefón naskenoval QR z novej webovej relácie → overené, server: krížovo podpísané | – |
+| Po zmene: vyhľadávanie v správach | – | – | – | ❌ nefunguje — b43 aj b42 (dávka 16): hľadanie nevrátilo nič ani pre práve prijatú správu (emulátor A po viacerých aktualizáciách/downgrade, aj čistá inštalácia b43 na druhom emulátore); index na disku správy obsahuje. Nie je to dôsledok D83 (b42 rovnako) — treba preskúmať | – |

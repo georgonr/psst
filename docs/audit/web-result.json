@@ -268,5 +268,20 @@
   "id": "install_clean",
   "status": "na",
   "note": "web sa neinštaluje"
+ },
+ {
+  "id": "landing",
+  "status": "ok",
+  "note": "2026-11-17: https://psst.macet.eu — / → /sk/ (sk-SK) alebo /en/ (en-US), prepínač SK/EN si voľbu pamätá (localStorage), obe tlačidlá viditeľné bez posúvania na 360/390/1440 px a znova na konci, odkazy app.macet.eu/download/ a app.macet.eu/, 0 požiadaviek mimo domény, 0 cookies, 0 chýb CSP, alt texty, skip link"
+ },
+ {
+  "id": "landing_ops",
+  "status": "ok",
+  "note": "Let's Encrypt certifikát psst-web (do 2027-02-15, obnova certbot kontajnerom), HSTS/nosniff/no-referrer/X-Frame-Options DENY + prísne CSP; healthcheck SK+EN+certifikát; sonda počas nasadenia: 954 požiadaviek na app/chat/call/push/download bez chyby, žiadny kontajner znovu nevytvorený"
+ },
+ {
+  "id": "noindex",
+  "status": "ok",
+  "note": "psst.macet.eu robots + sitemap; app.macet.eu/robots.txt povolí len /download/ a právne texty, web app a /admin X-Robots-Tag noindex, MAS prihlásenie noindex, chat.macet.eu/robots.txt Disallow"
  }
 ]

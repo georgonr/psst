@@ -102,6 +102,19 @@ ROWS = [
         ("qr_desktop", "Android ↔ psst desktop (Windows/macOS)"),
         ("qr_update", "Aktualizácia z b37 a čistá inštalácia"),
     ], ("android",)),
+    ("Prezentačná stránka psst.macet.eu (dávka 16, D82)", [
+        ("landing", "Stránka SK/EN: jazyk podľa prehliadača, prepínač, tlačidlá Stiahnuť / Prihlásiť sa, bez cudzích zdrojov"),
+        ("landing_ops", "HTTPS s vlastným certifikátom, bezpečnostné hlavičky, healthcheck, nasadenie bez výpadku"),
+        ("noindex", "Vyhľadávače: stránka indexovateľná, prihlásenie a /admin noindex"),
+    ], ("web",)),
+    ("Android: inštalácia a Play Protect (dávka 16, D83)", [
+        ("pp_manifest", "V manifeste nie je SMS, notification listener ani accessibility; kontrola v CI a pred podpisom"),
+        ("pp_install", "Play Protect pustí inštaláciu (emulátor s Google Play)"),
+        ("pp_label", "Názov aplikácie v systémových dialógoch je „psst“"),
+        ("pp_download_help", "Stránka /download: postup pri hláseniach Play Protect a Samsung (SK/EN)"),
+        ("pp_regressions", "Po zmene: upozornenie so zvukom, rozsvietenie, hovor cez zamknutú obrazovku, Upozornenia a hovory, diagnostika, budíček, QR overenie"),
+        ("pp_search", "Po zmene: vyhľadávanie v správach"),
+    ], ("android",)),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}
