@@ -50,9 +50,10 @@ while the search screen was open.
 | CI | `.github/workflows/android.yml` | Downloads that AAR (tag and SHA-256 from the fork's `libraries/rustsdk/psst-rust-sdk.properties`) into `libraries/rustsdk/matrix-rust-sdk.aar`. Checks that the built APKs contain exactly its `.so`. |
 | fork | `libraries/matrix/impl/build.gradle.kts` | Release builds use `libraries/rustsdk/matrix-rust-sdk.aar` when it exists (upstream only did this for debug). |
 | fork | `libraries/matrix/impl/.../search/PsstSearchQuery.kt` (new), `RustMessageSearch.kt` (1 line) | The query is split into words exactly like the index splits them, and each word is required (`+word`). Upstream's `TantivyQueryEscaper.kt` is kept unchanged but no longer used. |
-| fork | `RustMatrixClientFactory.kt` | Marker `search-index/psst-folded-v1`. An index without it (written by a build before b30) is deleted once, so the SDK reindexes stored events and the backfill refetches the history. |
-| fork | `libraries/matrix/api/.../search/psst/PsstSearchIndexing.kt`, `impl/.../search/psst/DefaultPsstSearchIndexing.kt` (new); `appnav/.../LoggedInPresenter.kt` | Runs the upstream `FOREGROUND` backfill while psst is on screen: 8 s after start, then at most every 6 h; it stops when psst goes to the background. Exposes "history is still being indexed". |
-| fork | `features/home/impl/.../search/GlobalSearch{State,Presenter,View}.kt` | Snippet around the first match with the searched words highlighted; "Staršie správy sa ešte indexujú" row. |
+| fork | `RustMatrixClientFactory.kt` | **Index marker:** `search-index/psst-folded-v1`. An index without it (written by b29 or older) is deleted once, so the SDK reindexes stored events and the backfill refetches the history. |
+| fork | `RustMatrixClientFactory.kt` | **Key backup:** `backupDownloadStrategy(ONE_SHOT)`. After the recovery key is entered, all room keys come from the key backup at once. The redecryptor then decrypts the stored history and indexes it. Upstream fetches one key per decryption failure, but only for events the timeline shows. After a new login, the history fetched by the backfill stayed encrypted: measured 38 of 56 hits, and the missing ones appeared only after scrolling through each conversation. |
+| fork | `libraries/matrix/api/.../search/psst/PsstSearchIndexing.kt`, `impl/.../search/psst/DefaultPsstSearchIndexing.kt` (new); `appnav/.../LoggedInPresenter.kt` | Runs the upstream `FOREGROUND` backfill while psst is on screen: 8 s after start, then at most once a day per device (time stored in SharedPreferences); it stops when psst goes to the background. Exposes "history is still being indexed". |
+| fork | `features/home/impl/.../search/GlobalSearch{State,Presenter,View}.kt` | Snippet around the first match with the searched words highlighted, sender kept. "Staršie správy sa ešte indexujú" row. Upstream starts a sweep each time search is first opened; psst only does that when the daily sweep is due, because one sweep re-reads the whole stored history: about 10 s CPU for ~930 messages on the emulator. |
 | fork | `features/roomdetails/impl/.../psst/search/*` (new); `RoomDetails{View,Node,FlowNode}.kt` | Room details → "Hľadať v správach": search in one conversation, using upstream `createMessageSearch(roomId)`. Tapping a result opens the timeline at the message. |
 | fork | `libraries/designsystem/.../psst/PsstSearchHighlight.kt` (new) | Folding-aware snippet and highlight, shared by both screens. |
 | fork | `res/values{,-sk}/psst_search_strings.xml` in home and roomdetails | SK/EN texts. |
@@ -72,10 +73,13 @@ while the search screen was open.
    - `GlobalSearchView.kt`, `RoomDetailsView.kt`, `RoomDetailsFlowNode.kt`, `LoggedInPresenter.kt`: small, marked `PSST (D80)`;
    - `libraries/matrix/impl/build.gradle.kts`.
 5. **If `MessageSearchService.createMessageSearch(roomId)` becomes a real room filter in the SDK:** the room screen's "page until 20 results" loop in `PsstRoomSearchPresenter` can go.
+6. **If upstream changes its backup download default, or starts decrypting back-paginated events with backup downloads:** re-check the `ONE_SHOT` line. Run the test "log out → log in with the recovery key → global search finds the whole history".
 
 ## Limits
 
 - The history goes back about 3 months (upstream backfill limit, 13 weeks). Older messages are found only if they are already in the event cache, for example from scrolling up in the room.
 - A message is searchable only once it is decrypted. Messages whose keys never arrived (no key backup, no other device) are not indexed.
 - Prefix matching applies to single words. A word that contains punctuation (`1/2/2024`) is split into its parts.
+- An edited message is found by its new text. Its result shows the time of the edit, because the index keeps the newest version as the edit event. Tapping it opens the message.
+- Typing words with diacritics in the search field works (the analyzer folds the query too). The emulator test typed only ASCII through adb; the Rust unit test covers `Šťast`/`číslo`.
 - Room search filters the global result stream (upstream design). In a room with few matches it pages through other rooms' results first; this is fast enough for psst's number of rooms.

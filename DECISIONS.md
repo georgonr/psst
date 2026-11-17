@@ -597,6 +597,8 @@ do `PSST_MAC_CERT_*` sa nikdy nesmú dať testovacie hodnoty.
   funkcii (Rust SDK search service + UI), nie v našom forku. Vlastná oprava = zásah do matrix-rust-sdk a vlastný build
   natívnej knižnice: odhad 1–2 týždne, vysoké riziko (šifrovaný index, migrácie). Nerobené; počkať na upstream
   (funkcia je v aktívnom vývoji). Obchádzka: vyhľadávanie na desktope (Seshat) a na webe v nešifrovaných miestnostiach.
+  **→ Vyriešené v D80 (dávka 14):** príčina nebola v nedokončenej funkcii, ale v analyzátore; malá záplata Rust SDK
+  bez zmeny FFI + doplnky vo forku.
 - **Android — zdieľanie obrazovky v hovore:** Element Call beží v Android WebView, ktorý `getDisplayMedia` nepodporuje.
   Riešenie = natívny MediaProjection + foreground service + most do LiveKit v Element Call (zmeny vo forku Element X aj
   Element Call). Odhad 2–3 týždne, vysoké riziko (Android 14 obmedzenia projekcie, údržba dvoch forkov). Nerobené.
@@ -627,8 +629,16 @@ Diakritiku ani začiatok slova nevie Kotlin obísť (regex aj prefix sú v parse
 - **Fork** (všetko označené `PSST (D80)`): dopyt sa delí na slová rovnako ako index (`PsstSearchQuery.kt`, každé
   slovo povinné); starý index (bez značky `psst-folded-v1`) sa raz zmaže a SDK ho postaví znova z uložených udalostí
   a histórie; história sa indexuje aj počas používania appky (upstream len pri otvorenom hľadaní alebo na nabíjačke
-  cez Wi-Fi) — `FOREGROUND` stratégia so 6 h odstupom, zastaví sa na pozadí; úryvok so zvýraznením; riadok
+  cez Wi-Fi) — `FOREGROUND` stratégia, zastaví sa na pozadí; úryvok so zvýraznením; riadok
   „Staršie správy sa ešte indexujú“; nová obrazovka „Hľadať v konverzácii“ (lupa v hlavičke konverzácie aj Detail →
   Hľadať v správach) nad upstream `createMessageSearch(roomId)`.
+- **Záloha kľúčov naraz (`ONE_SHOT`).** Upstream sťahuje kľúč zo zálohy len po chybe dešifrovania v časovej osi.
+  Preto po novom prihlásení ostala história stiahnutá dopĺňaním zašifrovaná a nevyhľadateľná: test našiel 38 z 56,
+  zvyšok až po prelistovaní konverzácií. psst stiahne celú zálohu raz po zadaní kľúča na obnovenie; redecryptor potom
+  správy dešifruje a zaindexuje. Rizikom je kľúč, ktorý sa do zálohy dostane až neskôr (zriedkavé); pri účtoch psst je
+  sťahovanie celej zálohy malé.
+- **Šetrenie batérie.** Jeden prechod históriou znovu číta celú uloženú históriu (~10 s CPU na ~930 správ v emulátore).
+  psst ho spustí najviac raz za deň na zariadenie a aj upstreamové spustenie pri otvorení hľadania podmieňuje tým
+  istým pravidlom. Nové správy sa indexujú priebežne pri prijatí.
 - **Obmedzenia:** história ~3 mesiace (upstream limit backfillu); indexuje sa len dešifrovaná správa; predpona len
   pre jednotlivé slová; hľadanie v miestnosti filtruje globálny prúd výsledkov (pri psst počte miestností dosť rýchle).

@@ -263,5 +263,65 @@
   "id": "install_clean",
   "status": "ok",
   "note": "b29: APK sa nainštaluje čisto aj cez staršiu verziu (rovnaký podpisový kľúč); sideload vyžaduje povoliť inštaláciu z prehliadača"
+ },
+ {
+  "id": "search",
+  "status": "ok",
+  "note": "b37 (dávka 14): šifrovaná 1:1 aj skupina — globálne hľadanie „cislo“ 56/56 správ naprieč 3 miestnosťami (930 správ), lokálny šifrovaný index, opravený tokenizér (D80)"
+ },
+ {
+  "id": "search_public",
+  "status": "ok",
+  "note": "b37: nešifrovaný verejný kanál — „cislo“ 18/18, „kon“ (začiatok slova) 56/56 v kanáli"
+ },
+ {
+  "id": "search_global",
+  "status": "ok",
+  "note": "b37: hlavná obrazovka → Hľadať → Správy: „cislo“ 56/56, „stastny“ 41/41, „zlty“ 31/31, „dakujem“ 84/84, „pradavny“ 3/3 (najstaršie správy) — presne podľa očakávaných počtov"
+ },
+ {
+  "id": "search_room",
+  "status": "ok",
+  "note": "b37: lupa v hlavičke konverzácie (aj Detail → Hľadať v správach): skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56; len správy danej konverzácie"
+ },
+ {
+  "id": "search_types",
+  "status": "ok",
+  "note": "b37: šifrovaná 1:1 (320 správ), šifrovaná skupina s 3 členmi (310) a nešifrovaný verejný kanál (300) — všetky výsledky nájdené"
+ },
+ {
+  "id": "search_result",
+  "status": "ok",
+  "note": "b37: miestnosť, odosielateľ, dátum/čas, úryvok okolo prvej zhody so zvýrazneným slovom; ťuknutie otvorí konverzáciu priamo na správe (zvýraznená, aj najstaršia správa histórie)"
+ },
+ {
+  "id": "search_folding",
+  "status": "ok",
+  "note": "b37: „cislo“→„číslo“, „stastny“→„šťastný“, „cisl“→„čísla/číslo“, „prada“→„pradávny“, „papag“→„papagaj“; dopyt s diakritikou (vložený text „vták … týždeň“) nájde správu; vložená URL nič nerozbije"
+ },
+ {
+  "id": "search_history",
+  "status": "ok",
+  "note": "b37: história sa dopĺňa na pozadí (upstream backfill FOREGROUND, ~3 mesiace): 930 správ za 48–59 s po aktualizácii/prihlásení, appka plynulá; riadok „Staršie správy sa ešte indexujú“ počas behu"
+ },
+ {
+  "id": "search_live",
+  "status": "ok",
+  "note": "b37/b35: nová prijatá správa („kolibrík“) aj odoslaná z telefónu („papagaj“) nájdené hneď; po úprave nájde nové znenie („sokol“), staré nie; zmazaná správa z výsledkov zmizne"
+ },
+ {
+  "id": "search_privacy",
+  "status": "ok",
+  "note": "b37: index len v telefóne (tantivy, šifrovaný kľúčom relácie — hľadané slová v súboroch 0×, 448 KB / 930 správ); na serveri 0 požiadaviek /search za 3 h testov; pri odhlásení sa adresár relácie s indexom zmaže"
+ },
+ {
+  "id": "search_speed",
+  "status": "ok",
+  "note": "emulátor (Samsung A05 nebol pripojený): prvá stránka 250–650 ms, ďalšia 450–750 ms (počas behu dopĺňania 1–2,6 s); prvé indexovanie 930 správ ~36 s CPU (s dešifrovaním), opakovaný prechod ~10 s CPU → najviac raz za 24 h; APK veľkosť nezmenená"
+ },
+ {
+  "id": "search_lifecycle",
+  "status": "ok",
+  "note": "b37: po reštarte hľadá hneď (index zostáva, prechod sa neopakuje); aktualizácia b29→b35 (starý index zmazaný a postavený znova, 56/56) a b35→b36→b37; odhlásenie → prihlásenie s kľúčom na obnovenie → 56/56 do ~1,5 min"
  }
 ]

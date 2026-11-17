@@ -1,3 +1,53 @@
+# PSST — report (2026-11-17, dávka 14: vyhľadávanie v správach na Androide)
+
+**Samsung A05 nebol pripojený** (adb: len emulátor). Android testovaný v emulátore Android 14 (Google APIs, x86_64).
+Rozhodnutie D80 v DECISIONS.md, čo je upstream a čo náš kód: [docs/android-search.md](docs/android-search.md),
+matica [docs/FEATURE-MATRIX.md](docs/FEATURE-MATRIX.md) (sekcia „Android: vyhľadávanie v správach“).
+
+**Čo upstream mal:** celý mechanizmus. Šifrovaný index tantivy pre každú miestnosť v telefóne, indexovanie nových,
+odoslaných, upravených aj zmazaných správ, dopĺňanie histórie (~3 mesiace), globálne hľadanie a otvorenie správy.
+**Prečo boli výsledky prázdne:** analyzátor len delil slová a hľadal celé slová bez ohľadu na diakritiku. „cislo“
+nenašlo „číslo“ a „ob“ nenašlo „obed“ (overené na b29). Históriu navyše indexoval len pri otvorenom hľadaní.
+
+**Čo psst doplnil:**
+- záplatu Rust SDK (odstránenie diakritiky a hľadanie podľa začiatku slova) bez zmeny FFI, postavenú v CI
+  (`android-rust-sdk.yml`) do oficiálneho AAR;
+- jednorazové preindexovanie starého indexu;
+- dopĺňanie histórie počas používania appky, najviac raz za deň;
+- stiahnutie celej zálohy kľúčov po obnovení, aby sa dala prehľadávať aj história po novom prihlásení;
+- úryvok so zvýraznením;
+- „Hľadať v konverzácii“ (lupa v hlavičke konverzácie).
+
+Testovacie dáta: šifrovaná 1:1 (320 správ), šifrovaná skupina (310) a verejný kanál (300), slovenské slová
+s diakritikou. Očakávané počty sa vypočítali z korpusu.
+
+| Bod | Výsledok |
+|---|---|
+| 1. Všetky konverzácie | ✅ „cislo“ 56/56, „stastny“ 41/41, „zlty“ 31/31, „dakujem“ 84/84 |
+| 2. Jedna konverzácia | ✅ skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56 |
+| 3. Šifrované aj kanál | ✅ všetky tri typy úplné |
+| 4. Výsledok | ✅ miestnosť, odosielateľ, dátum, zvýraznený úryvok; ťuknutie otvorí správu (aj najstaršiu) |
+| 5. Diakritika, začiatok slova | ✅ „cislo“→„číslo“, „cisl“→„čísla“, „prada“→„pradávny“, dopyt s diakritikou funguje |
+| 6. Staršie správy | ✅ najstaršia správa každej miestnosti nájdená; dopĺňanie 930 správ za 48–59 s, riadok „Staršie správy sa ešte indexujú“ |
+| 7. Nové, odoslané, úprava, zmazanie | ✅ prijatá aj odoslaná správa hneď; úprava → nové znenie, staré nie; zmazaná zmizne |
+| 8. Súkromie | ✅ index šifrovaný (slová v súboroch 0×); 0 požiadaviek /search na serveri; po odhlásení zmazaný |
+| 9. Rýchlosť | ✅ v emulátore: prvá stránka 250–650 ms, ďalšia 450–750 ms; prvé indexovanie ~36 s CPU, ďalší prechod ~10 s CPU najviac raz za deň; **na A05 neoverené** |
+| Reštart, aktualizácia, nové prihlásenie | ✅ po reštarte hneď; aktualizácia b29→b35→b36→b37; odhlásenie → prihlásenie → 56/56 do ~1,5 min |
+
+**Build:** Android **b37** (26.11.0-b37+2026-11-17) je na stránke na stiahnutie, SHA-256 overený.
+b30–b36 boli medzibuildy počas vývoja (nezverejnené). Upravené SDK: release `android-rust-sdk-26.11.05-psst1`.
+
+**Obmedzenia:**
+- história len ~3 mesiace dozadu (upstream);
+- indexuje sa len správa, ktorá sa dá dešifrovať;
+- výsledok pre upravenú správu ukazuje čas úpravy;
+- hľadanie v konverzácii prechádza globálne výsledky (pri počte miestností v psst rýchle);
+- web: šifrované miestnosti naďalej nie (D79).
+
+**Testovacie účty:** qa-s*, qa-t* a qa-u* (9) sú deaktivované, ich miestnosti zmazané a výnimky z limitu správ zrušené.
+
+---
+
 # PSST — report (2026-11-17, dávka 13: nočný beh — upozornenia a hovory na všetkých platformách)
 
 **Samsung A05 nebol pripojený** (adb: len emulátor). Android testovaný v emulátore Android 14 (Google APIs, FCM).

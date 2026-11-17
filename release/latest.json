@@ -44,26 +44,26 @@
   ]
  },
  "android": {
-  "build": 29,
-  "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory (prepínače so skutočným stavom, test upozornenia a zvonenia), rozsvietenie obrazovky pri správe, chýbajúce povolenia sa vyžiadajú hneď po inštalácii aj aktualizácii",
+  "build": 37,
+  "date": "20261117",
+  "note": "Vyhľadávanie v správach: nájde aj bez diakritiky a podľa začiatku slova, v celej histórii (aj po novom prihlásení), hľadanie v jednej konverzácii (lupa), zvýraznený úryvok",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261116-b29-arm64.apk",
-    "sha256": "555a80a040b5a40e1f3f187402bc3401ecde8dc8c3918fc4c224bc8871ff9962"
+    "name": "psst-android-20261117-b37-arm64.apk",
+    "sha256": "7b2aa5c5538833b43d5b97d74733ae400b11ec549cb464f9120d9d45b2b54f3e"
    },
    {
-    "name": "psst-android-20261116-b29-armv7.apk",
-    "sha256": "a8d19726997da3fb2a94c9184a12c6d9cdc8e0c138e9cf8f689ca7c24d609a51"
+    "name": "psst-android-20261117-b37-armv7.apk",
+    "sha256": "2a5cf40ef48d290d8d7ad7af997023a0a1daeb5a773b13267cd558a3fa666b09"
    },
    {
-    "name": "psst-android-20261116-b29-x86_64.apk",
-    "sha256": "8873037aaecce6cc8f96fbc6a1aace014cc9943a6f52f8f9f82f869465d20ed3"
+    "name": "psst-android-20261117-b37-x86_64.apk",
+    "sha256": "305c5b13dae5da2fd09c8cdce034ddd893c888ce8193a631676c7cff3bfe3b8f"
    },
    {
-    "name": "psst-android-20261116-b29.aab",
-    "sha256": "d3beb7bbb1b73481972fea06f54df956af8073750dbefe1d546fafe8fcc2d9b7"
+    "name": "psst-android-20261117-b37.aab",
+    "sha256": "486c84933d94d9e047da6f73460eecadf8487d078ecb464232b18b2df132c7d6"
    }
   ]
  }
