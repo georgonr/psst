@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://psst.macet.eu/sitemap.xml
