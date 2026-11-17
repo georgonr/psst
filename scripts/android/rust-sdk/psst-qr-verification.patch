@@ -14,7 +14,7 @@ index 642fbbe..67a5f7a 100644
  matrix-sdk-base.workspace = true
  matrix-sdk-common.workspace = true
 diff --git a/bindings/matrix-sdk-ffi/src/session_verification.rs b/bindings/matrix-sdk-ffi/src/session_verification.rs
-index 4154598..81bcf72 100644
+index 4154598..1266e9c 100644
 --- a/bindings/matrix-sdk-ffi/src/session_verification.rs
 +++ b/bindings/matrix-sdk-ffi/src/session_verification.rs
 @@ -21,8 +21,9 @@ use matrix_sdk::{
@@ -207,7 +207,7 @@ index 4154598..81bcf72 100644
              return Ok(());
          }
  
-@@ -283,6 +408,61 @@ impl SessionVerificationController {
+@@ -283,6 +408,63 @@ impl SessionVerificationController {
              sas_verification: Arc::new(RwLock::new(None)),
              request_cancel_info: Arc::new(RwLock::new(None)),
              sas_cancel_info: Arc::new(RwLock::new(None)),
@@ -238,7 +238,9 @@ index 4154598..81bcf72 100644
 +                d.did_change_qr_progress(progress);
 +            }
 +        };
-+        let mut stream = qr.changes();
++        // The state may already have moved before we subscribed (scanning sets `Reciprocated` right away), so
++        // report the current one first.
++        let mut stream = futures_util::stream::once(std::future::ready(qr.state())).chain(qr.changes());
 +        while let Some(state) = stream.next().await {
 +            match state {
 +                SdkQrVerificationState::Started => {}
@@ -269,7 +271,7 @@ index 4154598..81bcf72 100644
          }
      }
  
-@@ -400,8 +580,9 @@ impl SessionVerificationController {
+@@ -400,8 +582,9 @@ impl SessionVerificationController {
              match state {
                  VerificationRequestState::Transitioned { verification } => {
                      let Some(verification) = verification.sas() else {
