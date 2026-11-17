@@ -60,6 +60,8 @@ while the search screen was open.
 
 ## Updating to a new upstream
 
+The same psst Rust SDK build also carries the QR code verification patch ([android-qr-verification.md](android-qr-verification.md)). Since D81 the AAR is built from the patched sources with the official Kotlin components project (the bindings differ only in `matrix_sdk_ffi.kt`), not by swapping `.so` files. Update both patches in one go.
+
 1. **New matrix-rust-sdk / sdk-android version** (`libs.versions.toml` `matrix_sdk`):
    - Take the Rust commit from the release notes of `matrix-rust-components-kotlin` tag `sdk-v<version>` and put it in `pins.env` (`SDK_VERSION`, `RUST_SDK_REF`, `PSST_REV=1`).
    - Run *Android Rust SDK (psst patch)*. It fails if the patch no longer applies, or if the bindings differ from the official ones (that would mean the commit is wrong).
