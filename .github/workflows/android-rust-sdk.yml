@@ -123,13 +123,14 @@ jobs:
           curl -fsSL "$base.aar" -o official.aar
           curl -fsSL "$base-sources.jar" -o official-sources.jar
           mkdir official-src aar
-          (cd official-src && unzip -o -q ../official-sources.jar)   # layout: main/<package path>/*.kt
+          # layout main/<package path>/*.kt; the jar has duplicate entries, which unzip rejects
+          python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" official-sources.jar official-src
           # The Kotlin side of the official AAR must be exactly what our patched build generates.
           for f in $(cd bindings && find . -name '*.kt'); do
             diff -q "bindings/$f" "official-src/main/$f" || { echo "FFI bindings differ: $f"; exit 1; }
           done
           echo "bindings identical: $(cd bindings && find . -name '*.kt' | wc -l) files"
-          (cd aar && unzip -o -q ../official.aar)
+          python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" official.aar aar
           ls aar/jni
           for abi in arm64-v8a armeabi-v7a x86_64; do
             test -f "jniLibs/$abi/libmatrix_sdk_ffi.so"
