@@ -73,7 +73,13 @@ PSST_NOTE="čo sa zmenilo" scripts/release/fetch-web-desktop.sh <run-id> [--rele
 gh workflow run android.yml -R georgonr/psst
 PSST_NOTE="čo sa zmenilo" scripts/android/sign-release.sh --run <run-id>   # stiahne, podpíše kľúčom z ~/psst-keys
 # výstup: dist/android/psst-android-<RRRRMMDD>-b<N>-{arm64,armv7,x86_64}.apk, …-b<N>.aab, SHA256SUMS; staré → dist/archive/android/
+scripts/android/check-manifest.py dist/android/*.apk dist/android/*.aab   # Play Protect (D83), beží aj v CI a pred podpisom
 ```
+
+**Play Protect (D83):** vydaný APK/AAB nesmie v zlúčenom manifeste (náš kód + upstream + knižnice) obsahovať
+`RECEIVE_SMS`, `READ_SMS`, notification listener ani accessibility službu — Google Play Protect inak zablokuje
+inštaláciu stiahnutú z /download. Štítok aplikácie musí byť doslovne `psst`. Kontrolu robí
+`scripts/android/check-manifest.py`: CI (`android.yml`, APK aj AAB) zlyhá a `sign-release.sh` odmietne podpísať.
 
 ## 5. iOS
 

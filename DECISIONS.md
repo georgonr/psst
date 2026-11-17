@@ -692,3 +692,29 @@ feature `qrcode` vypnutý) a v obrazovkách Element X. Riešenie (podrobne docs/
   rovnako prihlásenie MAS na `chat.macet.eu/auth/`; `chat.macet.eu/robots.txt` zakazuje všetko. Predtým
   `app…/robots.txt` vracal HTML web appky.
 - **Healthcheck:** obe jazykové verzie + platnosť certifikátu `psst-web`.
+
+## Android: Google Play Protect blokoval inštaláciu (2026-11-17, šestnásta dávka)
+
+**D83 — Žiadne SMS, notification listener ani accessibility v manifeste; kontrola v CI.** Samsung A05 (Android 14)
+zablokoval inštaláciu b37 zo stránky /download („App blocked to protect your device“); b24 prešla. Play Protect
+(rozšírená ochrana pred podvodmi) blokuje aplikácie nainštalované z prehliadača, správ alebo správcu súborov, ktoré
+deklarujú `RECEIVE_SMS`, `READ_SMS`, službu notification listener alebo accessibility.
+- **Príčina:** vlastný kód psst — `PsstNotificationListener` (služba s `BIND_NOTIFICATION_LISTENER_SERVICE`), voliteľná
+  časť diagnostiky upozornení (D67), pridaná vo forku 2026-11-16 (`7df57a358`). Prvý build s ňou je **b25** (prvý
+  úspešný b27). V b24 nebola. SMS ani accessibility nie sú nikde (náš kód, upstream ani knižnice).
+  `REQUEST_INSTALL_PACKAGES` je upstream (otvorenie APK prílohy), bola už v b24 a nie je na zozname → ostáva.
+- **Zmena:** služba odstránená. Diagnostika namiesto „ranking“ z listenera vypíše efektívny kanál každého aktívneho
+  upozornenia vrátane kanála konverzácie (`getNotificationChannel(kanál, shortcutId)`). Stratené: per-upozornenie
+  `suppressed`/`intercepted` (DND sa ďalej zapisuje pri každom upozornení). Žiadna funkcia pre používateľa nechýba.
+- **Názov v dialógu:** Play Protect ukázal `io.element.android.x.ElementXApplication`. Štítok aplikácie bol
+  `@string/app_name` (správne „psst“), ale dialógy, ktoré čítajú APK pred inštaláciou bez zdrojov, padnú v
+  `loadLabel()` na `android:name`. Štítok je teraz doslovný `android:label="psst"` (rovnaký vo všetkých jazykoch).
+- **Kontrola:** `scripts/android/check-manifest.py` číta zlúčený manifest vo vydanom APK (aapt2) aj AAB (protobuf
+  manifesty všetkých modulov) a zlyhá pri ktorejkoľvek zo štyroch položiek alebo nedoslovnom štítku. Beží v CI
+  (`android.yml`, oba joby) a v `sign-release.sh` pred podpisom. Na b42 zlyhá, na b43 prejde.
+- **Reprodukcia:** emulátor Android 14 s Google Play (bez Google účtu), overovanie Play Protect zapnuté aj pre ADB:
+  b42 aj b43 → `VerifyApps … response=0` (povolené). Blok sa **nezopakoval** — rozšírená ochrana platí len v
+  niektorých krajinách a pre inštalácie z prehliadača/správ/súborov; Chrome v emulátore na tomto Macu nevykresľoval
+  stránky. Rozhodujúca je preto kontrola manifestu.
+- **Stránka /download:** postup pre hlásenia pri inštalácii (prehliadač „súbor môže poškodiť zariadenie“, neznáme
+  zdroje, Play Protect sken / odoslanie na kontrolu, Samsung Automatické blokovanie, čo robiť pri „App blocked“), SK + EN.
