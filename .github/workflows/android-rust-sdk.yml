@@ -1,9 +1,11 @@
-# PSST: native matrix-rust-sdk library for psst Android with the message-search patch (docs/android-search.md, D80).
+# PSST: matrix-rust-sdk for psst Android with the psst patches (docs/android-search.md D80,
+# docs/android-qr-verification.md D81).
 #
-# Builds libmatrix_sdk_ffi.so from matrix-rust-sdk at the commit of the official Kotlin release (pins.env) plus
-# scripts/android/rust-sdk/psst-search.patch, then swaps those .so files into the OFFICIAL sdk-android AAR from Maven
-# Central. The patch does not touch the FFI surface, and the job proves it: the Kotlin bindings generated here must be
-# identical to the official sources jar, otherwise nothing is released.
+# Builds libmatrix_sdk_ffi.so from matrix-rust-sdk at the commit of the official Kotlin release (pins.env) plus every
+# scripts/android/rust-sdk/*.patch, generates the Kotlin bindings, and builds the AAR with the official
+# matrix-rust-components-kotlin project at the same release tag (same Gradle setup as upstream's release). The job
+# also proves that the bindings differ from the official sources jar ONLY in matrix_sdk_ffi.kt (the psst additions to
+# the session verification controller); any other difference stops the release.
 # Result: GitHub release "android-rust-sdk-<version>-psst<rev>" with the AAR and its SHA-256; the Android workflow
 # downloads it by tag and checks the hash (forks/android libraries/rustsdk/psst-rust-sdk.properties).
 name: Android Rust SDK (psst patch)
@@ -47,7 +49,7 @@ jobs:
           git remote add origin https://github.com/matrix-org/matrix-rust-sdk.git
           git fetch -q --depth 1 origin "$RUST_SDK_REF"
           git checkout -q FETCH_HEAD
-          git apply --verbose ../scripts/android/rust-sdk/psst-search.patch
+          for p in ../scripts/android/rust-sdk/*.patch; do git apply --verbose "$p"; done
       - name: NDK
         run: |
           NDK="$ANDROID_HOME/ndk/$NDK_VERSION"
@@ -61,10 +63,12 @@ jobs:
           rustup target add ${{ matrix.target }}
           sudo apt-get update -q && sudo apt-get install -y -q protobuf-compiler
           cargo install cargo-ndk --locked
-      - name: Unit tests of the patched search crate
+      - name: Unit tests of the patched crates
         if: matrix.target == 'x86_64-linux-android'
         working-directory: rust-sdk
-        run: cargo test -p matrix-sdk-search --lib
+        run: |
+          cargo test -p matrix-sdk-search --lib
+          cargo check -p matrix-sdk-ffi
       - name: Build (small-release-stripped, as the official release)
         working-directory: rust-sdk
         env:
@@ -116,30 +120,41 @@ jobs:
         with:
           name: kotlin-bindings
           path: bindings/
-      - name: Official AAR + sources, FFI identity check, swap the native libraries
+      - name: Checkout matrix-rust-components-kotlin at the release tag
+        run: git clone -q --depth 1 --branch "sdk-v$SDK_VERSION" https://github.com/matrix-org/matrix-rust-components-kotlin.git rck
+      - name: Bindings differ from the official ones only in matrix_sdk_ffi.kt
         run: |
           set -euo pipefail
           base="https://repo1.maven.org/maven2/org/matrix/rustcomponents/sdk-android/$SDK_VERSION/sdk-android-$SDK_VERSION"
-          curl -fsSL "$base.aar" -o official.aar
           curl -fsSL "$base-sources.jar" -o official-sources.jar
-          mkdir official-src aar
-          # layout main/<package path>/*.kt; the official jars have overlapping duplicate entries that unzip and
-          # Python's zipfile reject, so they are read by their local headers
+          # the official jars have overlapping duplicate entries that unzip and zipfile reject: read by local headers
           python3 scripts/android/rust-sdk/unzip-stream.py official-sources.jar official-src
-          # The Kotlin side of the official AAR must be exactly what our patched build generates.
+          changed=""
           for f in $(cd bindings && find . -name '*.kt'); do
-            diff -q "bindings/$f" "official-src/main/$f" || { echo "FFI bindings differ: $f"; exit 1; }
+            diff -q "bindings/$f" "official-src/main/$f" >/dev/null || changed="$changed $f"
           done
-          echo "bindings identical: $(cd bindings && find . -name '*.kt' | wc -l) files"
-          python3 scripts/android/rust-sdk/unzip-stream.py official.aar aar
-          ls aar/jni
-          for abi in arm64-v8a armeabi-v7a x86_64; do
-            test -f "jniLibs/$abi/libmatrix_sdk_ffi.so"
-            cp "jniLibs/$abi/libmatrix_sdk_ffi.so" "aar/jni/$abi/libmatrix_sdk_ffi.so"
+          echo "changed bindings:$changed"
+          for f in $changed; do
+            case "$f" in ./org/matrix/rustcomponents/sdk/matrix_sdk_ffi.kt) ;; *) echo "unexpected change: $f"; exit 1 ;; esac
           done
-          rm -rf aar/jni/x86   # psst ships armeabi-v7a, arm64-v8a, x86_64 only
+          diff -u official-src/main/org/matrix/rustcomponents/sdk/matrix_sdk_ffi.kt bindings/org/matrix/rustcomponents/sdk/matrix_sdk_ffi.kt | grep -cE '^[+-]' || true
+      - name: JDK 17 (as the official release)
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build the AAR (official Gradle project, psst .so + bindings)
+        run: |
+          set -euo pipefail
+          main=rck/sdk/sdk-android/src/main
+          mkdir -p "$main/jniLibs" "$main/kotlin"
+          cp -r jniLibs/* "$main/jniLibs/"
+          cp -r bindings/* "$main/kotlin/"
+          find "$main/jniLibs" -type f
+          (cd rck && ./gradlew --no-daemon -q :sdk:sdk-android:assembleRelease)
           name="sdk-android-$SDK_VERSION-psst$PSST_REV.aar"
-          (cd aar && zip -q -r -X "../$name" .)
+          cp rck/sdk/sdk-android/build/outputs/aar/sdk-android-release.aar "$name"
+          unzip -l "$name" | grep -E "jni/|classes.jar"
           sha256sum "$name" | tee "$name.sha256"
           echo "AAR=$name" >> "$GITHUB_ENV"
       - name: Publish release
@@ -147,7 +162,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="android-rust-sdk-$SDK_VERSION-psst$PSST_REV"
-          notes="matrix-rust-sdk $RUST_SDK_REF + scripts/android/rust-sdk/psst-search.patch (diacritics folding + word-prefix search), native libraries swapped into the official sdk-android $SDK_VERSION AAR. Built by workflow run ${{ github.run_id }}."
+          notes="matrix-rust-sdk $RUST_SDK_REF + scripts/android/rust-sdk/*.patch (search: diacritics folding + word prefixes; QR code device verification in the FFI), AAR built with matrix-rust-components-kotlin sdk-v$SDK_VERSION. Built by workflow run ${{ github.run_id }}."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" "$AAR" "$AAR.sha256" --clobber
           else

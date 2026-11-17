@@ -1,0 +1,283 @@
+diff --git a/bindings/matrix-sdk-ffi/Cargo.toml b/bindings/matrix-sdk-ffi/Cargo.toml
+index 642fbbe..67a5f7a 100644
+--- a/bindings/matrix-sdk-ffi/Cargo.toml
++++ b/bindings/matrix-sdk-ffi/Cargo.toml
+@@ -70,7 +70,9 @@ matrix-sdk = { workspace = true, features = [
+     "socks",
+     "uniffi",
+     "federation-api",
+-    "experimental-search"
++    "experimental-search",
++    # PSST: QR code device verification (MSC1543 / spec "QR codes"), see psst docs/android-qr-verification.md
++    "qrcode"
+ ] }
+ matrix-sdk-base.workspace = true
+ matrix-sdk-common.workspace = true
+diff --git a/bindings/matrix-sdk-ffi/src/session_verification.rs b/bindings/matrix-sdk-ffi/src/session_verification.rs
+index 4154598..81bcf72 100644
+--- a/bindings/matrix-sdk-ffi/src/session_verification.rs
++++ b/bindings/matrix-sdk-ffi/src/session_verification.rs
+@@ -21,8 +21,9 @@ use matrix_sdk::{
+         Encryption,
+         identities::UserIdentity,
+         verification::{
+-            CancelInfo as SdkCancelInfo, SasState, SasVerification, VerificationRequest,
+-            VerificationRequestState,
++            CancelInfo as SdkCancelInfo, QrVerification, QrVerificationData,
++            QrVerificationState as SdkQrVerificationState, SasState, SasVerification,
++            VerificationRequest, VerificationRequestState,
+         },
+     },
+     ruma::events::key::verification::VerificationMethod,
+@@ -87,6 +88,61 @@ impl From<SdkCancelInfo> for SessionVerificationCancelInfo {
+     }
+ }
+ 
++/// PSST: methods advertised in requests and ready events: emoji (SAS) and both QR code roles, as Element Web.
++fn psst_verification_methods() -> Vec<VerificationMethod> {
++    vec![
++        VerificationMethod::SasV1,
++        VerificationMethod::QrCodeScanV1,
++        VerificationMethod::QrCodeShowV1,
++        VerificationMethod::ReciprocateV1,
++    ]
++}
++
++/// PSST: which QR code roles are possible with the other device of the current request.
++#[derive(uniffi::Record)]
++pub struct QrVerificationOptions {
++    /// The other device can scan, so this device can show a QR code.
++    pub can_show_qr_code: bool,
++    /// The other device can show a QR code, so this device can scan it.
++    pub can_scan_qr_code: bool,
++}
++
++/// PSST: result of [`SessionVerificationController::scan_qr_code`].
++#[derive(uniffi::Enum)]
++pub enum QrScanResult {
++    /// The code belongs to this verification; the other device must now confirm.
++    Started,
++    /// Not a Matrix verification QR code (or damaged).
++    InvalidCode,
++    /// A verification QR code, but for another flow, user or keys.
++    KeyMismatch,
++    /// No verification request ready for a QR code.
++    NotApplicable,
++}
++
++/// PSST: progress of a QR code verification.
++#[derive(uniffi::Enum)]
++pub enum QrVerificationProgress {
++    /// The other device scanned the code shown here: ask the user whether it shows a confirmation.
++    Scanned,
++    /// This device scanned the other one's code: the other device must confirm.
++    Reciprocated,
++    /// We confirmed the other side's scan, waiting for it to finish.
++    Confirmed,
++    /// Verified; [`SessionVerificationControllerDelegate::did_finish`] is called too.
++    Done,
++    /// Cancelled; [`SessionVerificationControllerDelegate::did_cancel`] is called too.
++    Cancelled { cancel_info: SessionVerificationCancelInfo },
++}
++
++/// PSST: listener for QR code verification progress.
++#[matrix_sdk_ffi_macros::export(callback_interface)]
++pub trait QrVerificationDelegate: SyncOutsideWasm + SendOutsideWasm {
++    fn did_change_qr_progress(&self, progress: QrVerificationProgress);
++}
++
++pub type QrDelegate = Arc<RwLock<Option<Arc<dyn QrVerificationDelegate>>>>;
++
+ #[matrix_sdk_ffi_macros::export(callback_interface)]
+ pub trait SessionVerificationControllerDelegate: SyncOutsideWasm + SendOutsideWasm {
+     fn did_receive_verification_request(&self, details: SessionVerificationRequestDetails);
+@@ -111,10 +167,75 @@ pub struct SessionVerificationController {
+     sas_verification: Arc<RwLock<Option<SasVerification>>>,
+     request_cancel_info: Arc<RwLock<Option<SessionVerificationCancelInfo>>>,
+     sas_cancel_info: Arc<RwLock<Option<SessionVerificationCancelInfo>>>,
++    // PSST: QR code verification
++    qr_delegate: QrDelegate,
++    qr_verification: Arc<RwLock<Option<QrVerification>>>,
+ }
+ 
+ #[matrix_sdk_ffi_macros::export]
+ impl SessionVerificationController {
++    /// PSST: set the listener for QR code verification progress.
++    pub fn set_qr_delegate(&self, delegate: Option<Box<dyn QrVerificationDelegate>>) {
++        *self.qr_delegate.write().unwrap() = delegate.map(Arc::from);
++    }
++
++    /// PSST: QR code roles possible with the other device (both false before the request is ready, or when the other
++    /// device only supports emoji, e.g. Element X iOS).
++    pub fn qr_options(&self) -> QrVerificationOptions {
++        let request = self.verification_request.read().unwrap().clone();
++        let theirs = request.and_then(|r| r.their_supported_methods()).unwrap_or_default();
++        let reciprocate = theirs.contains(&VerificationMethod::ReciprocateV1);
++        QrVerificationOptions {
++            can_show_qr_code: reciprocate && theirs.contains(&VerificationMethod::QrCodeScanV1),
++            can_scan_qr_code: reciprocate && theirs.contains(&VerificationMethod::QrCodeShowV1),
++        }
++    }
++
++    /// PSST: the QR code to show to the other device (binary Matrix verification QR data, to be encoded in byte
++    /// mode), or `None` when not possible. The emoji comparison stays possible afterwards.
++    pub async fn generate_qr_code(&self) -> Result<Option<Vec<u8>>, ClientError> {
++        let Some(request) = self.verification_request.read().unwrap().clone() else {
++            return Ok(None);
++        };
++        let Some(qr) = request.generate_qr_code().await? else {
++            return Ok(None);
++        };
++        let bytes = qr.to_bytes().map_err(ClientError::from_err)?;
++        self.track_qr_verification(qr);
++        Ok(Some(bytes))
++    }
++
++    /// PSST: the other device's QR code was scanned with the camera.
++    pub async fn scan_qr_code(&self, data: Vec<u8>) -> Result<QrScanResult, ClientError> {
++        let Some(request) = self.verification_request.read().unwrap().clone() else {
++            return Ok(QrScanResult::NotApplicable);
++        };
++        let Ok(data) = QrVerificationData::from_bytes(data) else {
++            return Ok(QrScanResult::InvalidCode);
++        };
++        match request.scan_qr_code(data).await {
++            Ok(Some(qr)) => {
++                self.track_qr_verification(qr);
++                Ok(QrScanResult::Started)
++            }
++            Ok(None) => Ok(QrScanResult::NotApplicable),
++            Err(matrix_sdk::Error::QrCodeScanError(e)) => {
++                warn!("Scanned verification QR code rejected: {e}");
++                Ok(QrScanResult::KeyMismatch)
++            }
++            Err(e) => Err(e.into()),
++        }
++    }
++
++    /// PSST: the user confirmed that the other device shows a successful scan of our code.
++    pub async fn confirm_qr_scanned(&self) -> Result<(), ClientError> {
++        let qr = self.qr_verification.read().unwrap().clone();
++        let Some(qr) = qr else {
++            return Err(ClientError::from_str("QR verification missing", None));
++        };
++        Ok(qr.confirm().await?)
++    }
++
+     pub fn set_delegate(&self, delegate: Option<Box<dyn SessionVerificationControllerDelegate>>) {
+         *self.delegate.write().unwrap() = delegate.map(Arc::from);
+     }
+@@ -145,7 +266,7 @@ impl SessionVerificationController {
+         let verification_request = self.verification_request.read().unwrap().clone();
+ 
+         if let Some(verification_request) = verification_request {
+-            let methods = vec![VerificationMethod::SasV1];
++            let methods = psst_verification_methods();
+             verification_request.accept_with_methods(methods).await?;
+         }
+ 
+@@ -154,7 +275,7 @@ impl SessionVerificationController {
+ 
+     /// Request verification for the current device
+     pub async fn request_device_verification(&self) -> Result<(), ClientError> {
+-        let methods = vec![VerificationMethod::SasV1];
++        let methods = psst_verification_methods();
+         let verification_request =
+             self.user_identity.request_verification_with_methods(methods).await?;
+ 
+@@ -175,7 +296,7 @@ impl SessionVerificationController {
+             return Err(ClientError::from_str("User is already verified", None));
+         }
+ 
+-        let methods = vec![VerificationMethod::SasV1];
++        let methods = psst_verification_methods();
+ 
+         let verification_request = user_identity.request_verification_with_methods(methods).await?;
+ 
+@@ -195,7 +316,11 @@ impl SessionVerificationController {
+         // side already did, the flow is handled by
+         // `listen_to_verification_request_changes` and starting our own
+         // would replace the SAS we already accepted.
+-        if matches!(verification_request.state(), VerificationRequestState::Transitioned { .. }) {
++        // PSST: a request that transitioned to a QR code (shown here) may still switch to emoji.
++        if matches!(
++            verification_request.state(),
++            VerificationRequestState::Transitioned { ref verification } if verification.clone().sas().is_some()
++        ) {
+             return Ok(());
+         }
+ 
+@@ -283,6 +408,61 @@ impl SessionVerificationController {
+             sas_verification: Arc::new(RwLock::new(None)),
+             request_cancel_info: Arc::new(RwLock::new(None)),
+             sas_cancel_info: Arc::new(RwLock::new(None)),
++            qr_delegate: Arc::new(RwLock::new(None)),
++            qr_verification: Arc::new(RwLock::new(None)),
++        }
++    }
++
++    /// PSST: remember the QR verification (the one shown or scanned here) and report its progress.
++    fn track_qr_verification(&self, qr: QrVerification) {
++        *self.qr_verification.write().unwrap() = Some(qr.clone());
++        get_runtime_handle().spawn(Self::listen_to_qr_verification_changes(
++            qr,
++            self.delegate.clone(),
++            self.qr_delegate.clone(),
++            self.sas_cancel_info.clone(),
++        ));
++    }
++
++    async fn listen_to_qr_verification_changes(
++        qr: QrVerification,
++        delegate: Delegate,
++        qr_delegate: QrDelegate,
++        cancel_info: Arc<RwLock<Option<SessionVerificationCancelInfo>>>,
++    ) {
++        let report = |progress: QrVerificationProgress| {
++            if let Some(d) = qr_delegate.read().unwrap().clone() {
++                d.did_change_qr_progress(progress);
++            }
++        };
++        let mut stream = qr.changes();
++        while let Some(state) = stream.next().await {
++            match state {
++                SdkQrVerificationState::Started => {}
++                SdkQrVerificationState::Scanned => report(QrVerificationProgress::Scanned),
++                SdkQrVerificationState::Confirmed => report(QrVerificationProgress::Confirmed),
++                SdkQrVerificationState::Reciprocated => report(QrVerificationProgress::Reciprocated),
++                SdkQrVerificationState::Done { .. } => {
++                    report(QrVerificationProgress::Done);
++                    if let Some(d) = Self::current_delegate(&delegate) {
++                        d.did_finish();
++                    }
++                    break;
++                }
++                SdkQrVerificationState::Cancelled(info) => {
++                    let info = SessionVerificationCancelInfo::from(info);
++                    warn!(
++                        "QR verification cancelled: code={}, reason={}, by_us={}",
++                        info.cancel_code, info.reason, info.cancelled_by_us
++                    );
++                    *cancel_info.write().unwrap() = Some(info.clone());
++                    report(QrVerificationProgress::Cancelled { cancel_info: info });
++                    if let Some(d) = Self::current_delegate(&delegate) {
++                        d.did_cancel();
++                    }
++                    break;
++                }
++            }
+         }
+     }
+ 
+@@ -400,8 +580,9 @@ impl SessionVerificationController {
+             match state {
+                 VerificationRequestState::Transitioned { verification } => {
+                     let Some(verification) = verification.sas() else {
+-                        error!("Invalid, non-sas verification flow. Returning.");
+-                        return;
++                        // PSST: a QR code verification is tracked by generate_qr_code / scan_qr_code; keep
++                        // listening, the user may still switch to emoji (a later transition to SAS).
++                        continue;
+                     };
+ 
+                     *sas_verification.write().unwrap() = Some(verification.clone());
