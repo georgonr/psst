@@ -78,6 +78,29 @@ HOWTO = {
     "macos": "Open the DMG and drag <b>psst</b> to Applications, then open it from Applications.",
 }
 
+# D83: dialogs a new member can meet when installing the APK from the browser (Chrome / Samsung Internet, Android 14).
+# psst declares no SMS, notification-listener or accessibility access (checked in CI), so Play Protect does not block it.
+ANDROID_STEPS = """<div class="warn" lang="sk"><b>Inštalácia na Androide – hlásenia, ktoré môžete vidieť</b>
+<ol><li><i>„Tento typ súboru môže poškodiť zariadenie“</i> (prehliadač) → <b>Napriek tomu stiahnuť</b>.</li>
+<li><i>„Z bezpečnostných dôvodov nie je v telefóne povolená inštalácia neznámych aplikácií z tohto zdroja“</i> →
+<b>Nastavenia</b> → zapnite <b>Povoliť z tohto zdroja</b> → späť.</li>
+<li><i>„Skenovať aplikáciu pomocou Play Protect?“</i> alebo <i>„Odoslať aplikáciu na bezpečnostnú kontrolu?“</i> →
+<b>Skenovať aplikáciu</b> / <b>Odoslať</b>, potom <b>Inštalovať</b>. Play Protect psst ešte nemusí poznať – je to v poriadku.</li>
+<li>Samsung: <i>„Zablokované Automatickým blokovaním“</i> → Nastavenia → Zabezpečenie a súkromie →
+<b>Automatické blokovanie</b> dočasne vypnite, nainštalujte a znova zapnite.</li>
+<li>Ak sa objaví <i>„Aplikácia bola zablokovaná na ochranu zariadenia“</i>, ťuknite na <b>OK</b>, Play Protect
+nevypínajte a dajte vedieť správcovi.</li></ol></div>
+<div class="warn" lang="en"><b>Installing on Android – messages you may see</b>
+<ol><li><i>“This type of file can harm your device”</i> (browser) → <b>Download anyway</b>.</li>
+<li><i>“For your security, your phone is not allowed to install unknown apps from this source”</i> → <b>Settings</b> →
+turn on <b>Allow from this source</b> → back.</li>
+<li><i>“Scan app with Play Protect?”</i> or <i>“Send app for a security check?”</i> → <b>Scan app</b> / <b>Send</b>,
+then <b>Install</b>. Play Protect may not know psst yet – that is fine.</li>
+<li>Samsung: <i>“Blocked by Auto Blocker”</i> → Settings → Security and privacy → turn <b>Auto Blocker</b> off for the
+install, then back on.</li>
+<li>If you see <i>“App blocked to protect your device”</i>, tap <b>OK</b>, keep Play Protect on and tell the
+administrator.</li></ol></div>"""
+
 # D69: until the macOS build is signed with a Developer ID certificate and notarized by Apple, Gatekeeper blocks it
 # ("Move to Trash"). Shown only while latest.json has no "signed": true for macOS — the next signed build removes it.
 MACOS_UNSIGNED = """<div class="warn" lang="sk"><b>Táto verzia pre macOS ešte nie je podpísaná ani notarizovaná Apple</b>, preto ju
@@ -129,6 +152,7 @@ def render(state):
             f'<div class="meta">{html.escape(e["file"])}</div>'
             f'<div class="sha" title="SHA-256">SHA-256: {e["sha256"]}</div>'
             f'<div class="how">{HOWTO[key]}</div>'
+            + (ANDROID_STEPS if key == "android" else "")
             + (MACOS_UNSIGNED if key == "macos" and not e.get("signed") else "")
             + '</section>')
     cards.append('<section class="card" id="ios"><h2>iPhone &amp; iPad</h2><p class="soon">Coming soon</p>'
