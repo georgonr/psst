@@ -183,7 +183,8 @@ def teardown(work: Path) -> None:
     acc = load(work, "accounts.json") if (work / "accounts.json").exists() else {}
     if (work / "room.json").exists():
         room = load(work, "room.json")["room_id"]
-        assert re.fullmatch(r"![A-Za-z0-9._~-]+:" + re.escape(HS), room)
+        # room version 12 ids have no server part ("!<hash>"), older ones end in ":chat.macet.eu"
+        assert re.fullmatch(r"![A-Za-z0-9._~-]+(:" + re.escape(HS) + ")?", room), room
         ssh("cd /opt/psst/server && tok=$(sudo cat secrets/admin_token) && curl -s -o /dev/null -X DELETE "
             "-H \"Authorization: Bearer $tok\" -H 'Content-Type: application/json' "
             "-d '{\"purge\": true, \"block\": false}' "

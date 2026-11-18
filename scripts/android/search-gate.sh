@@ -66,10 +66,12 @@ keytool -genkeypair -keystore "$WORK/gate.jks" -storepass psstgate -keypass psst
   -keysize 2048 -validity 2 -dname CN=psst-search-gate >/dev/null 2>&1
 "$BT/zipalign" -P 16 -f 4 "$APK" "$WORK/aligned.apk"
 "$BT/apksigner" sign --ks "$WORK/gate.jks" --ks-pass pass:psstgate --out "$WORK/gate.apk" "$WORK/aligned.apk"
+rm -f "$WORK/gate.apk.idsig" "$WORK/aligned.apk"   # no .idsig: a plain (not incremental) install
 VERSION="$("$BT/aapt2" dump badging "$APK" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")"
 say "APK $VERSION"
 adb uninstall "$PKG" >/dev/null 2>&1 || true
-adb install "$WORK/gate.apk" | tail -1 | grep -q Success || fail "install failed"
+adb install "$WORK/gate.apk" >"$WORK/install.log" 2>&1 || true
+grep -q Success "$WORK/install.log" || fail "install failed: $(tail -2 "$WORK/install.log" | tr '\n' ' ')"
 adb shell pm grant "$PKG" android.permission.POST_NOTIFICATIONS >/dev/null 2>&1 || true
 
 # ---------- accounts + encrypted room ----------
@@ -80,10 +82,11 @@ PASS_A="$("$PY" -I -c "import json,sys;print(json.load(open(sys.argv[1]))['a'][1
 # ---------- sign in (MAS in a Chrome custom tab) ----------
 adb shell am start -n "$PKG/$ACT" >/dev/null
 signed_in=0
-for _ in $(seq 60); do
+for _ in $(seq 100); do
   t="$(texts)"
   case "$t" in
     *"'Chats'"*"'Search'"*|*"'Konverzácie'"*) signed_in=1; break ;;
+    *"isn't responding"*|*"nereaguje"*) ui tap Wait >/dev/null 2>&1 || ui tap Čakať >/dev/null 2>&1 ;;
     *"run in background"*|*"na pozadí"*) ui tap Allow >/dev/null 2>&1 || ui tap Povoliť >/dev/null 2>&1 ;;
     *"Notifications &amp; calls"*|*"Upozornenia a hovory"*) adb shell input keyevent KEYCODE_BACK ;;
     *"New psst version"*|*"Nová verzia"*) ui tap LATER >/dev/null 2>&1 || ui tap NESKÔR >/dev/null 2>&1 ;;
@@ -95,12 +98,18 @@ for _ in $(seq 60); do
       ui tapfield 1 >/dev/null; ui type "$PASS_A"; adb shell input keyevent KEYCODE_ENTER ;;
     *"Continue to psst"*) ui tap Continue >/dev/null ;;
     *"Back up your chats"*|*"Zálohujte"*) ui tap Close >/dev/null 2>&1 || ui tap Zavrieť >/dev/null 2>&1 ;;
+    # the throwaway signature gets no FCM token (Firebase is bound to the release certificate): push is not needed here
+    *"Unable to register pusher"*|*"Firebase token"*) ui tap "Do not show this again" >/dev/null 2>&1; ui tap OK >/dev/null 2>&1 ;;
+    # Chrome keeps the MAS session of the previous run's (deleted) test account; its page is not always in the
+    # accessibility tree: tap its "Sign in" button where MAS puts it
+    *"matrix-authentication-service"*)
+      mas_idle=$((${mas_idle:-0} + 1)); [ "$mas_idle" -ge 3 ] && { ui tap "Sign in" >/dev/null 2>&1 || adb shell input tap 540 1030; mas_idle=0; } ;;
   esac
   sleep 3
 done
 ui shot "$WORK/signed-in.png"
 [ "$signed_in" = 1 ] || fail "could not sign in the test account (screen: $(texts | head -c 300))"
-for b in Close Zavrieť; do ui tap "$b" >/dev/null 2>&1 || true; done
+for b in Close Zavrieť OK; do ui tap "$b" >/dev/null 2>&1 || true; done
 
 # ---------- corpus ----------
 "$PY" -I "$HERE/search_check.py" seed "$WORK" >>"$LOG" 2>&1 || fail "sending the corpus failed"
@@ -124,7 +133,7 @@ check "nenajdes" 0
 
 # ---------- restart, then a message that arrives after it ----------
 adb shell am force-stop "$PKG"; adb shell am start -n "$PKG/$ACT" >/dev/null; sleep 12
-for b in Close Zavrieť LATER NESKÔR; do ui tap "$b" >/dev/null 2>&1 || true; done
+for b in Close Zavrieť LATER NESKÔR OK; do ui tap "$b" >/dev/null 2>&1 || true; done
 "$PY" -I "$HERE/search_check.py" send "$WORK" "Po reštarte prišlo ďalšie číslo (sg99)" >>"$LOG" 2>&1 || fail "sending after restart failed"
 sleep 10
 check "restarte" 1
