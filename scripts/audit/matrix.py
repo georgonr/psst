@@ -115,6 +115,13 @@ ROWS = [
         ("pp_regressions", "Po zmene: upozornenie so zvukom, rozsvietenie, hovor cez zamknutú obrazovku, Upozornenia a hovory, diagnostika, budíček, QR overenie"),
         ("pp_search", "Po zmene: vyhľadávanie v správach"),
     ], ("android",)),
+    ("Android: vyhľadávanie — príčina hlásenia a kontrola pred vydaním (dávka 17, D84)", [
+        ("s84_cause", "Prvý pokazený build medzi b37 a b42 (aktualizácie b37→…→b43 na jednom účte)"),
+        ("s84_chats_empty", "Karta Konverzácie: vlastný prázdny stav a „Hľadať v správach“; obrazovka hľadania po slovensky"),
+        ("s84_gate", "Kontrola pred vydaním: šifrovaná miestnosť, bez diakritiky a začiatkom slova, presné počty"),
+        ("s84_gate_negative", "Kontrola zastaví build s pokazeným hľadaním"),
+        ("s84_regressions", "Po zmene: QR Android↔web a Android↔Android, zvuk, rozsvietenie, hovor, kontrola manifestu"),
+    ], ("android",)),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}

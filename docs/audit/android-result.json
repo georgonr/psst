@@ -413,5 +413,85 @@
   "id": "search_global",
   "status": "fail",
   "note": "dávka 16 (b42/b43): žiadne výsledky ani pre novú správu — viď riadok „Po zmene: vyhľadávanie v správach“; v b37 (dávka 14) fungovalo"
+ },
+ {
+  "id": "search_global",
+  "status": "ok",
+  "note": "b44 (dávka 17): karta Správy „cislo“ 56/56, „stastny“ 41/41, „zlty“ 31/31, „dakujem“ 84/84, „cisl“ 86/86, „pradavny“ 3/3 (930 správ v 3 miestnostiach, webový partner). Hlásenie z dávky 16 bolo chybou testu (čítal kartu Konverzácie), D84"
+ },
+ {
+  "id": "search_room",
+  "status": "ok",
+  "note": "b44: skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56"
+ },
+ {
+  "id": "search_types",
+  "status": "ok",
+  "note": "b44: šifrovaná 1:1 (320), šifrovaná skupina (310), nešifrovaný kanál (300) — všetky počty presné"
+ },
+ {
+  "id": "search_result",
+  "status": "ok",
+  "note": "b44: miestnosť, odosielateľ, čas, zvýraznený úryvok; ťuknutie otvorí najstaršiu správu DM priamo na nej"
+ },
+ {
+  "id": "search_folding",
+  "status": "ok",
+  "note": "b44: „prada“→„pradávny“ 3/3, „cisl“→„čísla/číslo“; vložený text s diakritikou nájde presne jednu správu; vložená URL nič nerozbije"
+ },
+ {
+  "id": "search_history",
+  "status": "ok",
+  "note": "b44: po novom prihlásení dopĺňanie histórie 30 s (CPU 17,7 s), potom 56/56; najstaršia správa každej miestnosti nájdená"
+ },
+ {
+  "id": "search_live",
+  "status": "ok",
+  "note": "b44: prijatá správa hneď; odoslaná z telefónu hneď; po úprave nové znenie 1, staré 0; zmazaná 0"
+ },
+ {
+  "id": "search_privacy",
+  "status": "ok",
+  "note": "b44: index 456 KB, hľadané slová v súboroch 0×; na serveri 0 požiadaviek /search z 14 120; po odhlásení adresár relácie aj index zmazané"
+ },
+ {
+  "id": "search_speed",
+  "status": "ok",
+  "note": "b44 v emulátore: prvá stránka 2–196 ms, ďalšia 0–363 ms; A05 neoverené"
+ },
+ {
+  "id": "search_lifecycle",
+  "status": "ok",
+  "note": "b44: aktualizácia b43→b44 56/56, b37→b44 56/56 + nová správa, čistá inštalácia 56/56, odhlásenie → prihlásenie s kľúčom 56/56, reštart 56/56"
+ },
+ {
+  "id": "pp_search",
+  "status": "ok",
+  "note": "Hlásenie z dávky 16 bolo chybou testu: čítal kartu Konverzácie, kde upstream ukazoval hlášku pre správy. b37→b38→…→b43 všetky nájdu staré aj nové správy (D84)"
+ },
+ {
+  "id": "s84_cause",
+  "status": "ok",
+  "note": "Prvý pokazený build neexistuje: b38–b43 aktualizované na jednom účte, každý našiel staré správy aj správu prijatú po aktualizácii; b43 aj po čistej inštalácii, novom prihlásení a resete identity. Karta Konverzácie ukázala presne texty z dávky 16"
+ },
+ {
+  "id": "s84_chats_empty",
+  "status": "ok",
+  "note": "b44: karta Konverzácie pri nezhode ukáže „Žiadna konverzácia s týmto názvom“ + „Hľadať v správach“ (prepne na Správy); obrazovka hľadania po slovensky"
+ },
+ {
+  "id": "s84_gate",
+  "status": "ok",
+  "note": "scripts/android/search-gate.sh v sign-release.sh: b44 PASS 8/8 (cislo 3, stastn 2, ob 2, zlty kon 1, dvanast 2, nenajdes 0, po reštarte restarte 1, cislo 4) za ~10 min"
+ },
+ {
+  "id": "s84_regressions",
+  "status": "ok",
+  "note": "b44: QR Android↔web (telefón skenuje web, krížový podpis potvrdený), QR Android↔Android (A skenuje B, oba overené), upozornenie so zvukom a vibráciou, displej sa rozsvietil za 2 s, hovor na celú obrazovku pri zhasnutom displeji za 2 s, check-manifest.py OK (APK aj AAB)"
+ },
+ {
+  "id": "s84_gate_negative",
+  "status": "ok",
+  "note": "b29 (pred opravou D80): kontrola zlyhala v 7 z 8 dopytov (cislo 0/3, stastn 0/2, ob 0/2, zlty kon 0/1, dvanast 0/2, po reštarte 0/1, cislo 0/4) → „not releasing“; sign-release.sh by nepodpísal ani nenahral"
  }
 ]

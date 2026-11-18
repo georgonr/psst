@@ -1,13 +1,13 @@
 # PSST — matica funkcií
 
-Stav k 2026-11-17, testované na produkčnom serveri chat.macet.eu výhradne na testovacích účtoch (po teste deaktivované). Postup a skripty: `scripts/audit/` (DECISIONS D64), podrobnosti v REPORT.md.
+Stav k 2026-11-18, testované na produkčnom serveri chat.macet.eu výhradne na testovacích účtoch (po teste deaktivované). Postup a skripty: `scripts/audit/` (DECISIONS D64), podrobnosti v REPORT.md.
 
 - **Web**: Element Web app.macet.eu v Chromiu (Playwright), partner = ďalšia webová relácia.
 - **Windows / macOS**: nainštalované MSI / DMG na GitHub runneroch (windows-latest, macos-latest), riadené cez CDP.
 - **Android**: APK v emulátore (API 34, Google APIs = Google Play services, FCM), ovládané cez adb/uiautomator.
 - **iOS**: simulátor na GitHub runneri (XCUITest `PsstAuditTests`), nepodpísaný build — bez APNs, kamery a mikrofónu.
 
-**Súhrn (294 buniek):** ✅ 220 funguje · ❌ 3 nefunguje · 🟠 2 nefunguje kvôli upstreamu · ⚪ 69 nedá sa tu overiť
+**Súhrn (299 buniek):** ✅ 227 funguje · ❌ 1 nefunguje · 🟠 2 nefunguje kvôli upstreamu · ⚪ 69 nedá sa tu overiť
 
 Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje, obmedzenie upstreamu (nie náš fork/server) · ⚪ nedá sa v tomto prostredí overiť (dôvod v bunke) · – riadok sa týka len inej platformy (nepočíta sa).
 
@@ -98,16 +98,16 @@ Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje,
 
 | Funkcia | Web | Windows | macOS | Android | iOS |
 |---|---|---|---|---|---|
-| Hľadanie vo všetkých konverzáciách (hlavná obrazovka → Hľadať → Správy) | – | – | – | ❌ nefunguje — dávka 16 (b42/b43): žiadne výsledky ani pre novú správu — viď riadok „Po zmene: vyhľadávanie v správach“; v b37 (dávka 14) fungovalo | – |
-| Hľadanie v jednej konverzácii (lupa v konverzácii / Detail → Hľadať v správach) | – | – | – | ✅ funguje — b37: lupa v hlavičke konverzácie (aj Detail → Hľadať v správach): skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56; len správy danej konverzácie | – |
-| Šifrovaná 1:1, šifrovaná skupina aj nešifrovaný verejný kanál | – | – | – | ✅ funguje — b37: šifrovaná 1:1 (320 správ), šifrovaná skupina s 3 členmi (310) a nešifrovaný verejný kanál (300) — všetky výsledky nájdené | – |
-| Výsledok: odosielateľ, miestnosť, dátum, úryvok so zvýraznením; ťuknutie otvorí správu | – | – | – | ✅ funguje — b37: miestnosť, odosielateľ, dátum/čas, úryvok okolo prvej zhody so zvýrazneným slovom; ťuknutie otvorí konverzáciu priamo na správe (zvýraznená, aj najstaršia správa histórie) | – |
-| Bez ohľadu na veľkosť písmen a diakritiku („cislo“ → „číslo“), aj začiatok slova | – | – | – | ✅ funguje — b37: „cislo“→„číslo“, „stastny“→„šťastný“, „cisl“→„čísla/číslo“, „prada“→„pradávny“, „papag“→„papagaj“; dopyt s diakritikou (vložený text „vták … týždeň“) nájde správu; vložená URL nič nerozbije | – |
-| Staršie správy: index sa dopĺňa z histórie na pozadí, stav indexovania viditeľný | – | – | – | ✅ funguje — b37: história sa dopĺňa na pozadí (upstream backfill FOREGROUND, ~3 mesiace): 930 správ za 48–59 s po aktualizácii/prihlásení, appka plynulá; riadok „Staršie správy sa ešte indexujú“ počas behu | – |
-| Nová prijatá aj odoslaná správa hneď v indexe; úprava a zmazanie sa prejavia | – | – | – | ✅ funguje — b37/b35: nová prijatá správa („kolibrík“) aj odoslaná z telefónu („papagaj“) nájdené hneď; po úprave nájde nové znenie („sokol“), staré nie; zmazaná správa z výsledkov zmizne | – |
-| Index šifrovaný v telefóne, nič na server, zmazaný pri odhlásení | – | – | – | ✅ funguje — b37: index len v telefóne (tantivy, šifrovaný kľúčom relácie — hľadané slová v súboroch 0×, 448 KB / 930 správ); na serveri 0 požiadaviek /search za 3 h testov; pri odhlásení sa adresár relácie s indexom zmaže | – |
-| Rýchlosť hľadania a indexovania, záťaž | – | – | – | ✅ funguje — emulátor (Samsung A05 nebol pripojený): prvá stránka 250–650 ms, ďalšia 450–750 ms (počas behu dopĺňania 1–2,6 s); prvé indexovanie 930 správ ~36 s CPU (s dešifrovaním), opakovaný prechod ~10 s CPU → najviac raz za 24 h; APK veľkosť nezmenená | – |
-| Po reštarte appky, po aktualizácii zo staršieho buildu, po odhlásení a novom prihlásení | – | – | – | ✅ funguje — b37: po reštarte hľadá hneď (index zostáva, prechod sa neopakuje); aktualizácia b29→b35 (starý index zmazaný a postavený znova, 56/56) a b35→b36→b37; odhlásenie → prihlásenie s kľúčom na obnovenie → 56/56 do ~1,5 min | – |
+| Hľadanie vo všetkých konverzáciách (hlavná obrazovka → Hľadať → Správy) | – | – | – | ✅ funguje — b44 (dávka 17): karta Správy „cislo“ 56/56, „stastny“ 41/41, „zlty“ 31/31, „dakujem“ 84/84, „cisl“ 86/86, „pradavny“ 3/3 (930 správ v 3 miestnostiach, webový partner). Hlásenie z dávky 16 bolo chybou testu (čítal kartu Konverzácie), D84 | – |
+| Hľadanie v jednej konverzácii (lupa v konverzácii / Detail → Hľadať v správach) | – | – | – | ✅ funguje — b44: skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56 | – |
+| Šifrovaná 1:1, šifrovaná skupina aj nešifrovaný verejný kanál | – | – | – | ✅ funguje — b44: šifrovaná 1:1 (320), šifrovaná skupina (310), nešifrovaný kanál (300) — všetky počty presné | – |
+| Výsledok: odosielateľ, miestnosť, dátum, úryvok so zvýraznením; ťuknutie otvorí správu | – | – | – | ✅ funguje — b44: miestnosť, odosielateľ, čas, zvýraznený úryvok; ťuknutie otvorí najstaršiu správu DM priamo na nej | – |
+| Bez ohľadu na veľkosť písmen a diakritiku („cislo“ → „číslo“), aj začiatok slova | – | – | – | ✅ funguje — b44: „prada“→„pradávny“ 3/3, „cisl“→„čísla/číslo“; vložený text s diakritikou nájde presne jednu správu; vložená URL nič nerozbije | – |
+| Staršie správy: index sa dopĺňa z histórie na pozadí, stav indexovania viditeľný | – | – | – | ✅ funguje — b44: po novom prihlásení dopĺňanie histórie 30 s (CPU 17,7 s), potom 56/56; najstaršia správa každej miestnosti nájdená | – |
+| Nová prijatá aj odoslaná správa hneď v indexe; úprava a zmazanie sa prejavia | – | – | – | ✅ funguje — b44: prijatá správa hneď; odoslaná z telefónu hneď; po úprave nové znenie 1, staré 0; zmazaná 0 | – |
+| Index šifrovaný v telefóne, nič na server, zmazaný pri odhlásení | – | – | – | ✅ funguje — b44: index 456 KB, hľadané slová v súboroch 0×; na serveri 0 požiadaviek /search z 14 120; po odhlásení adresár relácie aj index zmazané | – |
+| Rýchlosť hľadania a indexovania, záťaž | – | – | – | ✅ funguje — b44 v emulátore: prvá stránka 2–196 ms, ďalšia 0–363 ms; A05 neoverené | – |
+| Po reštarte appky, po aktualizácii zo staršieho buildu, po odhlásení a novom prihlásení | – | – | – | ✅ funguje — b44: aktualizácia b43→b44 56/56, b37→b44 56/56 + nová správa, čistá inštalácia 56/56, odhlásenie → prihlásenie s kľúčom 56/56, reštart 56/56 | – |
 
 ## Android: overenie zariadenia QR kódom (dávka 15, D81)
 
@@ -141,4 +141,14 @@ Legenda: ✅ funguje (skutočne otestované) · ❌ nefunguje · 🟠 nefunguje,
 | Názov aplikácie v systémových dialógoch je „psst“ | – | – | – | ✅ funguje — b43: application android:label="psst" doslovne (aapt2 badging: label='psst'); predtým @string → dialóg pred inštaláciou ukázal triedu ElementXApplication | – |
 | Stránka /download: postup pri hláseniach Play Protect a Samsung (SK/EN) | – | – | – | ✅ funguje — b43: /download karta Android — 5 krokov SK + EN (Napriek tomu stiahnuť, Povoliť z tohto zdroja, Skenovať/Odoslať → Inštalovať, Samsung Automatické blokovanie, App blocked → OK + správca) | – |
 | Po zmene: upozornenie so zvukom, rozsvietenie, hovor cez zamknutú obrazovku, Upozornenia a hovory, diagnostika, budíček, QR overenie | – | – | – | ✅ funguje — b43 (emulátor A, Android 14): správa pri zhasnutom displeji → rozsvietené za 4 s, importance 4, zvuk prehraný (mSoundNotificationKey); hovor z webu pri zamknutom telefóne → IncomingCallActivity na celú obrazovku za 2 s; Upozornenia a hovory + Diagnostika (bez tlačidla prístupu k upozorneniam, riadok CHANNEL); žiadosť o overenie pri spiacom telefóne → notifikácia za 1 s; QR: telefón naskenoval QR z novej webovej relácie → overené, server: krížovo podpísané | – |
-| Po zmene: vyhľadávanie v správach | – | – | – | ❌ nefunguje — b43 aj b42 (dávka 16): hľadanie nevrátilo nič ani pre práve prijatú správu (emulátor A po viacerých aktualizáciách/downgrade, aj čistá inštalácia b43 na druhom emulátore); index na disku správy obsahuje. Nie je to dôsledok D83 (b42 rovnako) — treba preskúmať | – |
+| Po zmene: vyhľadávanie v správach | – | – | – | ✅ funguje — Hlásenie z dávky 16 bolo chybou testu: čítal kartu Konverzácie, kde upstream ukazoval hlášku pre správy. b37→b38→…→b43 všetky nájdu staré aj nové správy (D84) | – |
+
+## Android: vyhľadávanie — príčina hlásenia a kontrola pred vydaním (dávka 17, D84)
+
+| Funkcia | Web | Windows | macOS | Android | iOS |
+|---|---|---|---|---|---|
+| Prvý pokazený build medzi b37 a b42 (aktualizácie b37→…→b43 na jednom účte) | – | – | – | ✅ funguje — Prvý pokazený build neexistuje: b38–b43 aktualizované na jednom účte, každý našiel staré správy aj správu prijatú po aktualizácii; b43 aj po čistej inštalácii, novom prihlásení a resete identity. Karta Konverzácie ukázala presne texty z dávky 16 | – |
+| Karta Konverzácie: vlastný prázdny stav a „Hľadať v správach“; obrazovka hľadania po slovensky | – | – | – | ✅ funguje — b44: karta Konverzácie pri nezhode ukáže „Žiadna konverzácia s týmto názvom“ + „Hľadať v správach“ (prepne na Správy); obrazovka hľadania po slovensky | – |
+| Kontrola pred vydaním: šifrovaná miestnosť, bez diakritiky a začiatkom slova, presné počty | – | – | – | ✅ funguje — scripts/android/search-gate.sh v sign-release.sh: b44 PASS 8/8 (cislo 3, stastn 2, ob 2, zlty kon 1, dvanast 2, nenajdes 0, po reštarte restarte 1, cislo 4) za ~10 min | – |
+| Kontrola zastaví build s pokazeným hľadaním | – | – | – | ✅ funguje — b29 (pred opravou D80): kontrola zlyhala v 7 z 8 dopytov (cislo 0/3, stastn 0/2, ob 0/2, zlty kon 0/1, dvanast 0/2, po reštarte 0/1, cislo 0/4) → „not releasing“; sign-release.sh by nepodpísal ani nenahral | – |
+| Po zmene: QR Android↔web a Android↔Android, zvuk, rozsvietenie, hovor, kontrola manifestu | – | – | – | ✅ funguje — b44: QR Android↔web (telefón skenuje web, krížový podpis potvrdený), QR Android↔Android (A skenuje B, oba overené), upozornenie so zvukom a vibráciou, displej sa rozsvietil za 2 s, hovor na celú obrazovku pri zhasnutom displeji za 2 s, check-manifest.py OK (APK aj AAB) | – |

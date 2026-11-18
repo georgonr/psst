@@ -1,3 +1,85 @@
+# PSST — report (2026-11-18, dávka 17: vyhľadávanie na Androide — príčina hlásenia, kontrola pred vydaním)
+
+**Výsledok:** vyhľadávanie sa medzi b37 a b42 **nepokazilo**, prvý pokazený build neexistuje. Hlásenie z dávky 16
+bolo chybou testu, ktorú podporila zavádzajúca hláška upstreamu (D84). Nový build **b44** je na stránke na
+stiahnutie.
+
+**Príčina hlásenia:** test v dávke 16 napísal slovo a čítal obrazovku bez prepnutia na kartu **Správy**.
+- Obrazovka hľadania sa otvára na karte **Konverzácie**, ktorá hľadá len názvy konverzácií.
+- Element X na nej pri prázdnom výsledku ukazuje hlášku pre správy („No results in the last 3 months … in your
+  recent messages“).
+- Na b43 karta Konverzácie ukáže presne texty z dávky 16 (aj poradie prvkov) a karta Správy výsledky.
+- QR beh (dávka 15) na Správy prepol a jeho 5/5 bolo správne.
+
+**Overenie po buildoch:** b38–b41 som stiahol z CI a podpísal len na test. Jeden účet prešiel aktualizáciami
+b37 → b38 → … → b43. Každý build našiel staré správy aj správu prijatú hneď po aktualizácii. b43 hľadá aj:
+- po čistej inštalácii;
+- po novom prihlásení s kľúčom na obnovenie;
+- po resete identity;
+- s prázdnou miestnosťou;
+- s obrázkom v šifrovanej miestnosti.
+
+Záplata Rust (`psst_folded`) je v `.so` b37 aj b42.
+
+**Oprava v b44:**
+- karta Konverzácie má vlastný prázdny stav „Žiadna konverzácia s týmto názvom“ s tlačidlom „Hľadať v správach“;
+- obrazovka hľadania je po slovensky (Localazy ju v SK nemá).
+
+**Deväť bodov D80 na b44** (930 správ: šifrovaná 1:1 320, šifrovaná skupina 310, nešifrovaný kanál 300; webový
+partner; počty vypočítané z korpusu):
+
+| Bod | Výsledok |
+|---|---|
+| 1. Všetky konverzácie | ✅ „cislo“ 56/56, „stastny“ 41/41, „zlty“ 31/31, „dakujem“ 84/84, „cisl“ 86/86 |
+| 2. Jedna konverzácia | ✅ skupina „cisl“ 29/29, DM „stastny“ 14/14, kanál „kon“ 56/56 |
+| 3. Šifrované aj kanál | ✅ všetky tri typy presne |
+| 4. Výsledok | ✅ miestnosť, odosielateľ, čas, zvýraznenie; ťuknutie otvorí najstaršiu správu priamo na nej |
+| 5. Diakritika, začiatok slova | ✅ „prada“ → „pradávny“ 3/3; vložený text s diakritikou → presne 1 správa |
+| 6. Staršie správy | ✅ najstaršia správa každej miestnosti; po prihlásení dopĺňanie 30 s (CPU 17,7 s) |
+| 7. Nové, odoslané, úprava, zmazanie | ✅ prijatá 1, odoslaná z telefónu 1, po úprave nové 1 / staré 0, zmazaná 0 |
+| 8. Súkromie | ✅ slová v indexe 0×, na serveri 0 × /search z 14 120 požiadaviek, po odhlásení index zmazaný |
+| 9. Rýchlosť | ✅ prvá stránka 2–196 ms, ďalšia 0–363 ms (emulátor; A05 neoverené) |
+| Aktualizácia, inštalácia, prihlásenie, reštart | ✅ b37→b44 a b43→b44 56/56, čistá inštalácia 56/56, odhlásenie → prihlásenie 56/56, reštart 56/56 |
+
+**Kontrola pred vydaním (D84):** `scripts/android/search-gate.sh` beží v `sign-release.sh` po kontrole manifestu.
+- Čistá inštalácia vydávaného APK v emulátore a nový účet `qa-sg…`.
+- Partner (nio, E2EE) pošle 8 známych správ do šifrovanej miestnosti.
+- Dopyty na karte Správy:
+  - bez diakritiky a začiatkom slova: `cislo` 3, `stastn` 2, `ob` 2, `zlty kon` 1, `dvanast` 2;
+  - slovo, ktoré tam nie je: 0;
+  - po reštarte prijatá správa: 1 a `cislo` 4.
+- Pri nezhode sa build nepodpíše ani nenahrá.
+- **b44: PASS 8/8. b29 (pred opravou D80): FAIL 7/8 → nevydané.**
+- `search_ui.py` počíta len na karte Správy (overí vybraný segment).
+
+**Bod 5 na b44:**
+- ✅ QR Android ↔ web: telefón naskenoval web, krížový podpis potvrdený zo servera.
+- ✅ QR Android ↔ Android: A naskenoval B, obe zariadenia overené.
+- ✅ Upozornenie so zvukom aj vibráciou.
+- ✅ Rozsvietenie displeja za 2 s.
+- ✅ Hovor na celú obrazovku pri zhasnutom displeji za 2 s.
+- ✅ `check-manifest.py` OK (APK aj AAB).
+
+**Účty na serveri:** aktívnych je 6.
+- geo, psstadmin: admin, bez pozvánky.
+- jj, ll, ss, mac: bez admina, vznikli pozvánkou.
+
+„9“ v dávke 16 zahŕňalo aj 3 deaktivované registračné testy `reg*`.
+
+**Upratanie:**
+- Testovacie účty qa-sw1–3, qa-sg* a ich miestnosti sú zmazané.
+- Disk: voľných 11,4 → 56,3 GiB (obsadených 200,9 → 155,0 GiB).
+- Zmazané:
+  - obraz Play emulátora;
+  - nepoužívaný emulátor psst33 s obrazom Android 13;
+  - staré medzibuildy;
+  - lokálny Gradle build a cache;
+  - testovacie kópie.
+
+Matica: 299 buniek — ✅ 227 · ❌ 1 · 🟠 2 · ⚪ 69.
+
+---
+
 # PSST — report (2026-11-17, dávka 16: prezentačná stránka a Play Protect)
 
 ## A) Prezentačná stránka — https://psst.macet.eu (D82)
