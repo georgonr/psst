@@ -105,6 +105,13 @@ while IFS= read -r -d '' f; do mapfile_list+=("$f"); done < <(find "$IN_DIR" -ty
 [ ${#mapfile_list[@]} -eq 0 ] || AAPT2="$AAPT2" python3 "$REPO_ROOT/scripts/android/check-manifest.py" "${mapfile_list[@]}" \
   || die "manifest check failed (DECISIONS.md D83) — not signing"
 
+# Message search must work in the release APK (D84): emulator + test accounts, known messages in an encrypted room,
+# queries without diacritics and by word beginnings must return the expected counts. A failure stops the release.
+GATE_APK="$(find "$IN_DIR" -type f -name '*x86_64*-unsigned.apk' | head -1)"
+[ -n "$GATE_APK" ] || die "no x86_64 APK for the message search check (D84) in $IN_DIR"
+AAPT2="$AAPT2" "$REPO_ROOT/scripts/android/search-gate.sh" "$GATE_APK" \
+  || die "message search check failed (DECISIONS.md D84) — not signing, not uploading"
+
 mkdir -p "$OUT_DIR"
 SIGNED=()
 
