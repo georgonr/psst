@@ -44,26 +44,26 @@
   ]
  },
  "android": {
-  "build": 43,
-  "date": "20261117",
-  "note": "No notification listener (Play Protect no longer blocks install), app label shown as psst, install help on download page.",
+  "build": 44,
+  "date": "20261118",
+  "note": "Hľadanie: karta Konverzácie už neukazuje hlášku o správach (tlačidlo Hľadať v správach), obrazovka hľadania po slovensky; kontrola hľadania pred vydaním.",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261117-b43-arm64.apk",
-    "sha256": "effd788e563d9b128ecebf9f68aaf8d7f9431df87e894177df4573b41a60b1e2"
+    "name": "psst-android-20261118-b44-arm64.apk",
+    "sha256": "206206ead1c146efcedd79b51191e0c67e6efb824dfcba790f411f2cdee119a6"
    },
    {
-    "name": "psst-android-20261117-b43-armv7.apk",
-    "sha256": "8531f6b55142e1d1fe6b803551d10bf55782d2dec9b56e86edf5aa29bff73422"
+    "name": "psst-android-20261118-b44-armv7.apk",
+    "sha256": "0a1ee2f8ce0c71f157ea34713b8ce8aade034001eb93e5d705fbb0e9d583578f"
    },
    {
-    "name": "psst-android-20261117-b43-x86_64.apk",
-    "sha256": "df0c6327f28a933593096c421d108fa7515c711bf288fcae33661b715d4fb93b"
+    "name": "psst-android-20261118-b44-x86_64.apk",
+    "sha256": "7277739d512f8987104d1a470416ce68616e01a4bf83d4a3b4e7766e28770c46"
    },
    {
-    "name": "psst-android-20261117-b43.aab",
-    "sha256": "45c948be5e794c5b612753c7613e53585f5bfeebea28c274a4ed767e59d5a430"
+    "name": "psst-android-20261118-b44.aab",
+    "sha256": "0802641a77f8337f26d7431e1153174dd0ef690cd9028bde0029e085213a7f51"
    }
   ]
  }
