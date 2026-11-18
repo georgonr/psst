@@ -89,7 +89,7 @@ def page(t):
 <div class="cta"><a class="btn primary" href="{DOWNLOAD}">{e(t["dl"])}</a><a class="btn ghost" href="{LOGIN}">{e(t["login"])}</a></div>
 <p class="plat" aria-label="{e(t["platforms_label"])}">{e(t["platforms"])}</p>
 </main>
-<footer>Powered by GG &amp; TT</footer>
+<footer>Powered by GT</footer>
 </body>
 </html>
 '''
