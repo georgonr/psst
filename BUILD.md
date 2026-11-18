@@ -74,12 +74,32 @@ gh workflow run android.yml -R georgonr/psst
 PSST_NOTE="čo sa zmenilo" scripts/android/sign-release.sh --run <run-id>   # stiahne, podpíše kľúčom z ~/psst-keys
 # výstup: dist/android/psst-android-<RRRRMMDD>-b<N>-{arm64,armv7,x86_64}.apk, …-b<N>.aab, SHA256SUMS; staré → dist/archive/android/
 scripts/android/check-manifest.py dist/android/*.apk dist/android/*.aab   # Play Protect (D83), beží aj v CI a pred podpisom
+scripts/android/search-gate.sh <x86_64.apk>   # vyhľadávanie v správach (D84), beží v sign-release.sh pred podpisom
 ```
 
 **Play Protect (D83):** vydaný APK/AAB nesmie v zlúčenom manifeste (náš kód + upstream + knižnice) obsahovať
 `RECEIVE_SMS`, `READ_SMS`, notification listener ani accessibility službu — Google Play Protect inak zablokuje
 inštaláciu stiahnutú z /download. Štítok aplikácie musí byť doslovne `psst`. Kontrolu robí
 `scripts/android/check-manifest.py`: CI (`android.yml`, APK aj AAB) zlyhá a `sign-release.sh` odmietne podpísať.
+
+**Vyhľadávanie v správach (D84):** `sign-release.sh` pred podpisom spustí `scripts/android/search-gate.sh` na x86_64
+APK v emulátore Android 14 (AVD `psst34` alebo pripojený emulátor). Postup kontroly:
+
+1. Vytvorí dva testovacie účty `qa-sg…`. Partner (`search_check.py`, matrix-nio s E2EE) pošle 8 známych správ
+   do **šifrovanej** miestnosti.
+2. Telefón hľadá na karte **Správy** bez diakritiky a začiatkom slova (`cislo`, `stastn`, `ob`, `zlty kon`,
+   `dvanast`) a jedno slovo, ktoré tam nie je.
+3. Po reštarte appky musí nájsť aj novo prijatú správu.
+
+Počty výsledkov sa vypočítajú z textov správ. Ak sa ktorýkoľvek nezhoduje, build sa nepodpíše ani nenahrá na
+/download. Účty aj miestnosť sa na konci zmažú, aj pri chybe.
+
+Kontrola potrebuje:
+- `~/.local/psst-venv` s `matrix-nio[e2e]`, `requests` a `certifi`;
+- ssh `psst`;
+- Android SDK s emulátorom.
+
+Trvá ~4 min. Podrobnosti: docs/android-search.md.
 
 ## 5. iOS
 

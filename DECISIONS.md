@@ -718,3 +718,38 @@ deklarujú `RECEIVE_SMS`, `READ_SMS`, službu notification listener alebo access
   stránky. Rozhodujúca je preto kontrola manifestu.
 - **Stránka /download:** postup pre hlásenia pri inštalácii (prehliadač „súbor môže poškodiť zariadenie“, neznáme
   zdroje, Play Protect sken / odoslanie na kontrolu, Samsung Automatické blokovanie, čo robiť pri „App blocked“), SK + EN.
+
+## Android: „vyhľadávanie nefunguje“ v b42/b43 (2026-11-18, sedemnásta dávka)
+
+**D84 — Vyhľadávanie sa nepokazilo. Chyba bola v teste a v zavádzajúcej hláške upstreamu. Pred vydaním odteraz beží
+automatická kontrola hľadania.** Dávka 16 hlásila, že b42 aj b43 nenájdu nič, ani práve prijatú správu.
+- **Overenie po buildoch:** b38 až b41 som stiahol z CI (artefakty) a podpísal len na test. Na jednom účte som
+  postupne aktualizoval b37 → b38 → … → b43. Každý build našiel staré správy aj správu prijatú hneď po aktualizácii.
+  Nájdu sa aj po čistej inštalácii b43, po novom prihlásení s kľúčom na obnovenie a po resete identity.
+  **Prvý pokazený build neexistuje.** Rust knižnica (psst2/psst3 s QR) obsahuje záplatu hľadania (`psst_folded`
+  v `.so` b37 aj b42) a Kotlin zmeny QR behu sa hľadania nedotýkajú.
+- **Skutočná príčina hlásenia:** test v dávke 16 napísal slovo a čítal obrazovku bez prepnutia na kartu
+  **Správy**. Obrazovka hľadania sa otvára na karte **Konverzácie**, ktorá hľadá len názvy konverzácií. Upstream
+  (Element X) pri prázdnom výsledku ukazuje na oboch kartách hlášku pre správy: „No results in the last 3 months –
+  There are no results for “…” in your recent messages“. Overené na b43: karta Konverzácie ukáže presne texty
+  z dávky 16 (vrátane poradia prvkov), karta Správy výsledky. QR beh (dávka 15) prepol na Správy a výsledok 5/5 bol
+  správny.
+- **Oprava v appke (b44):**
+  - karta Konverzácie má vlastný prázdny stav „Žiadna konverzácia s týmto názvom – Slová môžu byť vo vašich
+    správach“ s tlačidlom **Hľadať v správach**;
+  - obrazovka hľadania je po slovensky (Localazy pre ňu SK nemá, texty sú v `psst_search_strings.xml`).
+  Prečo nie automatické prepnutie na Správy: zoznam konverzácií hneď po zmene dopytu najprv vráti medzistav a
+  prepnutie by preskakovalo kartu aj pri hľadaní názvu. Tlačidlo je jednoznačné.
+- **Oprava testov:** `scripts/android/search_ui.py` vždy prepne na Správy. Počet uzná len vtedy, keď vidí hlavičku
+  „Z vašich správ“ alebo prázdny stav pre správy. Výsledky prejde posúvaním a pred aj po dopyte sa vráti na zoznam
+  konverzácií, takže sa dopyty nespájajú.
+- **Kontrola pred vydaním:** `scripts/android/search-gate.sh` beží v `sign-release.sh` hneď po kontrole manifestu.
+  Ak zlyhá, build sa nepodpíše ani nenahrá na /download. Postup:
+  - čistá inštalácia vydávaného x86_64 APK (podpísaného jednorazovým kľúčom) v emulátore Android 14;
+  - nový účet `qa-sg…`, ktorému partner cez nio s E2EE pošle 8 známych správ do šifrovanej miestnosti;
+  - dopyty bez diakritiky a začiatkom slova (`cislo` 3, `stastn` 2, `ob` 2, `zlty kon` 1, `dvanast` 2) a slovo,
+    ktoré tam nie je (0);
+  - po reštarte appky prijatá správa (1) a nový súčet pre `cislo` (4).
+  Očakávané počty počíta `search_check.py` z textov správ podľa pravidiel indexu. Účty a miestnosť sa zmažú aj pri
+  chybe. Kontrola potrebuje Mac s emulátorom, ssh `psst` a test venv. V GitHub Actions nebeží, lebo by
+  potrebovala prístup na produkčný server na zakladanie účtov.

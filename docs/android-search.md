@@ -56,7 +56,52 @@ while the search screen was open.
 | fork | `features/home/impl/.../search/GlobalSearch{State,Presenter,View}.kt` | Snippet around the first match with the searched words highlighted, sender kept. "Staršie správy sa ešte indexujú" row. Upstream starts a sweep each time search is first opened; psst only does that when the daily sweep is due, because one sweep re-reads the whole stored history: about 10 s CPU for ~930 messages on the emulator. |
 | fork | `features/roomdetails/impl/.../psst/search/*` (new); `RoomDetails{View,Node,FlowNode}.kt` | Room details → "Hľadať v správach": search in one conversation, using upstream `createMessageSearch(roomId)`. Tapping a result opens the timeline at the message. |
 | fork | `libraries/designsystem/.../psst/PsstSearchHighlight.kt` (new) | Folding-aware snippet and highlight, shared by both screens. |
-| fork | `res/values{,-sk}/psst_search_strings.xml` in home and roomdetails | SK/EN texts. |
+| fork | `res/values{,-sk}/psst_search_strings.xml` in home and roomdetails | SK/EN texts. Since D84 also the Slovak for upstream's search screen (tabs, empty states), which Localazy does not have yet. |
+| fork | `features/home/impl/.../search/GlobalSearchView.kt` (D84) | The **Chats** tab shows its own empty state ("No chat with this name" + "Search in messages") instead of upstream's Messages empty state. |
+
+## "Search finds nothing" in b42/b43 was a test error (D84)
+
+Batch 16 reported that b42 and b43 find nothing, not even a message that just arrived. That was wrong:
+
+- The test typed the word and read the screen without switching to **Messages**. The search screen opens on the
+  **Chats** tab, which only matches chat NAMES.
+- Upstream shows the Messages empty state ("No results in the last 3 months – There are no results for “…” in your
+  recent messages") on the Chats tab too. So the screen looked exactly like a broken message search.
+- Repeated on b43 (2026-11-18): the Chats tab shows exactly those texts, and the Messages tab shows the results.
+- Every build b37 → b38 → … → b43, updated in place on one account, found the old messages and a message received
+  right after each update. b43 also finds messages after a clean install, after a new login with the recovery key, and
+  after an identity reset.
+- The QR run (batch 15) was right: it switched to Messages and found 5 of 5.
+
+Fixes:
+
+- **App:** the Chats tab now has its own empty state ("No chat with this name") with a **Search in messages** button.
+- **Tests:** `scripts/android/search_ui.py` counts only on the Messages tab. It fails if it cannot see the Messages
+  header or the Messages empty state.
+
+## Release check (D84)
+
+`scripts/android/sign-release.sh` runs `scripts/android/search-gate.sh` on the x86_64 release APK before signing. A
+failure means nothing is signed or uploaded. The check:
+
+1. installs the APK (with a throwaway signature) in the Android 14 emulator;
+2. signs in a fresh test account `qa-sg…`;
+3. a partner (`search_check.py`, matrix-nio with E2EE) sends 8 Slovak messages into an **encrypted** room;
+4. on the phone it searches the **Messages** tab for `cislo`, `stastn`, `ob`, `zlty kon`, `dvanast` (no diacritics,
+   word beginnings) and for a word that is not there;
+5. it restarts the app, receives one more message and finds it, plus the new total for `cislo`.
+
+The expected counts are computed from the message texts with the index's rules (ASCII folding, every word a prefix),
+not typed by hand. The test accounts and the room are deleted at the end, also on failure.
+
+Run by hand:
+
+```sh
+scripts/android/search-gate.sh path/to/app-gplay-x86_64-release-unsigned.apk
+```
+
+It needs the psst test venv (`~/.local/psst-venv` with `matrix-nio[e2e]`), ssh access `psst`, and the AVD `psst34`
+(or an attached emulator).
 
 ## Updating to a new upstream
 
