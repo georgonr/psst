@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PSST server — nasadenie jedným príkazom (idempotentné: prvé nasadenie aj aktualizácia).
 #
-#   sudo ./deploy.sh <IP_SERVERA> <EMAIL_PRE_LETS_ENCRYPT> [voľby]
+#   sudo ./deploy.sh <IP_SERVERA> <EMAIL_PRE_LETS_ENCRYPT|none> [voľby]
 #
 #   Voľby:
 #     --apple-team-id <ID>  Apple Developer Team ID (iOS push cez Sygnal, universal links)
@@ -58,7 +58,7 @@ if [ "$LOCAL_TEST" = 1 ]; then
 else
   [ -n "$SERVER_IP" ] && [ -n "$LE_EMAIL" ] || { warn "chýba IP servera alebo e-mail"; usage 1; }
   [[ "$SERVER_IP" =~ ^[0-9]{1,3}(\.[0-9]{1,3}){3}$ ]] || die "IP servera musí byť IPv4 adresa (napr. 203.0.113.10)"
-  [[ "$LE_EMAIL" == *@*.* ]] || die "neplatný e-mail: $LE_EMAIL"
+  [[ "$LE_EMAIL" == *@*.* ]] || [ "$LE_EMAIL" = none ] || die "neplatný e-mail: $LE_EMAIL (alebo none = Let's Encrypt bez e-mailu)"
 fi
 
 # ----------------------------------------------------------------- domény
@@ -216,6 +216,7 @@ render() { # render <template> <output>
       -e "s|__CALL_DOMAIN__|${CALL_DOMAIN}|g" -e "s|__AUTH_DOMAIN__|${AUTH_DOMAIN}|g" \
       -e "s|__SERVER_NAME__|${SERVER_NAME}|g" -e "s|__TURN_DOMAIN__|${TURN_DOMAIN}|g" \
       -e "s|__WWW_DOMAIN__|${WWW_DOMAIN:-}|g" \
+      -e "s|__ALL_DOMAINS__|${ALL_DOMAINS}|g" \
       -e "s|__AUTH_PREFIX__|${AUTH_PREFIX}|g" -e "s|__MAS_PUBLIC_BASE__|${MAS_PUBLIC_BASE}|g" \
       -e "s|__TURN_DOMAIN_RE__|${TURN_DOMAIN_RE_SED}|g" \
       -e "s|__NGINX_IP__|${NGINX_IP}|g" -e "s|__SERVER_IP__|${SERVER_IP}|g" \
@@ -350,7 +351,7 @@ fi
 # secrets/webpush. allowed_endpoints: Sygnal posiela len známym push službám prehliadačov (nie na ľubovoľné URL).
 WEB_PUSH_APP_ID="${WEB_PUSH_APP_ID:-eu.macet.psst.web}"
 SYG_APPS+="$(printf '  %s:\n    type: webpush\n    vapid_private_key: /webpush/vapid_private.pem\n    vapid_contact_email: %s\n    ttl: 3600\n    allowed_endpoints:\n      - "fcm.googleapis.com"\n      - "*.push.services.mozilla.com"\n      - "*.notify.windows.com"\n      - "web.push.apple.com"\n ' \
-  "$WEB_PUSH_APP_ID" "${LETSENCRYPT_EMAIL:-admin@${SERVER_NAME}}")"$'\n'
+  "$WEB_PUSH_APP_ID" "$( [ "${LETSENCRYPT_EMAIL:-none}" = none ] && echo "admin@${SERVER_NAME}" || echo "$LETSENCRYPT_EMAIL")")"$'\n'
 printf '{\n    "app_id": "%s",\n    "vapid_public_key": "%s",\n    "gateway_url": "https://%s/_matrix/push/v1/notify"\n}\n' \
   "$WEB_PUSH_APP_ID" "$VAPID_PUBLIC_KEY" "$MATRIX_DOMAIN" > data/config/app-default/psst-push.json.tmp
 if [ -f data/config/app-default/psst-push.json ]; then cat data/config/app-default/psst-push.json.tmp > data/config/app-default/psst-push.json; rm -f data/config/app-default/psst-push.json.tmp
@@ -492,6 +493,7 @@ compose up -d admin >/dev/null && { [ "$ADM_BEFORE" = "$(cat secrets/admin-run/*
 compose exec -T nginx nginx -s reload >/dev/null 2>&1 || true
 
 # ----------------------------------------------------------------- 6. Let's Encrypt
+LE_EMAIL_ARGS="--email ${LETSENCRYPT_EMAIL:-}"; [ "${LETSENCRYPT_EMAIL:-none}" = none ] && LE_EMAIL_ARGS="--register-unsafely-without-email"
 if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
   log "žiadam certifikát Let's Encrypt pre: $ALL_DOMAINS"
   STAGING_ARG=""; [ "$STAGING" = 1 ] && STAGING_ARG="--staging"
@@ -500,7 +502,7 @@ if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
     'rm -rf /etc/letsencrypt/live/psst /etc/letsencrypt/archive/psst /etc/letsencrypt/renewal/psst.conf'
   # shellcheck disable=SC2086
   if compose run --rm --no-deps -T --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name psst $DOMAIN_ARGS \
-       --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email --non-interactive --key-type ecdsa $STAGING_ARG; then
+       $LE_EMAIL_ARGS --agree-tos --no-eff-email --non-interactive --key-type ecdsa $STAGING_ARG; then
     compose exec -T nginx nginx -s reload
     log "certifikát Let's Encrypt nainštalovaný"
   else

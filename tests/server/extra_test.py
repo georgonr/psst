@@ -123,7 +123,7 @@ async def main():
     data = os.urandom(200_000) + "PSST súbor 📎".encode()
     h = hashlib.sha256(data).hexdigest()
     uri = await send_file(room, data, "dokument.bin", "application/octet-stream", "m.file")
-    raw = S.get(f"{BASE}/_matrix/client/v1/media/download/{DOMAIN}/{uri.rsplit('/', 1)[1]}",
+    raw = S.get(f"{BASE}/_matrix/client/v1/media/download/{uri.removeprefix('mxc://')}",
                 headers={"Authorization": f"Bearer {erik.access_token}"}).content
     check("súbor: na serveri je len zašifrovaný blob", hashlib.sha256(raw).hexdigest() != h and len(raw) == len(data), f"{len(raw)} B")
     ok, ev = await receive_file(room, h, (RoomEncryptedFile,))

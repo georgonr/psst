@@ -12,8 +12,9 @@ Overí:
 - E2EE DM: šifrovaná správa a→b, na serveri len m.room.encrypted, b dešifruje,
 - skupina (súkromná, šifrovaná): správa a→b,
 - verejný kanál: publikovaný v adresári, adresár bez prihlásenia nedostupný, b sa pripojí cez alias,
-- šifrovaný súbor v kanáli: na serveri len zašifrovaný blob, b stiahne a dešifruje (SHA-256 zhoda),
-- federácia zvonka nedostupná (federation/key API 404, .well-known/matrix/server 404, port 8448 zavretý),
+- šifrovaný súbor v skupine: na serveri len zašifrovaný blob, b stiahne a dešifruje (SHA-256 zhoda),
+- federácia zvonka nedostupná (federation/key API 404 na chat aj psst.pro, .well-known/matrix/server na psst.pro ukazuje
+  na chat.psst.pro:8448, ktorý je zvonka zatvorený — D85),
 - verejná registrácia zamietnutá (Synapse /register, guest), MAS registrácia vyžaduje token.
 """
 import asyncio
@@ -68,15 +69,25 @@ async def main():
     # ---------------- externé kontroly (bez účtu) ----------------
     r = S.get(f"{BASE}/_matrix/client/versions", timeout=10)
     check("TLS: platný certifikát + client API", r.ok, f"HTTP {r.status_code}")
-    for path in ("/_matrix/federation/v1/version", "/_matrix/key/v2/server", "/.well-known/matrix/server"):
-        code = S.get(BASE + path, timeout=10).status_code
-        check(f"federácia: {path} nedostupné", code == 404, f"HTTP {code}")
-    s = socket.socket(); s.settimeout(5)
-    try:
-        open8448 = s.connect_ex((socket.gethostbyname(DOMAIN), 8448)) == 0
-    finally:
-        s.close()
-    check("federácia: port 8448 zvonka zatvorený", not open8448, "open" if open8448 else "closed/filtered")
+    for base in (BASE, f"https://{SN}"):
+        for path in ("/_matrix/federation/v1/version", "/_matrix/key/v2/server"):
+            code = S.get(base + path, timeout=10).status_code
+            check(f"federácia: {base}{path} nedostupné", code == 404, f"HTTP {code}")
+    code = S.get(BASE + "/.well-known/matrix/server", timeout=10).status_code
+    check(f"federácia: {DOMAIN}/.well-known/matrix/server nedostupné", code == 404, f"HTTP {code}")
+    wk = S.get(f"https://{SN}/.well-known/matrix/server", timeout=10)
+    m_server = wk.json().get("m.server", "") if wk.ok else ""
+    check(f"{SN}/.well-known/matrix/server → {DOMAIN}:8448 (len pre internú sieť)", m_server == f"{DOMAIN}:8448", m_server or f"HTTP {wk.status_code}")
+    wkc = S.get(f"https://{SN}/.well-known/matrix/client", timeout=10)
+    check(f"{SN}/.well-known/matrix/client → {BASE}", wkc.ok and wkc.json().get("m.homeserver", {}).get("base_url") == BASE,
+          wkc.text[:80])
+    for host in sorted({DOMAIN, SN}):
+        s = socket.socket(); s.settimeout(5)
+        try:
+            open8448 = s.connect_ex((socket.gethostbyname(host), 8448)) == 0
+        finally:
+            s.close()
+        check(f"federácia: port 8448 na {host} zvonka zatvorený", not open8448, "open" if open8448 else "closed/filtered")
     code = S.get(f"{BASE}/_synapse/admin/v1/server_version", timeout=10).status_code
     check("admin API zvonka nedostupné", code == 404, f"HTTP {code}")
     r = S.post(f"{BASE}/_matrix/client/v3/register", json={"username": "eve" + secrets.token_hex(3), "password": "Passw0rd-x1-long"}, timeout=10)
@@ -154,21 +165,22 @@ async def main():
     await settle(); await settle()
 
     # ---------------- šifrovaný súbor v kanáli ----------------
+    # šifrovaný súbor posielame do šifrovanej skupiny (kanál je verejný a nešifrovaný, D65)
     data = os.urandom(300_000) + "PSST súbor".encode()
     h = hashlib.sha256(data).hexdigest()
     resp, keys = await a.upload(lambda *_: data, content_type="application/octet-stream", filename="dokument.bin",
                                 encrypt=True, filesize=len(data))
     check("súbor: upload", isinstance(resp, UploadResponse), getattr(resp, "content_uri", resp))
-    await a.room_send(chan, "m.room.message", {"msgtype": "m.file", "body": "dokument.bin",
+    await a.room_send(grp.room_id, "m.room.message", {"msgtype": "m.file", "body": "dokument.bin",
                       "info": {"size": len(data), "mimetype": "application/octet-stream"},
                       "file": {"url": resp.content_uri, **keys}}, ignore_unverified_devices=True)
-    blob = S.get(f"{BASE}/_matrix/client/v1/media/download/{DOMAIN}/{resp.content_uri.rsplit('/', 1)[1]}",
+    blob = S.get(f"{BASE}/_matrix/client/v1/media/download/{resp.content_uri.removeprefix('mxc://')}",
                  headers={"Authorization": f"Bearer {b.access_token}"}, timeout=30).content
     check("súbor: na serveri len zašifrovaný blob", hashlib.sha256(blob).hexdigest() != h and len(blob) == len(data), f"{len(blob)} B")
     got = False
     for _ in range(15):
         sr = await b.sync(timeout=2000)
-        room = sr.rooms.join.get(chan)
+        room = sr.rooms.join.get(grp.room_id)
         for ev in (room.timeline.events if room else []):
             if isinstance(ev, RoomEncryptedFile):
                 dl = await b.download(ev.url)
@@ -178,7 +190,7 @@ async def main():
     check("súbor: b stiahol a dešifroval (SHA-256 zhoda)", got, h[:16])
 
     # kanál po teste odstrániť z adresára (nech nezavadzia skutočným členom)
-    S.put(f"{BASE}/_matrix/client/v3/directory/list/room/{chan}", json={"visibility": "private"},
+    S.put(f"{BASE}/_matrix/client/v3/directory/list/room/{grp.room_id}", json={"visibility": "private"},
           headers={"Authorization": f"Bearer {a.access_token}"}, timeout=10)
     for c in (a, b):
         await c.logout(); await c.close()
