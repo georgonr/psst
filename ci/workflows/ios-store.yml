@@ -1,0 +1,174 @@
+# PSST (D87): App Store material on the iOS simulator against production psst.pro.
+#   review  — forks/ios IntegrationTests PsstStoreTests.testStoreReview with the Element Web partner
+#             (scripts/audit/ios-partner.mjs): Report content, Report room, About links, Delete account.
+#   shots   — PsstStoreTests.testStoreScreenshots on iPhone 6.9" (Pro Max), iPhone 6.3" (Pro) and iPad Pro 13":
+#             full-screen PNGs in native resolution with an overridden status bar (9:41, full battery).
+#
+# Test accounts only: secret PSST_STORE_IOS = {"review": {"a": {...}, "b": {...}},
+#                                               "shots": {"user", "password", "recovery"}} (qa-* accounts, deactivated
+# afterwards; the secret is deleted after the run). Never real users.
+name: iOS store
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "georgonr/psst-ios ref"
+        default: psst
+        required: true
+      parts:
+        description: "review,shots"
+        default: "review,shots"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-store
+  cancel-in-progress: true
+
+env:
+  FORK_REPO: georgonr/psst-ios
+  FORK_REF: ${{ inputs.ref || 'psst' }}
+
+jobs:
+  store:
+    runs-on: xcode-27
+    timeout-minutes: 170
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: psst
+          persist-credentials: false
+      - name: Checkout psst-ios
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.FORK_REPO }}
+          ref: ${{ env.FORK_REF }}
+          path: ios
+          fetch-depth: 1
+          lfs: false
+          submodules: false
+          persist-credentials: false
+      - name: Select Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1)
+          [ -n "$XCODE" ] || XCODE=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"; xcodebuild -version
+      - name: Tools + project
+        working-directory: ios
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1
+          brew install xcodegen
+          mkdir -p "$RUNNER_TEMP/shims"
+          for t in swiftlint swiftformat; do printf '#!/bin/sh\nexit 0\n' > "$RUNNER_TEMP/shims/$t"; chmod +x "$RUNNER_TEMP/shims/$t"; done
+          echo "$RUNNER_TEMP/shims" >> "$GITHUB_PATH"
+          xcodegen
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/spm
+          key: spm-${{ hashFiles('ios/project.yml') }}
+          restore-keys: spm-
+      - name: Pick simulators (6.9", 6.3", iPad 13")
+        run: |
+          xcrun simctl list devices available -j > "$RUNNER_TEMP/devices.json"
+          python3 - "$RUNNER_TEMP/devices.json" >> "$GITHUB_ENV" <<'PY'
+          import json, re, sys
+          devs = []
+          for rt, ds in json.load(open(sys.argv[1]))["devices"].items():
+              m = re.search(r"iOS-(\d+)-(\d+)", rt)
+              if not m: continue
+              v = (int(m.group(1)), int(m.group(2)))
+              devs += [(v, d["name"], d["udid"]) for d in ds]
+          def best(pred):
+              c = sorted([d for d in devs if pred(d[1])], key=lambda d: (d[0], d[1]))
+              return c[-1] if c else None
+          picks = {
+              "IPHONE69": best(lambda n: n.startswith("iPhone") and "Pro Max" in n),
+              "IPHONE63": best(lambda n: n.startswith("iPhone") and n.endswith(" Pro")),
+              "IPAD13": best(lambda n: n.startswith("iPad Pro") and "13" in n),
+          }
+          for k, d in picks.items():
+              print(f"{k}={d[2] if d else ''}")
+              print(f"{k}_NAME={d[1] if d else ''}", file=sys.stderr)
+          PY
+          cat "$GITHUB_ENV" | grep -E "IPHONE|IPAD"
+      - name: Build for testing
+        working-directory: ios
+        run: |
+          xcrun simctl boot "$IPHONE63"; xcrun simctl bootstatus "$IPHONE63" -b
+          xcodebuild build-for-testing -project ElementX.xcodeproj -scheme IntegrationTests -configuration Debug \
+            -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -skipPackagePluginValidation -skipMacroValidation \
+            COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO \
+            PROVISIONING_PROFILE_SPECIFIER= DEVELOPMENT_TEAM=PSSTSIMULA > "$RUNNER_TEMP/build.log" 2>&1 \
+            || { grep -E 'error:' "$RUNNER_TEMP/build.log" | sort -u | head -60; tail -30 "$RUNNER_TEMP/build.log"; exit 1; }
+          tail -3 "$RUNNER_TEMP/build.log"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Secrets → files
+        env:
+          STORE: ${{ secrets.PSST_STORE_IOS }}
+        run: |
+          [ -n "$STORE" ] || { echo "::error::secret PSST_STORE_IOS missing"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/partner" "$RUNNER_TEMP/out"
+          umask 077
+          printf '%s' "$STORE" > "$RUNNER_TEMP/store.json"
+          python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'));json.dump(d['review'],open('$RUNNER_TEMP/partner/accounts.json','w'))"
+      - name: Review checks (report message, report room, about, delete account)
+        if: contains(inputs.parts, 'review')
+        working-directory: ios
+        run: |
+          cp ../psst/scripts/audit/ios-partner.mjs "$RUNNER_TEMP/partner/"
+          (cd "$RUNNER_TEMP/partner" && npm init -y >/dev/null && npm i playwright@1.64.1 >/dev/null && npx playwright install chromium >/dev/null)
+          (cd "$RUNNER_TEMP/partner" && nohup node ios-partner.mjs "$RUNNER_TEMP/out/partner" accounts.json > "$RUNNER_TEMP/out/partner.log" 2>&1 &)
+          for i in $(seq 1 90); do grep -q "signed in" "$RUNNER_TEMP/out/partner.log" 2>/dev/null && break; sleep 2; done
+          eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['review'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_AUDIT_PARTNER=@%s:psst.pro' % (d['a']['user'], d['a']['password'], d['b']['user']))")"
+          export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/review"
+          xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests \
+            -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/testStoreReview \
+            -resultBundlePath "$RUNNER_TEMP/out/review.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/review.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
+          pkill -f ios-partner.mjs || true
+      - name: Screenshots on three simulators
+        if: contains(inputs.parts, 'shots')
+        working-directory: ios
+        run: |
+          eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['shots'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_RECOVERY_KEY=\"%s\"' % (d['user'], d['password'], d['recovery']))")"
+          for dev in IPHONE69 IPHONE63 IPAD13; do
+            udid="${!dev}"; [ -n "$udid" ] || { echo "no simulator for $dev"; continue; }
+            xcrun simctl shutdown all >/dev/null 2>&1 || true
+            xcrun simctl erase "$udid"
+            xcrun simctl boot "$udid"; xcrun simctl bootstatus "$udid" -b
+            xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+              --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
+            export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/shots/$dev"
+            xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests \
+              -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$RUNNER_TEMP/dd" \
+              -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/testStoreScreenshots \
+              -resultBundlePath "$RUNNER_TEMP/out/shots-$dev.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/shots-$dev.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
+            mkdir -p "$RUNNER_TEMP/out/attachments/$dev"
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/out/shots-$dev.xcresult" --output-path "$RUNNER_TEMP/out/attachments/$dev" >/dev/null 2>&1 || true
+            ls -la "$RUNNER_TEMP/out/shots/$dev" 2>/dev/null || true
+          done
+      - name: Results
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/store.json" "$RUNNER_TEMP/partner/accounts.json"
+          cat "$RUNNER_TEMP/out/"*.log 2>/dev/null | grep -h "PSST-STORE|" | sed 's/.*PSST-STORE|/PSST-STORE|/' | sort -u > "$RUNNER_TEMP/out/store-result.txt" || true
+          { echo "### iOS store"; echo; echo '| id | status | note |'; echo '|---|---|---|';
+            awk -F'|' '{print "| "$2" | "$3" | "$4" |"}' "$RUNNER_TEMP/out/store-result.txt"; } >> "$GITHUB_STEP_SUMMARY"
+          mkdir -p "$RUNNER_TEMP/out/review-x"
+          [ -d "$RUNNER_TEMP/out/review.xcresult" ] && xcrun xcresulttool export attachments --path "$RUNNER_TEMP/out/review.xcresult" --output-path "$RUNNER_TEMP/out/review-x" >/dev/null 2>&1 || true
+          tail -40 "$RUNNER_TEMP/out/partner.log" 2>/dev/null || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: psst-ios-store
+          path: |
+            ${{ runner.temp }}/out/
+            !${{ runner.temp }}/out/*.xcresult
+          if-no-files-found: ignore
+          retention-days: 14

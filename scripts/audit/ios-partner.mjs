@@ -1,7 +1,8 @@
 // PSST iOS audit partner (runs next to the iOS simulator test on the CI runner, docs/FEATURE-MATRIX.md).
 //   node ios-partner.mjs <out-dir> <accounts.json>      accounts: {"a": ios user, "b": partner}
 // Element Web as `b`: joins every invite, answers "ping:<x>" with "pong:<x>", records what the iOS app sent
-// (text, reply, reaction, edit, redaction, image, file). When it sees "VERIFY-NOW" it signs `a` in on a second web
+// (text, reply, reaction, edit, redaction, image, file); "MAKE-GROUP:<x>" → creates group "QA ios group <x>" and
+// invites the iOS user (D87). When it sees "VERIFY-NOW" it signs `a` in on a second web
 // session (a new device) and asks the iOS app (the existing device) to verify it, accepting the emoji automatically.
 // Writes <out-dir>/partner.json continuously; stops when it sees "AUDIT-DONE" or after 60 minutes.
 import { chromium } from "playwright";
@@ -71,6 +72,14 @@ while (Date.now() - t0 < 60 * 60 * 1000) {
             answered.add(ping[1]);
             await b.evaluate(([r, t]) => window.mxMatrixClientPeg.get().sendTextMessage(r, t), [x.room, `pong:${ping[1]}`]);
             log(`answered pong:${ping[1]}`);
+        }
+        // D87: the store review test asks for a group it can report ("Report room" is offered for groups only)
+        const mk = /MAKE-GROUP:(\S+)/.exec(body);
+        if (mk && !answered.has("g" + mk[1])) {
+            answered.add("g" + mk[1]);
+            const rid = await b.evaluate(async ([ios, n]) => (await window.mxMatrixClientPeg.get().createRoom({ preset: "private_chat", name: n, invite: [ios],
+                initial_state: [{ type: "m.room.encryption", state_key: "", content: { algorithm: "m.megolm.v1.aes-sha2" } }] })).room_id, [IOS, `QA ios group ${mk[1]}`]);
+            log(`created group ${rid} for the room report`);
         }
         if (body.includes("READ-ME")) await b.evaluate(async ([r, id]) => { const c = window.mxMatrixClientPeg.get(); const e = c.getRoom(r)?.findEventById(id); if (e) await c.sendReadReceipt(e); }, [x.room, x.id]);
         if (body.includes("TYPE-NOW")) await b.evaluate((r) => window.mxMatrixClientPeg.get().sendTyping(r, true, 15000), x.room);
