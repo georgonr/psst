@@ -1,7 +1,8 @@
-# psst — overené fakty pre formuláre Google Play (stav 2026-11-19, D86)
+# psst — overené fakty pre formuláre Google Play (stav 2026-11-19, D86 + D87, build b51)
 
-Zdroj: vydaný **AAB b47** `dist/android/psst-android-20261119-b47.aab` (SHA-256 v `dist/LATEST.md`), fork
-`georgonr/psst-android@038c30754` a produkčný server psst.pro.
+Zdroj: **AAB b51** `dist/android/psst-android-20261119-b51.aab` (SHA-256 v `dist/LATEST.md`), fork
+`georgonr/psst-android@82e6fa5a7` a produkčný server psst.pro. Body 1, 3–5 platili už pre b47 (D86); b51 (D87) z
+manifestu odstránil povolenia, ktoré Play obmedzuje (bod 2), a doplnil verejné stránky (zásady, zmazanie účtu).
 
 Ako som fakty overil:
 - zlúčený manifest: `java -jar bundletool-all-1.18.3.jar dump manifest --bundle <aab>`;
@@ -21,42 +22,48 @@ Do Play Console som nič nenahral ani neodoslal.
   `SERVICES_SENTRY_* = null`).
 - **Do formulára:** „Does your app use advertising ID?“ → **No**.
 
-## 2. Povolenia (zlúčený manifest b47) a na čo sú
+## 2. Povolenia (zlúčený manifest b51) a na čo sú
+
+Konečný zoznam z `scripts/android/check-manifest.py --list <b51 APK>` (aapt2 `dump permissions`), rovnaký vo
+všetkých ABI aj v AAB:
 
 | Povolenie | Na čo | Odkiaľ |
 |---|---|---|
 | INTERNET, ACCESS_NETWORK_STATE | spojenie so serverom chat.psst.pro, zistenie, či je sieť | app, knižnice |
+| ACCESS_LOCAL_NETWORK | Android 16+: upstream knižnica sieťových volaní (nepýta sa používateľa) | androidutils |
 | POST_NOTIFICATIONS | upozornenia na správy a hovory | push |
 | com.google.android.c2dm.permission.RECEIVE | príjem pushov cez Firebase Cloud Messaging | firebase-messaging |
 | WAKE_LOCK | spracovanie pushu a hovoru pri zhasnutom displeji; rozsvietenie displeja pri správe (D73) | push, call |
 | TURN_SCREEN_ON | rozsvietenie displeja pri novej správe (Android 15+ len so súhlasom používateľa) | push (psst) |
-| USE_FULL_SCREEN_INTENT | prichádzajúci hovor na celú obrazovku cez zamknutý displej | call |
+| USE_FULL_SCREEN_INTENT | prichádzajúci hovor na celú obrazovku cez zamknutý displej | call — vyhlásenie: DECLARATIONS.md §1 |
 | VIBRATE | vibrácia upozornení a zvonenia | app |
 | RECORD_AUDIO | hlasové správy, hovory | voicerecorder, call |
 | CAMERA | video hovory, odfotenie prílohy, skenovanie QR (prihlásenie, overenie) | call, qrcode |
 | MODIFY_AUDIO_SETTINGS | prepnutie reproduktor/slúchadlo počas hovoru | call |
-| FOREGROUND_SERVICE (+ _CAMERA, _MICROPHONE) | prebiehajúci hovor beží ako služba v popredí (`CallForegroundService` microphone, `ElementCallForegroundService` camera+microphone) | call |
-| FOREGROUND_SERVICE (shortService) | `FetchPushForegroundService`: krátke stiahnutie správy po pushi | push |
-| FOREGROUND_SERVICE_LOCATION, ACCESS_FINE/COARSE_LOCATION | zdieľanie polohy (upstream). **V psst je funkcia skrytá** (bez mapového kľúča MapTiler `LocationService.isServiceAvailable()` = false, voľba „Location“ sa v prílohách neukáže), povolenia však v manifeste ostali | features/location |
-| REQUEST_IGNORE_BATTERY_OPTIMIZATIONS | „Upozornenia a hovory“: žiadosť o výnimku z optimalizácie batérie, aby hovory a správy chodili spoľahlivo | push (psst) |
-| REQUEST_INSTALL_PACKAGES | otvorenie prijatej prílohy .apk v systémovom inštalátore (upstream mediaviewer) | mediaviewer |
+| FOREGROUND_SERVICE, FOREGROUND_SERVICE_MICROPHONE, FOREGROUND_SERVICE_CAMERA | prebiehajúci hovor ako služba v popredí: `CallForegroundService` (microphone), `ElementCallForegroundService` (camera\|microphone); `FetchPushForegroundService` (shortService) po pushi | call, push — vyhlásenie: DECLARATIONS.md §2 |
 | RECEIVE_BOOT_COMPLETED | WorkManager (naplánované úlohy po reštarte) | androidx.work |
 | USE_BIOMETRIC, USE_FINGERPRINT | voliteľný zámok appky odtlačkom prsta | androidx.biometric |
-| ACCESS_LOCAL_NETWORK | Android 16+: upstream knižnica (sieťové volania) | androidutils |
 | eu.macet.psst.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION | interné (androidx), nie je to povolenie od používateľa | AGP |
 
-V manifeste nie je SMS, kontakty, notification listener ani accessibility (D83, `check-manifest.py`).
+V manifeste nie je SMS, kontakty, notification listener, accessibility (D83), ani **AD_ID**, **poloha**,
+**REQUEST_INSTALL_PACKAGES** a **REQUEST_IGNORE_BATTERY_OPTIMIZATIONS** (D87). `check-manifest.py` od D87 zlyhá v CI
+aj pred podpisom, ak sa ktorékoľvek z nich vráti (napr. cez aktualizáciu knižnice).
 
-**Pozor pri odoslaní do Play** (neimplementované, len zistené): pri týchto povoleniach Play vyžaduje vyhlásenie
-alebo ich obmedzuje.
-- `REQUEST_INSTALL_PACKAGES`: povolené len pre appky, ktorých hlavnou funkciou je inštalácia balíkov → odporúčam
-  ho pre Play odstrániť (`tools:node="remove"`).
-- `ACCESS_FINE/COARSE_LOCATION` + `FOREGROUND_SERVICE_LOCATION`: funkcia je skrytá → odstrániť, inak treba
-  vyhlásenie o polohe.
-- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: Play to pre bežný messenger s FCM spravidla neuzná → odstrániť alebo
-  zdôvodniť.
-- `USE_FULL_SCREEN_INTENT`: psst je appka s hovormi → vyhlásenie „calling app“.
-- `FOREGROUND_SERVICE_CAMERA/MICROPHONE`: vyhlásenie typov služieb v popredí (video ukážka hovoru).
+**Odstránené v b51 (D87):**
+- `REQUEST_INSTALL_PACKAGES`: Play ho povoľuje len appkám, ktorých hlavnou funkciou je inštalácia balíkov.
+  Príloha `.apk` sa teraz odovzdá systému ako každý iný súbor; aktualizácia psst sa sťahuje cez prehliadač
+  (app.psst.pro/download).
+- `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `FOREGROUND_SERVICE_LOCATION`: zdieľanie polohy bolo v psst
+  skryté (bez mapového kľúča). Odstránené sú povolenia, služba `LiveLocationSharingService` a čítanie polohy
+  (`PlatformLocationProvider`); appka polohu nečíta.
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`: **rozhodnutie — odstrániť.** Zdroj: Android dokumentácia, na ktorú
+  odkazuje politika Play „Device and Network Abuse“
+  (https://developer.android.com/training/monitoring-device-state/doze-standby#exemption-cases): riadok
+  „Instant messaging, chat, or calling app — Can use FCM? Yes, using FCM → **Not Acceptable**“; výnimka je len
+  pre appky, ktoré FCM použiť nemôžu. psst používa FCM (Sygnal, `event_id_only`), takže nárok nemá. Krok
+  „Bez obmedzenia batérie“ na obrazovke Upozornenia a hovory teraz zobrazí krátky návod („Batéria → Bez
+  obmedzení“) a otvorí systémovú stránku appky (Informácie o aplikácii); upstream banner otvára systémový zoznam
+  optimalizácie batérie (`ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS`, nepotrebuje povolenie).
 
 ## 3. Data safety
 
@@ -71,7 +78,7 @@ psst (chat.psst.pro, Hetzner, Fínsko). Tretej strane ide len push: Google FCM.
 | Fotky, videá, súbory | len čo používateľ pošle | server psst | áno | v šifrovaných miestnostiach šifrované end-to-end |
 | Hlas (hlasové správy, hovory) | len čo používateľ pošle / počas hovoru | server psst (médiá, LiveKit SFU) | áno | hlasové správy v šifr. miestnostiach E2EE; hovory šifrované pri prenose |
 | Kontakty (adresár) | **nie** | — | — | povolenie na kontakty nie je |
-| Poloha | **nie** | — | — | funkcia skrytá (bod 2) |
+| Poloha | **nie** | — | — | povolenia aj kód odstránené v b51 (bod 2) |
 | Identifikátory zariadenia | áno: Matrix device ID (vytvorí appka), FCM registračný token, Firebase Installation ID | server psst; Google (FCM) | nie | žiadne reklamné ID ani IMEI; server pri relácii vidí aj IP adresu |
 | Push token | áno | server psst (pusher) → Sygnal → Google FCM | nie (bez neho nechodia upozornenia) | push nesie len ID udalosti a miestnosti a počty (`event_id_only`, `push.include_content: false`), nikdy obsah |
 | Diagnostika, crash logy, analytika | **nie** | — | — | rageshake vypnutý, žiadne Sentry/PostHog |
@@ -89,12 +96,14 @@ psst (chat.psst.pro, Hetzner, Fínsko). Tretej strane ide len push: Google FCM.
 - Správy, ktoré už dostali iní členovia, im ostanú. Na serveri sú v šifrovaných miestnostiach len šifrované a
   novým členom sa po zmazaní nezobrazia. Nahraté médiá Synapse pri deaktivácii automaticky nemaže.
 
-**Čo pre Play chýba** (neimplementované):
-- (a) **verejná stránka** s postupom zmazania (napr. `https://app.psst.pro/delete-account`) pre pole
-  „Delete account URL“. Stránka účtu v MAS vyžaduje prihlásenie, takže je to len cesta pre prihláseného
-  používateľa;
-- (b) zmazanie **len údajov** bez zrušenia účtu appka neponúka, okrem mazania vlastných správ;
-- (c) médiá zmazaného účtu ostávajú na serveri, kým ich správca nevyčistí.
+**Verejná stránka na zmazanie (D87):** `https://psst.pro/delete-account` (SK + EN, bez prihlásenia) — pole
+„Delete account URL“. Obsahuje: názov appky a prevádzkovateľa, postup v appke (Android aj iPhone) a na webe,
+žiadosť e-mailom na psst@psst.pro bez prihlásenia (overenie vlastníctva, vybavenie do 30 dní), čo sa zmaže, čo
+ostane a ako dlho (správy u príjemcov, nahraté súbory do odstránenia na žiadosť, šifrované zálohy najviac
+6 mesiacov). Odkaz je aj v appkách (Android a iOS: O aplikácii → Zmazanie účtu; web/desktop: Help & About).
+
+Ostáva (vedome, napísané na stránke): zmazanie **len údajov** bez zrušenia účtu appka sama neponúka (okrem mazania
+vlastných správ) — na žiadosť e-mailom; médiá zmazaného účtu odstráni správca na žiadosť.
 
 ## 4. Dotazník hodnotenia obsahu
 
@@ -102,16 +111,19 @@ psst (chat.psst.pro, Hetzner, Fínsko). Tretej strane ide len push: Google FCM.
   Registrácia len na pozvánku.
 - **Zdieľanie obsahu používateľov:** áno, v rámci konverzácií. Verejný web ani profil, ktorý by videl ktokoľvek,
   nie je; adresár kanálov vidia len prihlásení členovia servera.
-- **Zdieľanie polohy:** nie (funkcia je skrytá, bod 2).
+- **Zdieľanie polohy:** nie (odstránené v b51, bod 2).
 - **Nákupy v appke / reklamy:** nie / nie.
 - **Nástroje proti zneužitiu:**
   - zablokovanie používateľa (detail používateľa → Block, jeho správy sa skryjú);
   - „Decline and block“ pri pozvánke;
-  - nahlásenie správy a miestnosti správcovi servera (Synapse `/report` → tabuľka `event_reports`);
+  - nahlásenie správy (všetky appky) a miestnosti (Android, iOS pri skupinách, web) správcovi servera
+    (Synapse `event_reports`, `room_reports`; nahlásenie používateľa cez API → `user_reports`);
   - správcovia miestností môžu vyhodiť alebo zakázať člena a meniť práva;
   - správca servera môže účet zablokovať (https://app.psst.pro/admin).
-- **Medzera:** nahlásenia sa zatiaľ nikde nezobrazujú. Admin stránka ich neukazuje (dnes je 0 nahlásení), dajú
-  sa čítať len cez Synapse admin API.
+- **Nahlásenia (D87):** https://app.psst.pro/admin → sekcia **Nahlásenia**: kto, koho/čo, dôvod, kedy; stav
+  nevybavené/vybavené; akcie Zablokovať člena, Zmazať správu / miestnosť / správy člena; každá akcia v audit logu.
+  Admin vidí len dôvod, ktorý napísal nahlasovateľ — obsah šifrovaných správ nie (read-only DB rola nemá prístup
+  k obsahu udalostí, overené „permission denied“). Podmienky sľubujú vybavenie spravidla do 24 hodín.
 
 ## 5. Technické požiadavky Play
 

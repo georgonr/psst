@@ -1,0 +1,28 @@
+psst is a private messenger for people who were invited to the psst service. Accounts are created only with an invitation code from the operator; there is no public sign-up.
+
+Private by default
+• Direct chats and private groups are end-to-end encrypted: the server stores only encrypted messages and files.
+• Verify your devices with a QR code or emoji, and keep your history with an encrypted recovery key.
+• No ads, no analytics, no tracking, no advertising identifier.
+
+Everything for everyday conversations
+• One-to-one chats, groups and channels
+• Voice and video calls, including group calls
+• Photos, videos, files and voice messages
+• Replies, reactions, edits, mentions and read receipts
+• Notifications for messages and incoming calls
+
+Safety
+• Report any message or room to the operator; reports are reviewed within 24 hours.
+• Block anyone you do not want to hear from.
+• For adults (18+).
+
+Your account, your choice
+• One account on iPhone, iPad, Android, the web and desktop (Windows, macOS).
+• Delete your account at any time in the app (Settings → Manage account → Delete account) or as described at psst.pro/delete-account.
+
+What psst is not
+psst does not make you anonymous. The server knows your username, your devices and who is in which conversation. Notifications are delivered through Apple Push Notification service and carry only an event ID, never message content. Public channels are not end-to-end encrypted.
+
+psst is built on the open Matrix standard and the open-source Element apps (AGPL-3.0). Source code: https://github.com/georgonr/psst
+Privacy Policy: https://psst.pro/privacy · Terms of Use: https://psst.pro/terms

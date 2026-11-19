@@ -135,7 +135,8 @@ NOT_FOUND = (ROOT.replace('<title>psst</title>', '<title>psst – 404</title>')
 ROOT = ROOT.replace('__MSG__\n', '')
 
 LEGAL_NAV = [("privacy", "Súkromie", "Privacy"), ("terms", "Podmienky", "Terms"),
-             ("delete-account", "Zmazanie účtu", "Delete account")]
+             ("delete-account", "Zmazanie účtu", "Delete account"),
+             ("support", "Pomoc a kontakt", "Help & contact")]
 
 
 def legal_page(slug):

@@ -282,7 +282,7 @@ PAGES = {
 <h2>V aplikácii (Android, iPhone)</h2>
 <ol>
 <li>Ťuknite na svoj profilový obrázok vľavo hore a otvorte <strong>Nastavenia</strong>.</li>
-<li>Zvoľte <strong>Spravovať účet a zariadenia</strong> (Manage account &amp; devices) alebo <strong>Účet</strong> (Account).</li>
+<li>Zvoľte <strong>Manage account &amp; devices</strong> (Android) alebo <strong>Manage account</strong> (iPhone). Tieto položky sú v aplikácii po anglicky.</li>
 <li>Otvorí sa stránka účtu. Zvoľte <strong>Zmazať účet</strong> (Delete account) a potvrďte.</li>
 </ol>
 
@@ -326,7 +326,7 @@ PAGES = {
 <h2>In the app (Android, iPhone)</h2>
 <ol>
 <li>Tap your avatar in the top left corner and open <strong>Settings</strong>.</li>
-<li>Choose <strong>Manage account &amp; devices</strong> (or <strong>Account</strong>).</li>
+<li>Choose <strong>Manage account &amp; devices</strong> (Android) or <strong>Manage account</strong> (iPhone).</li>
 <li>Your account page opens. Choose <strong>Delete account</strong> and confirm.</li>
 </ol>
 
@@ -357,6 +357,60 @@ PAGES = {
 <li><strong>Reports</strong> and the record of administrator actions, as long as needed to protect the service.</li>
 </ul>
 <p>More in the <a href="/privacy">Privacy Policy</a>.</p>
+""",
+        },
+    },    # ------------------------------------------------------------------------------------------------ support
+    "support": {
+        "sk": {
+            "title": "Pomoc a kontakt",
+            "desc": "Pomoc s aplikáciou psst secure chat a kontakt na prevádzkovateľa.",
+            "body": f"""
+<p class="meta">Aplikácia <strong>psst secure chat</strong> · prevádzkovateľ {OP_SK}</p>
+<p class="callout">Kontakt: {MAIL}. Odpovedáme spravidla do 2 pracovných dní, na nahlásenia zneužitia do 24 hodín.</p>
+
+<h2>Ako získam účet?</h2>
+<p>psst je len na pozvánku. Pozývací kód dostanete od niekoho, kto službu používa, alebo od prevádzkovateľa. V aplikácii zvoľte <strong>Create account</strong> (Vytvoriť účet) a zadajte kód.</p>
+
+<h2>Kde stiahnem aplikáciu?</h2>
+<p>Android, Windows a macOS: <a href="https://app.psst.pro/download/">app.psst.pro/download</a>. Na webe: <a href="https://app.psst.pro/">app.psst.pro</a>.</p>
+
+<h2>Nové zariadenie a staré správy</h2>
+<p>Pri prihlásení na novom zariadení potvrďte svoju identitu iným prihláseným zariadením alebo kľúčom na obnovenie. Bez neho sa staršie šifrované správy nedajú prečítať, ani prevádzkovateľom.</p>
+
+<h2>Nahlásenie a blokovanie</h2>
+<p>Správu nahlásite podržaním prsta na správe → <strong>Nahlásiť</strong>. Miestnosť nahlásite v jej detaile → <strong>Nahlásiť miestnosť</strong>. Používateľa zablokujete v jeho profile → <strong>Zablokovať</strong>.</p>
+
+<h2>Zmazanie účtu</h2>
+<p>Postup je na <a href="/delete-account">psst.pro/delete-account</a>.</p>
+
+<h2>Súkromie a podmienky</h2>
+<p><a href="/privacy">Zásady ochrany súkromia</a> · <a href="/terms">Podmienky používania</a></p>
+""",
+        },
+        "en": {
+            "title": "Help and contact",
+            "desc": "Help with the psst secure chat app and how to contact the operator.",
+            "body": f"""
+<p class="meta">App <strong>psst secure chat</strong> · operator {OP_EN}</p>
+<p class="callout">Contact: {MAIL}. We usually reply within 2 working days, and to abuse reports within 24 hours.</p>
+
+<h2>How do I get an account?</h2>
+<p>psst is invitation only. You get an invitation code from someone who uses the service or from the operator. In the app choose <strong>Create account</strong> and enter the code.</p>
+
+<h2>Where can I download the app?</h2>
+<p>Android, Windows and macOS: <a href="https://app.psst.pro/download/">app.psst.pro/download</a>. On the web: <a href="https://app.psst.pro/">app.psst.pro</a>.</p>
+
+<h2>New device and older messages</h2>
+<p>When you sign in on a new device, confirm your identity with another signed-in device or with your recovery key. Without it, older encrypted messages cannot be read, not even by the operator.</p>
+
+<h2>Reporting and blocking</h2>
+<p>To report a message, touch and hold it → <strong>Report</strong>. To report a room, open its details → <strong>Report room</strong>. To block a user, open their profile → <strong>Block</strong>.</p>
+
+<h2>Deleting your account</h2>
+<p>See <a href="/delete-account">psst.pro/delete-account</a>.</p>
+
+<h2>Privacy and terms</h2>
+<p><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Use</a></p>
 """,
         },
     },
