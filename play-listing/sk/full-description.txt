@@ -1,0 +1,23 @@
+psst je súkromný messenger pre ľudí, ktorých do služby psst niekto pozval. Účet sa dá vytvoriť len s pozývacím kódom od správcu – verejná registrácia neexistuje.
+
+Súkromie ako samozrejmosť
+• Rozhovory medzi dvoma ľuďmi a súkromné skupiny sú šifrované end-to-end: server ukladá len zašifrované správy a súbory.
+• Zariadenia si overíte QR kódom alebo emoji a históriu si uchováte so šifrovaným kľúčom na obnovenie.
+• Žiadne reklamy, analytika, sledovacie knižnice ani reklamné ID.
+
+Všetko pre každodennú komunikáciu
+• Rozhovory, skupiny a kanály
+• Hlasové a video hovory, aj skupinové
+• Fotky, videá, súbory a hlasové správy
+• Odpovede, reakcie, úpravy, zmienky a potvrdenia o prečítaní
+• Vyhľadávanie v šifrovaných správach priamo v telefóne
+• Spoľahlivé upozornenia, aj na prichádzajúci hovor na zamknutej obrazovke
+
+Váš účet, vaša voľba
+• Jeden účet v Androide, na iPhone, na webe aj v počítači (Windows, macOS).
+• Účet môžete kedykoľvek zmazať: Nastavenia → Manage account & devices → Delete account.
+
+Čo psst nie je
+psst vás nerobí anonymnými. Server pozná vaše meno používateľa, zariadenia a to, kto je v ktorom rozhovore. Upozornenia doručuje Google Firebase Cloud Messaging (nesú len ID udalosti, nikdy obsah správy). Verejné kanály nie sú šifrované end-to-end.
+
+psst je postavený na otvorenom štandarde Matrix a open-source aplikáciách Element. Zdrojový kód: https://github.com/georgonr/psst

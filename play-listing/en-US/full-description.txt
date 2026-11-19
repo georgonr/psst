@@ -1,0 +1,23 @@
+psst is a private messenger for people who were invited to the psst service. Accounts are created only with an invitation code from the administrator — there is no public sign-up.
+
+Private by default
+• Direct chats and private groups are end-to-end encrypted: the server stores only encrypted messages and files.
+• Verify your devices with a QR code or emoji, and keep your history with an encrypted recovery key.
+• No ads, no analytics, no tracking SDKs, and no advertising ID.
+
+Everything for everyday conversations
+• One-to-one chats, groups and channels
+• Voice and video calls, including group calls
+• Photos, videos, files and voice messages
+• Replies, reactions, edits, mentions and read receipts
+• Search in your encrypted messages, right on your device
+• Reliable notifications, also for incoming calls on the lock screen
+
+Your account, your choice
+• Sign in on Android, iPhone, the web and desktop (Windows, macOS) with the same account.
+• Delete your account at any time: Settings → Manage account & devices → Delete account.
+
+What psst is not
+psst does not make you anonymous. The server knows your username, your devices and who is in which conversation, and push notifications are delivered through Google Firebase Cloud Messaging (they carry only an event ID, never message content). Public channels are not end-to-end encrypted.
+
+psst is built on the open Matrix standard and the open-source Element apps. Source code: https://github.com/georgonr/psst
