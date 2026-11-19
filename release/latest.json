@@ -1,45 +1,45 @@
 {
  "web": {
-  "build": 31,
+  "build": 32,
   "date": "20261119",
-  "note": "macOS podpísaný Developer ID (GexPay, SE) a notarizovaný Apple — Gatekeeper bez varovania (D86)",
+  "note": "Odkazy na Súkromie, Podmienky a Zmazanie účtu na psst.pro, kontakt psst@psst.pro (D87)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261119-b31.tar.gz",
-    "sha256": "2e5a304a36c9a33c63fc9231918fbe450e6b5b4dd1552cb619dce734fe438fb4"
+    "name": "psst-web-20261119-b32.tar.gz",
+    "sha256": "8091cb56cbe80f015c4fd93e159090320b21021b1929b71a64b129c2346aa020"
    }
   ]
  },
  "macos": {
-  "build": 31,
+  "build": 32,
   "date": "20261119",
-  "note": "macOS podpísaný Developer ID (GexPay, SE) a notarizovaný Apple — Gatekeeper bez varovania (D86)",
+  "note": "Odkazy na Súkromie, Podmienky a Zmazanie účtu na psst.pro, kontakt psst@psst.pro (D87)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261119-b31.dmg",
-    "sha256": "1760b1ba0b0d0632ea4218b934f84834896ecbac782851040fe2f9adbdaf2d20"
+    "name": "psst-macos-20261119-b32.dmg",
+    "sha256": "40f007586f500717e44ce4e08a811f96cfafac0799c04c3a2c91d0759e61e8b2"
    },
    {
-    "name": "psst-macos-20261119-b31.zip",
-    "sha256": "740078cec99ebad1173f8a72b79b89026a5a50f13bdf5e482953521d069b8b92"
+    "name": "psst-macos-20261119-b32.zip",
+    "sha256": "18f0307a3cf2e3ab360bfd40e599dc2fd28825443bb6ea22415f5a4036eb02c6"
    }
   ]
  },
  "windows": {
-  "build": 31,
+  "build": 32,
   "date": "20261119",
-  "note": "macOS podpísaný Developer ID (GexPay, SE) a notarizovaný Apple — Gatekeeper bez varovania (D86)",
+  "note": "Odkazy na Súkromie, Podmienky a Zmazanie účtu na psst.pro, kontakt psst@psst.pro (D87)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261119-b31-setup.exe",
-    "sha256": "275165e92d3d23cd2b24f53203d75cf32e86e11acc0633cc08c950063eda582a"
+    "name": "psst-windows-20261119-b32-setup.exe",
+    "sha256": "ead0c22ab05d6088d7d959a51c9f98b8a54e968300bcda0b16820d61bfc667f7"
    },
    {
-    "name": "psst-windows-20261119-b31.msi",
-    "sha256": "98817fbaf300976f7d8d30416d8ab492113cee6d99db3cca80634ac01dde21db"
+    "name": "psst-windows-20261119-b32.msi",
+    "sha256": "4c4ea6f22c996c2b368cc29045639ee65187e7392dccef2b42cdedf5af3900b7"
    }
   ]
  },
@@ -68,14 +68,14 @@
   ]
  },
  "ios": {
-  "build": 1,
+  "build": 2,
   "date": "20261119",
-  "note": "psst.pro: server chat.psst.pro, ID @meno:psst.pro (D85); prvý build v TestFlighte",
+  "note": "iOS b2: About — Delete account, contact psst@psst.pro, legal pages on psst.pro (D87)",
   "dir": "ios",
   "files": [
    {
-    "name": "psst-ios-20261119-b1.ipa",
-    "sha256": "6de1991cfb05d3a49a23854ea44b61574408fbb7e80262adee70b2f67df5167c"
+    "name": "psst-ios-20261119-b2.ipa",
+    "sha256": "c8eba16904bcef019c8b4ce9a9edc6ce747fe96c77785c7936b5248c66eb3b2a"
    }
   ]
  }
