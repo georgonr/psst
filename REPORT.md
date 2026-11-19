@@ -1,33 +1,58 @@
-# PSST — report (2026-11-19, dávka 20, nočný beh: príprava na Google Play a App Store)
+# psst — nočný beh 2026-11-19/20 (dávka 20): príprava na Google Play a App Store
 
 **Nič sa nezaseklo na veci mimo môjho dosahu.** Do Play Console ani App Store Connect som nič neposlal, okrem iOS
 buildu b2 do TestFlightu. Rozhodnutia sú v DECISIONS.md D87.
 
-1. **Kontakt:** všade je psst@psst.pro, prevádzkovateľ MACET, s.r.o., IČO 35953781. Platí to pre stránky, web a
-   desktop b33, Android b51, iOS b2, /download aj MAS. Let's Encrypt účet má e-mail psst@psst.pro. Úvodná stránka
-   je bez mena, pod „Powered by GT“ má len odkazy Súkromie a Podmienky.
-2. **Právne stránky** (SK aj EN na jednej URL): psst.pro/privacy, /terms, /support. Staré app.psst.pro/*.html
-   presmerujú. OAuth metadáta ostali na app.psst.pro, lebo MAS chce rovnaký host ako client_uri.
-3. **Zmazanie účtu:** psst.pro/delete-account. Obsahuje postup v appke a na webe, e-mail bez prihlásenia, čo sa
-   zmaže a ako dlho ostane v zálohách (6 mesiacov).
-4. **Android b51:** odstránená inštalácia balíkov, poloha (aj kód) aj výnimka z batérie. Výnimka z batérie podľa
-   Android docs, na ktoré odkazuje politika Play, je pre chat s FCM „Not Acceptable“. Krok batérie preto ukáže
-   návod a otvorí App info. `check-manifest.py` zlyhá, ak sa povolenia vrátia (aj AD_ID). Texty vyhlásení a 2
-   videá sú v `play-listing/DECLARATIONS.md` (psst.pro/video/…).
-5. **Nahlásenia na /admin:** správy, miestnosti a používatelia (kto, čo, dôvod, kedy), stav vybavené alebo nie,
-   akcie Zablokovať a Zmazať (správu, miestnosť alebo správy člena), všetko do audit logu. Admin nevidí obsah
-   správ, DB rola k nemu nemá prístup.
-6. **Účty review a review-partner:** nie sú admin, majú šifrovanú DM a skupinu, zálohu kľúčov a kľúč na
-   obnovenie. Údaje a návod sú v `~/proj/psst-review.txt` (600).
-7. **Podklady:** `play-listing/` (FACTS b51, FORMS, DECLARATIONS, texty) a `appstore-listing/` (texty, FORMS,
-   APP-REVIEW-NOTES, snímky 6,9″, 6,3″ a iPad 13″).
-8. **PEPK:** `encryption_public_key.pem` bol k dispozícii, zip je v `~/psst-keys/play/psst-signing-key.zip` (600).
-   Certifikát v ňom má odtlačok 3A:64…:38:99 ako vydané APK.
+1. **Kontakt psst@psst.pro (MACET, s.r.o., IČO 35953781)** je všade: Zásady, Podmienky, /download, web a desktop
+   (Help & About), Android aj iOS (O aplikácii) a MAS. Let's Encrypt účet má tiež psst@psst.pro. Úvodná
+   psst.pro je bez mena, pod „Powered by GT“ má len Súkromie a Podmienky.
+2. **Stránky psst.pro/privacy, /terms a /support**, každá SK aj EN na jednej URL. Pokrývajú údaje, E2EE a čo
+   vidí server, EÚ, FCM/APNs, uchovávanie, zálohy 6 mesiacov, práva, 18+, pozvánky a nesľubujú anonymitu.
+3. **psst.pro/delete-account:** postup v appke aj na webe, e-mail bez prihlásenia, čo sa zmaže a čo ostane.
+4. **Android povolenia:** odstránené inštalácia balíkov, poloha (aj kód) a výnimka z batérie.
+   - **Batéria — rozhodnutie odstrániť.** Zdroj: developer.android.com/training/monitoring-device-state/doze-standby#exemption-cases,
+     riadok „Instant messaging, chat, or calling app … Yes, using FCM → Not Acceptable“; odkazuje naň politika
+     Play Device and Network Abuse.
+   - Krok batérie ukáže návod a otvorí App info. Overené: Allow background usage → Unrestricted.
+   - `check-manifest.py` zlyhá pri návrate ktoréhokoľvek z nich alebo AD_ID.
+   - Vyhlásenia sú v `play-listing/DECLARATIONS.md`, videá na psst.pro/video/….
+   - Overené na b51: zvuk, rozsvietenie, hovor na celú obrazovku, hovor na pozadí, vyhľadávanie (PASS), QR
+     prihlásenie, QR overenie, inštalácia cez b47.
+5. **Nahlásenia na app.psst.pro/admin:** kto, koho/čo, dôvod, kedy; vybavené/nevybavené; akcie Zablokovať a
+   Zmazať obsah; audit log. Obsah správ admin nevidí.
+   - Overené naostro z webu, Androidu a iOS (simulátor): správa aj miestnosť.
+   - Používateľa nahlásiť v appkách nejde (len cez API), stránky to tak aj píšu.
+6. **Účty review a review-partner:** nie sú admin, majú šifrovanú DM, skupinu a kľúč na obnovenie. Údaje a
+   návod sú v ~/proj/psst-review.txt (600). Tieto dva účty ostali aktívne.
+7. **Podklady pre Play:** FACTS, FORMS, DECLARATIONS, texty EN/SK; ikona a feature grafika sú pôvodné, snímky z
+   b47 (UI je rovnaké).
+   **Podklady pre App Store:** texty, FORMS, APP-REVIEW-NOTES; snímky 1320×2868, 1206×2622 a iPad 2064×2752.
+8. **PEPK:** encryption_public_key.pem existoval. Zip je hotový, certifikát 3A:64…:38:99 sedí s APK.
 9. **Buildy:**
-   - Android b51: APK arm64, armv7, AAB na /download aj v dist/android;
-   - iOS b2 v TestFlighte (VALID);
-   - web/desktop b32 a b33 (macOS Gatekeeper PASS).
-   Stránka /download sedí s release/latest.json.
+   - Android **b51** (APK arm64, armv7, AAB): na /download aj v dist/android;
+   - iOS **b2** v TestFlighte (VALID);
+   - web a desktop **b32**, a **b33** spustený omylom zmenou testovacieho skriptu (rovnaký obsah), macOS
+     Gatekeeper PASS;
+   - /download sedí s release/latest.json.
+
+**Konečné povolenia b51:** INTERNET, ACCESS_NETWORK_STATE, ACCESS_LOCAL_NETWORK, POST_NOTIFICATIONS,
+c2dm.RECEIVE, WAKE_LOCK, TURN_SCREEN_ON, USE_FULL_SCREEN_INTENT, VIBRATE, RECORD_AUDIO, CAMERA,
+MODIFY_AUDIO_SETTINGS, FOREGROUND_SERVICE (+_MICROPHONE, _CAMERA), RECEIVE_BOOT_COMPLETED, USE_BIOMETRIC,
+USE_FINGERPRINT, DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION (interné).
+
+**Neoverené:**
+- Zmazanie účtu na iOS som nedokončil. Cesta Nastavenia → Manage account & devices → stránka účtu s „Delete
+  account“ je overená, samotné zmazanie je ten istý MAS, overený v D86.
+- Desktop odkazy som v appke neotváral (config je rovnaký ako na webe).
+- Fyzické telefóny som netestoval, všetko bežalo v emulátore a simulátore.
+
+**Pre teba:**
+- Prečítaj FORMS.md (Play aj App Store) a vyplň formuláre. Heslá a kľúč na obnovenie vlož z psst-review.txt.
+  V App Store Connect prepíš Privacy URL na psst.pro/privacy.
+- V Play nahraj psst-signing-key.zip (App integrity → App signing).
+- Over na iPhone TestFlight b2 a na Samsungu b51: krok batérie, upozornenia a hovor.
+- Nahlásenia vybavuj do 24 h, ako sľubujú Podmienky.
+- V ďalšom builde doplniť do návodu batérie medzikrok „Allow background usage“.
 
 # PSST — report (2026-11-19, dávka 19: macOS Developer ID, iOS TestFlight, podklady pre Google Play)
 

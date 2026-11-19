@@ -282,7 +282,7 @@
  {
   "id": "m87_report",
   "status": "ok",
-  "note": "simulátor: skupina → Report room → dôvod → Report → /admin Nahlásenia; „Report content“ v menu správy sa otvára (odoslanie správy: viď REPORT)"
+  "note": "simulátor (CI ios-store): podržať správu → Report content → dôvod → Send a skupina → Report room → Report; obe v Synapse aj /admin Nahlásenia"
  },
  {
   "id": "m87_perms",
