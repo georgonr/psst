@@ -1,3 +1,85 @@
+# PSST — report (2026-11-19, dávka 18: presun na psst.pro, založené načisto)
+
+**Výsledok:** psst beží na **psst.pro** (D85). Server_name je `psst.pro`, ID majú tvar `@meno:psst.pro`.
+- homeserver a MAS: chat.psst.pro;
+- web, `/download`, `/admin`: app.psst.pro;
+- hovory a TURN/TLS na 443: call.psst.pro;
+- úvodná stránka a `.well-known`: psst.pro; www presmeruje na psst.pro.
+
+Databáza, podpisový kľúč a tajomstvá sú nové. Staré adresy na macet.eu sú vypnuté.
+
+**Upozornenia na začiatok:**
+- DNS je v poriadku: všetkých 5 A záznamov ukazuje na 204.168.160.131, žiadny AAAA, CAA nie je (LE povolený).
+- **Fyzický Samsung A05 nebol pripojený** (`adb devices` prázdne), Android je overený len v emulátoroch
+  (Android 14 a 15).
+
+**Server:**
+- Posledná šifrovaná záloha starého stavu je v `/opt/psst/archive-macet-final/`. Overené: SHA-256, dešifrovanie a
+  rozbalenie, `pg_restore --list` (177 a 34 tabuliek), podpisový kľúč, 749 médií. Je mimo rotácie, zmazať po
+  2026-12-19.
+- Až potom sa starý stack zastavil a jeho adresár (dáta, certifikáty, vhosty, staré zálohy a buildy) sa zmazal.
+- Nový stack je nasadený cez `deploy.sh 204.168.160.131 none …`.
+  - Jeden LE certifikát pre 5 názvov, platí do 2027-02-17, automatická obnova.
+  - Federácia vypnutá (`m.server` → chat.psst.pro:8448, zvonka zatvorený).
+  - Registrácia len pozvánkou. Kontakt na stránkach Podmienky/Súkromie je @geo:psst.pro.
+- Účty: `geo` (admin) a servisný `psstadmin`. Heslá sú v `~/proj/psst-admin.txt` (600). Pozvánky sa nevytvorili.
+  V iCloude žiadna kópia nie je.
+- Zálohy: denný cron. Skúšobná obnova naostro do dočasného prostredia (`scripts/restore-test.sh`): kľúč, 49 účtov,
+  509 udalostí, 28 miestností a 5 pozvánok sa zhodujú, obnovený Synapse naštartoval.
+- Neznáme názvy nedostanú TLS ani HTTP odpoveď. Overené zvonka pre chat, app, call, push, psst a ntfy.macet.eu.
+
+**Appky:**
+- Vo všetkých forkoch: homeserver, server_name, App Links / Associated Domains, push gateway, kontrola verzie a
+  právne odkazy. OAuth schéma callbacku je `pro.psst.app`.
+- Android má jediný provider „psst.pro“ (Managed, priamo na chat.psst.pro). `AppMigration11` po aktualizácii
+  zmaže reláciu starého servera.
+- Web a desktop zahodia uloženú reláciu iného homeservera (unit testy 49/49). Unit test Android migrácie je
+  napísaný, lokálne ho Gradle nespustil (nedostupný plugin); správanie overila skutočná aktualizácia v emulátore.
+- Buildy:
+  - **Android b47** (arm64, armv7, x86_64, AAB): kontrola manifestu OK, kontrola vyhľadávania PASS 8/8;
+  - **Windows/macOS/web b30** (b29 bol rovnaký kód, otestovaný auditmi);
+  - iOS fork upravený, v simulátore v CI audit 20 ok / 0 fail / 2 nedá sa. TestFlight čaká na Apple.
+- Stránka /download ukazuje len b47 a b30, `check-download-page.py` OK. Je na nej aj poznámka pre pôvodných
+  používateľov.
+
+**Aktualizácia zo starej appky (bod 11):**
+- **Android b44**, prihlásená na starom serveri a visiaca na „Offline / Server unreachable“, → b47: bez pádu, hneď
+  „Sign in to psst.pro“.
+- **macOS b27** (profil s reláciou starého servera) → b29: prihlasovacia obrazovka psst.pro, potom prihlásenie
+  @qa:psst.pro 6/6.
+- Windows rovnaký kód; lokálne neoverené.
+- Staré buildy o novej verzii samy nevedia, preto treba členov upozorniť.
+
+**Testy na psst.pro:**
+- server `prod_test.py` 29/29 (vrátane zamietnutej federácie a verejnej registrácie), server-smoke v CI 17/17;
+- admin stránka 28/28;
+- web audit 39/39 (registrácia pozvánkou, E2EE, súbory, skupina, kanál, hovory);
+- Web Push 8/8;
+- desktop audit Windows 43/43 a macOS 43/43;
+- hovor len cez TURN/TLS 443: 6/6 (relayProtocol tls);
+- Android (emulátor):
+  - registrácia pozvánkou;
+  - upozornenie so zvukom a vibráciou;
+  - rozsvietenie za 3 s (Android 15 po povolení);
+  - hovor na celú obrazovku za 3 s;
+  - QR prihlásenie z webu;
+  - QR overenie s webom;
+  - budíček ~1 s;
+  - vyhľadávanie 8/8;
+- zvonka:
+  - TLS 1.2/1.3, TLS 1.0/1.1 odmietnuté, hlavičky HSTS/nosniff/CSP;
+  - otvorené TCP len 22, 80, 443, 7881 (UDP 7882 prenáša médiá);
+  - healthcheck OK.
+
+**Upratanie:** testovacie účty (45) deaktivované, ich miestnosti (30) zmazané. Aktívni sú len geo a psstadmin,
+miestnosti 0, platné pozvánky 0. Matica funkcií má 339 buniek: ✅ 255 · ❌ 2 · 🟠 2 · ⚪ 80.
+
+**Úplnosť (bod 12):** „macet.eu“ už nie je v repozitároch (okrem histórie v DECISIONS.md a REPORT.md), v
+konfigurácii servera, vo webe, MSI, DMG ani ZIP.
+- **Výnimka:** podpisový certifikát Android APK/AAB má `O=macet.eu`. Kľúč sa meniť nesmie, inak by nová verzia
+  nešla nainštalovať cez starú.
+
+
 # PSST — report (2026-11-18, dávka 17: vyhľadávanie na Androide — príčina hlásenia, kontrola pred vydaním)
 
 **Výsledok:** vyhľadávanie sa medzi b37 a b42 **nepokazilo**, prvý pokazený build neexistuje. Hlásenie z dávky 16

@@ -283,5 +283,45 @@
   "id": "noindex",
   "status": "ok",
   "note": "psst.pro robots + sitemap; app.psst.pro/robots.txt povolí len /download/ a právne texty, web app a /admin X-Robots-Tag noindex, MAS prihlásenie noindex, chat.psst.pro/robots.txt Disallow"
+ },
+ {
+  "id": "m85_signin",
+  "status": "ok",
+  "note": "b29/b30: app.psst.pro, prihlásenie cez MAS na chat.psst.pro, ID @…:psst.pro; server picker ukazuje psst.pro (smoke test v CI + audit)"
+ },
+ {
+  "id": "m85_register",
+  "status": "ok",
+  "note": "registrácia s pozývacím tokenom z /admin aj zo servera → @qa-…:psst.pro (admin test 28/28, audit)"
+ },
+ {
+  "id": "m85_features",
+  "status": "ok",
+  "note": "web audit 39 ok / 0 fail: E2EE DM, súbor, obrázok, video, hlas, skupina, kanál, hovory 1:1/skupinové/zdieľanie obrazovky, QR, overenie, záloha kľúčov"
+ },
+ {
+  "id": "m85_turn",
+  "status": "ok",
+  "note": "relay-only (iceTransportPolicy relay): spojenie cez TURN/TLS call.psst.pro:443 (relayProtocol tls), médiá oboma smermi 6/6; UDP zakázané v prehliadači → hovor ide"
+ },
+ {
+  "id": "m85_alerts",
+  "status": "ok",
+  "note": "Web Push 8/8 v Chrome: pusher na serveri, upozornenie pri zatvorenej karte 1,1 s, budíček pri žiadosti o overenie 1,1 s, bez duplicít, odhlásenie zmaže pusher"
+ },
+ {
+  "id": "m85_qr",
+  "status": "ok",
+  "note": "„Link new device“ ukáže QR (MSC4108); Android ho naskenoval, kód 2 číslice, schválenie v MAS → Android prihlásený; nová webová relácia overená QR z Androidu"
+ },
+ {
+  "id": "m85_update",
+  "status": "na",
+  "note": "web na novej adrese app.psst.pro nemá staré dáta (iný pôvod); ten istý kód desktopu overený na macOS"
+ },
+ {
+  "id": "m85_package",
+  "status": "ok",
+  "note": "psst-web-…-b30.tar.gz: 0 výskytov starej domény; nasadený web (server/app) tiež 0"
  }
 ]

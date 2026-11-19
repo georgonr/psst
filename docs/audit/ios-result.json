@@ -223,5 +223,45 @@
   "id": "install_clean",
   "status": "na",
   "note": "iOS build čaká na App Store Connect záznam od Account Holdera (TestFlight)"
+ },
+ {
+  "id": "m85_signin",
+  "status": "ok",
+  "note": "simulátor (CI, fork e7f429c): úvodná obrazovka „Sign in to psst.pro“, prihlásenie cez MAS (ASWebAuthenticationSession, pro.psst.app) → @…:psst.pro"
+ },
+ {
+  "id": "m85_register",
+  "status": "na",
+  "note": "registrácia ide cez MAS v prehliadači (overené na webe a Androide)"
+ },
+ {
+  "id": "m85_features",
+  "status": "ok",
+  "note": "iOS audit 20 ok / 0 fail / 2 nedá sa (PHPicker, avatary potvrdení): DM s partnerom, odpoveď, reakcia, úprava, zmazanie, blokovanie, overenie emoji, profil, Upozornenia a hovory, test zvonenia"
+ },
+ {
+  "id": "m85_turn",
+  "status": "na",
+  "note": "simulátor bez kamery/mikrofónu"
+ },
+ {
+  "id": "m85_alerts",
+  "status": "na",
+  "note": "APNs v simulátore nie je (nepodpísaný build); lokálny test upozornenia a CallKit zvonenia OK"
+ },
+ {
+  "id": "m85_qr",
+  "status": "na",
+  "note": "simulátor bez kamery"
+ },
+ {
+  "id": "m85_update",
+  "status": "na",
+  "note": "iOS ešte nebol vydaný (TestFlight čaká na Apple) — žiadne staré relácie"
+ },
+ {
+  "id": "m85_package",
+  "status": "na",
+  "note": "iOS balík sa v tejto dávke nevydával; zdroje forku: 0 výskytov"
  }
 ]

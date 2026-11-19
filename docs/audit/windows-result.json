@@ -258,5 +258,45 @@
   "id": "install_clean",
   "status": "na",
   "note": "MSI nie je podpísané — SmartScreen môže varovať; na runneri sa inštalácia netestuje voči SmartScreen"
+ },
+ {
+  "id": "m85_signin",
+  "status": "ok",
+  "note": "b29: MSI na windows-latest, prihlásenie cez MAS (protocol handler pro.psst.app) → @…:psst.pro"
+ },
+ {
+  "id": "m85_register",
+  "status": "na",
+  "note": "registrácia ide cez MAS v prehliadači (overené na webe a Androide)"
+ },
+ {
+  "id": "m85_features",
+  "status": "ok",
+  "note": "desktop audit 43 ok / 0 fail (správy, súbory, skupiny, kanály, hovory, QR, overenie, relogin, kontrola aktualizácie b29)"
+ },
+ {
+  "id": "m85_turn",
+  "status": "ok",
+  "note": "UDP zablokované firewallom Windows: hovor cez ICE/TCP 7881, video 2"
+ },
+ {
+  "id": "m85_alerts",
+  "status": "ok",
+  "note": "notifikácia pri otvorenom aj zatvorenom okne (tray)"
+ },
+ {
+  "id": "m85_qr",
+  "status": "ok",
+  "note": "„Link new device“ QR; skenovanie overené Androidom"
+ },
+ {
+  "id": "m85_update",
+  "status": "na",
+  "note": "Windows lokálne netestovaný; rovnaký kód relácie (Lifecycle) overený na macOS a unit testom"
+ },
+ {
+  "id": "m85_package",
+  "status": "ok",
+  "note": "psst-windows-…-b30.msi (OLE + CAB, app.asar): 0 výskytov starej domény"
  }
 ]

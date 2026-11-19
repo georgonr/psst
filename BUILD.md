@@ -111,7 +111,8 @@ scripts/ios/release-testflight.sh                        # podpísaný build →
 ## 6. Server
 
 ```sh
-cd server && sudo ./deploy.sh <IP> none   # na cieľovom serveri, nie lokálne
+cd server && sudo ./deploy.sh <IP> none   # na cieľovom serveri; none = Let's Encrypt bez e-mailu (D85)
+sudo scripts/restore-test.sh               # skúšobná obnova najnovšej zálohy do dočasného prostredia (D85)
 gh workflow run server-smoke.yml -R georgonr/psst            # lokálny test celého stacku v CI
 ```
 

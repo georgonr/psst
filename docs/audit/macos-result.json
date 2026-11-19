@@ -258,5 +258,45 @@
   "id": "install_clean",
   "status": "fail",
   "note": "b27: DMG nepodpísaný — Gatekeeper ho po stiahnutí odmietne (spctl „no usable signature“); CI podpíše a notarizuje automaticky po dodaní Developer ID certifikátu (overené suchým behom s testovacím certifikátom, D78); návod na otvorenie je na stránke"
+ },
+ {
+  "id": "m85_signin",
+  "status": "ok",
+  "note": "b29: DMG na macos-latest aj lokálne, prihlásenie cez MAS (open-url pro.psst.app) → @…:psst.pro"
+ },
+ {
+  "id": "m85_register",
+  "status": "na",
+  "note": "registrácia ide cez MAS v prehliadači (overené na webe a Androide)"
+ },
+ {
+  "id": "m85_features",
+  "status": "ok",
+  "note": "desktop audit 43 ok / 0 fail (správy, súbory, skupiny, kanály, hovory, QR, overenie, relogin, kontrola aktualizácie b29)"
+ },
+ {
+  "id": "m85_turn",
+  "status": "ok",
+  "note": "UDP zablokované: hovor prešiel (video 2)"
+ },
+ {
+  "id": "m85_alerts",
+  "status": "ok",
+  "note": "notifikácia pri otvorenom aj zatvorenom okne (Dock)"
+ },
+ {
+  "id": "m85_qr",
+  "status": "ok",
+  "note": "„Link new device“ QR; skenovanie overené Androidom"
+ },
+ {
+  "id": "m85_update",
+  "status": "ok",
+  "note": "b27 prihlásená na starý server (profil) → b29 nad tým istým profilom: prihlasovacia obrazovka psst.pro (2 štarty), potom prihlásenie @…:psst.pro 6/6"
+ },
+ {
+  "id": "m85_package",
+  "status": "ok",
+  "note": "psst-macos-…-b30.dmg aj .zip (app.asar): 0 výskytov starej domény"
  }
 ]

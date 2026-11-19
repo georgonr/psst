@@ -493,5 +493,45 @@
   "id": "s84_gate_negative",
   "status": "ok",
   "note": "b29 (pred opravou D80): kontrola zlyhala v 7 z 8 dopytov (cislo 0/3, stastn 0/2, ob 0/2, zlty kon 0/1, dvanast 0/2, po reštarte 0/1, cislo 0/4) → „not releasing“; sign-release.sh by nepodpísal ani nenahral"
+ },
+ {
+  "id": "m85_signin",
+  "status": "ok",
+  "note": "b47: tlačidlo „Sign in to psst.pro“ (Managed provider, priamo chat.psst.pro), CI emulátorový test + kontrola vyhľadávania"
+ },
+ {
+  "id": "m85_register",
+  "status": "ok",
+  "note": "b47 (Android 15): Create account → MAS na chat.psst.pro → token pozvánky → meno → zoznam konverzácií"
+ },
+ {
+  "id": "m85_features",
+  "status": "ok",
+  "note": "šifrovaná DM s nio partnerom, dešifrovaná notifikácia; vyhľadávanie v šifrovanej miestnosti 8/8 (kontrola pred podpisom)"
+ },
+ {
+  "id": "m85_turn",
+  "status": "na",
+  "note": "hovor bez UDP overený na webe a desktope (rovnaký LiveKit/TURN)"
+ },
+ {
+  "id": "m85_alerts",
+  "status": "ok",
+  "note": "FCM: upozornenie so zvukom a vibráciou (importance 4, prehrané), displej rozsvietený za 3 s (Android 15 po povolení rozsvietenia), hovor na celú obrazovku pri zhasnutom displeji za 3 s, budíček pri žiadosti o overenie ~1 s"
+ },
+ {
+  "id": "m85_qr",
+  "status": "ok",
+  "note": "QR prihlásenie z webu (kód 2 číslice + schválenie v MAS) → prihlásený; QR overenie: Android naskenoval QR novej webovej relácie → Verification complete / Device verified"
+ },
+ {
+  "id": "m85_update",
+  "status": "ok",
+  "note": "b44 prihlásená na starom serveri („Offline / Server unreachable“) → inštalácia b47 cez ňu → bez pádu, „Sign in to psst.pro“ (AppMigration11)"
+ },
+ {
+  "id": "m85_package",
+  "status": "fail",
+  "note": "výnimka: v APK/AAB je stará doména len v podpisovom certifikáte (O = pôvodná doména). Certifikát sa meniť nesmie — inak by sa nová verzia nedala nainštalovať cez starú. Kód, zdroje a manifest: 0 výskytov"
  }
 ]
