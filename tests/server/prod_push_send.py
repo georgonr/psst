@@ -4,14 +4,14 @@
 import asyncio, json, os, secrets, sys, tempfile, time
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
-HS = "https://chat.macet.eu"
+HS = "https://chat.psst.pro"
 SENDER = os.environ.get("PSST_SENDER", "qa-ring")
 
 async def main(rcpt, mode="invite", room=None):
     from nio import AsyncClient, AsyncClientConfig, RoomPreset
     pw = json.loads((ROOT / ".prod-test-accounts.json").read_text())[SENDER]
     store = ROOT / ".prod-nio-store"; store.mkdir(exist_ok=True)
-    c = AsyncClient(HS, "@" + SENDER + ":chat.macet.eu", store_path=str(store), config=AsyncClientConfig(encryption_enabled=True),
+    c = AsyncClient(HS, "@" + SENDER + ":chat.psst.pro", store_path=str(store), config=AsyncClientConfig(encryption_enabled=True),
                     ssl=__import__("ssl").create_default_context(cafile=__import__("certifi").where()))
     sess = store / "session.json"
     if sess.exists():
@@ -27,7 +27,7 @@ async def main(rcpt, mode="invite", room=None):
     r = await c.sync(timeout=3000, full_state=True); print('synced', type(r).__name__, file=sys.stderr)
     if c.should_upload_keys: await c.keys_upload()
     if mode == "invite":
-        r = await c.room_create(is_direct=True, invite=[f"@{rcpt}:chat.macet.eu"], preset=RoomPreset.trusted_private_chat, name="PSST test")
+        r = await c.room_create(is_direct=True, invite=[f"@{rcpt}:psst.pro"], preset=RoomPreset.trusted_private_chat, name="PSST test")
         print("ROOM", r.room_id)
     elif mode == "message":
         await c.sync(timeout=3000)
@@ -41,14 +41,14 @@ async def main(rcpt, mode="invite", room=None):
         dev = c.device_id
         member = {"application": "m.call", "call_id": "", "device_id": dev, "expires": 14400000,
                   "foci_preferred": [{"livekit_alias": room, "livekit_service_url": HS + "/livekit/jwt", "type": "livekit",
-                                      "url": "wss://chat.macet.eu/livekit/sfu"}],
+                                      "url": "wss://chat.psst.pro/livekit/sfu"}],
                   "focus_active": {"focus_selection": "multi_sfu", "type": "livekit"}, "m.call.intent": "video",
                   "membershipID": f"{c.user_id}:{dev}", "scope": "m.room"}
         r = await c.room_put_state(room, "org.matrix.msc3401.call.member", member, state_key=f"_{c.user_id}_{dev}_m.call")
         print("MEMBER", getattr(r, "event_id", r))
         now = int(time.time() * 1000)
         content = {"notification_type": "ring", "sender_ts": now, "lifetime": 30000, "m.call.intent": "video",
-                   "m.mentions": {"user_ids": [f"@{rcpt}:chat.macet.eu"], "room": True},
+                   "m.mentions": {"user_ids": [f"@{rcpt}:psst.pro"], "room": True},
                    "m.relates_to": {"rel_type": "m.reference", "event_id": r.event_id}}
         r = await c.room_send(room, "org.matrix.msc4075.rtc.notification", content, ignore_unverified_devices=True)
         print("RING", getattr(r, "event_id", r))

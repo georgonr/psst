@@ -38,7 +38,7 @@ jobs:
           bash -n deploy.sh scripts/*.sh
 
       - name: Map PSST domains to localhost
-        run: echo "127.0.0.1 chat.macet.eu app.macet.eu call.macet.eu auth.macet.eu ntfy.macet.eu turn.macet.eu" | sudo tee -a /etc/hosts
+        run: echo "127.0.0.1 psst.pro www.psst.pro chat.psst.pro app.psst.pro call.psst.pro auth.psst.pro" | sudo tee -a /etc/hosts
 
       - name: Deploy stack (./deploy.sh --local-test)
         working-directory: server
@@ -73,13 +73,13 @@ jobs:
         if: success()
         working-directory: server
         run: |
-          before=$(docker compose exec -T synapse sha256sum /data/chat.macet.eu.signing.key | cut -c1-64)
+          before=$(docker compose exec -T synapse sha256sum /data/chat.psst.pro.signing.key | cut -c1-64)
           cp secrets/backup.pass /tmp/backup.pass
           docker compose down --remove-orphans
           sudo mv data /tmp/old-data && mv .env /tmp/old-env && mv secrets /tmp/old-secrets
           mkdir -p secrets && cp /tmp/backup.pass secrets/backup.pass
           ./scripts/restore.sh "$BACKUP"
-          after=$(docker compose exec -T synapse sha256sum /data/chat.macet.eu.signing.key | cut -c1-64)
+          after=$(docker compose exec -T synapse sha256sum /data/chat.psst.pro.signing.key | cut -c1-64)
           test "$before" = "$after"
           sleep 20 && ./scripts/healthcheck.sh
 

@@ -14,12 +14,13 @@ const [OUT, ACC_FILE] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
 const A = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
 const TA = process.env.PSST_TOKEN_A, TB = process.env.PSST_TOKEN_B;
-const WEB = "https://app.macet.eu", HS = "https://chat.macet.eu", DOMAIN = "chat.macet.eu";
+const WEB = "https://app.psst.pro", HS = "https://chat.psst.pro", DOMAIN = "chat.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
 const APP_ID = "eu.macet.psst.web";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
 const record = (id, ok, note = "") => { results.push({ id, status: ok ? "ok" : "fail", note: String(note).slice(0, 400) }); console.log(`${ok ? "OK  " : "FAIL"} ${id}  ${note}`); };
-const uid = (k) => `@${A[k].user}:${DOMAIN}`;
+const uid = (k) => `@${A[k].user}:${SN}`;
 
 async function api(token, method, p, body) {
     const r = await fetch(HS + p, { method, headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });

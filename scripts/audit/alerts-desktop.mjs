@@ -15,7 +15,7 @@ import {
 const [BIN, OUT, ACC_FILE, PLATFORM] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
 const A = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
-const HS = "chat.macet.eu";
+const HS = "chat.psst.pro";
 const results = [];
 const record = (id, status, note = "") => {
     results.push({ id, status, note: typeof note === "string" ? note.slice(0, 800) : note });
@@ -66,7 +66,7 @@ async function desktopLogin(user, password) {
     if (!authUrl) throw new Error("MAS URL not captured");
     const b2 = await chromium.launch(); const p2 = await (await b2.newContext()).newPage();
     let callback = "";
-    p2.on("response", async (r) => { const loc = (await r.allHeaders().catch(() => ({})))["location"] || ""; if (/^(eu\.macet\.|psst:)/.test(loc)) callback = loc; });
+    p2.on("response", async (r) => { const loc = (await r.allHeaders().catch(() => ({})))["location"] || ""; if (/^(pro\.psst\.|eu\.macet\.psst|psst:)/.test(loc)) callback = loc; });
     await p2.goto(authUrl);
     await p2.fill('input[name="username"]', user, { timeout: 30000 }); await p2.fill('input[name="password"]', password);
     await p2.click("button[type=submit]");

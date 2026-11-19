@@ -37,7 +37,7 @@ GROUP = "group." + BUNDLE
 KEYS = Path(os.environ.get("PSST_KEYS_DIR", Path.home() / "psst-keys"))
 DIST = KEYS / "ios-dist"
 TESTER = {"email": os.environ.get("PSST_TESTER_EMAIL", ""), "firstName": "Geo", "lastName": "M"}
-PRIVACY_URL = "https://app.macet.eu/privacy.html"
+PRIVACY_URL = "https://app.psst.pro/privacy.html"
 
 # What a person with the right role must do once in the Apple web portals (the API cannot do it).
 HUMAN = {

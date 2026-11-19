@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PSST: publish one build on https://app.macet.eu/download (D59) and verify it over HTTPS.
+# PSST: publish one build on https://app.psst.pro/download (D59) and verify it over HTTPS.
 #
 #   scripts/release/upload-download.sh <android|windows|macos> <file> ["what changed"]
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 PLATFORM="${1:?platform}"; FILE="${2:?file}"; NOTE="${3:-}"
 HOST="${PSST_DL_HOST:-204.168.160.131}"
 KEY="${PSST_DL_KEY:-$HOME/psst-keys/psst-dl-upload}"
-BASE="${PSST_DL_BASE:-https://app.macet.eu/download}"
+BASE="${PSST_DL_BASE:-https://app.psst.pro/download}"
 KNOWN="${PSST_DL_KNOWN_HOSTS:-}"
 die() { echo "ERROR: $*" >&2; exit 1; }
 [ -f "$FILE" ] || die "missing $FILE"

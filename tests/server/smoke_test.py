@@ -2,7 +2,7 @@
 """PSST server smoke test (bod 7) — beží v CI proti stacku z server/compose.yml + compose.test.yml.
 
 Predpoklady:
-  * stack beží (./deploy.sh --no-letsencrypt), domény chat./app./call.macet.eu → 127.0.0.1 v /etc/hosts
+  * stack beží (./deploy.sh --no-letsencrypt), domény chat./app./call.psst.pro → 127.0.0.1 v /etc/hosts
   * pip install "matrix-nio[e2e]==0.26.0" requests  (Olm/Megolm cez vodozemac)
   * env COMPOSE_FILE=compose.yml:compose.test.yml (pre server/scripts/*)
 
@@ -29,9 +29,10 @@ import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.macet.eu")
-APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.macet.eu")
-CALL_DOMAIN = os.environ.get("CALL_DOMAIN", "call.macet.eu")
+DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.psst.pro")
+SN = os.environ.get("SERVER_NAME", "psst.pro")   # Matrix server_name (user IDs), D85
+APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.psst.pro")
+CALL_DOMAIN = os.environ.get("CALL_DOMAIN", "call.psst.pro")
 BASE = os.environ.get("SMOKE_BASE", f"https://{DOMAIN}")
 DIRECT = os.environ.get("SMOKE_DIRECT", "http://127.0.0.1:8008")  # Synapse loopback (ako cez SSH tunel)
 SFU_URL = f"wss://{DOMAIN}/livekit/sfu"
@@ -253,7 +254,7 @@ def c_federation():
     for url in (f"{BASE}/_matrix/federation/v1/version", f"{BASE}/_matrix/key/v2/server",
                 f"{BASE}/.well-known/matrix/server",
                 f"{DIRECT}/_matrix/federation/v1/version", f"{DIRECT}/_matrix/key/v2/server",
-                f"{DIRECT}/_matrix/federation/v1/query/profile?user_id=@alice:{DOMAIN}"):
+                f"{DIRECT}/_matrix/federation/v1/query/profile?user_id=@alice:{SN}"):
         r = S.get(url, timeout=10)
         expect(r.status_code in (400, 401, 403, 404), f"{url} → {r.status_code} {r.text[:120]}")
         out.append(r.status_code)
@@ -287,7 +288,7 @@ async def e2ee_scenario():
     for name in ("alice", "bob", "carol"):
         store = tmp / name
         store.mkdir()
-        c = AsyncClient(BASE, f"@{name}:{DOMAIN}", store_path=str(store),
+        c = AsyncClient(BASE, f"@{name}:{SN}", store_path=str(store),
                         config=AsyncClientConfig(encryption_enabled=True, store_sync_tokens=False), ssl=False)
         resp = await c.login(CTX["passwords"][name], device_name=f"psst-smoke-{name}")
         if not isinstance(resp, LoginResponse):
@@ -558,7 +559,7 @@ def c_containers():
 
 
 # ----------------------------------------------------------------------------- 7. web vhosts
-@check("7.1", "app.macet.eu (PSST web): index + config.json, cache a bezpečnostné hlavičky")
+@check("7.1", "app.psst.pro (PSST web): index + config.json, cache a bezpečnostné hlavičky")
 def c_app():
     r = S.get(f"https://{APP_DOMAIN}/", timeout=10)
     expect(r.status_code == 200 and "<html" in r.text.lower(), f"index {r.status_code}")
@@ -572,7 +573,7 @@ def c_app():
     return f"index 200, config.json no-cache, CSP '{r.headers.get('Content-Security-Policy')}'"
 
 
-@check("7.2", "call.macet.eu (Element Call v0.28.2) + presmerovanie HTTP→HTTPS")
+@check("7.2", "call.psst.pro (Element Call v0.28.2) + presmerovanie HTTP→HTTPS")
 def c_call():
     r = S.get(f"https://{CALL_DOMAIN}/", timeout=10)
     expect(r.status_code == 200 and "<html" in r.text.lower(), f"EC index {r.status_code}")

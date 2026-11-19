@@ -33,7 +33,8 @@ import certifi
 import requests
 from nio import AsyncClient, AsyncClientConfig, RoomCreateResponse, RoomSendResponse
 
-HS = "chat.macet.eu"
+HS = "chat.psst.pro"
+SN = os.environ.get("SERVER_NAME", "psst.pro")   # Matrix server_name (user IDs), D85
 BASE = f"https://{HS}"
 SSH = os.environ.get("PSST_SSH", "psst")
 
@@ -93,7 +94,7 @@ async def partner(work: Path) -> AsyncClient:
     acc = load(work, "accounts.json")
     store = work / "nio-store"
     store.mkdir(exist_ok=True)
-    c = AsyncClient(BASE, f"@{acc['b'][0]}:{HS}", store_path=str(store),
+    c = AsyncClient(BASE, f"@{acc['b'][0]}:{SN}", store_path=str(store),
                     config=AsyncClientConfig(encryption_enabled=True, store_sync_tokens=True),
                     ssl=ssl.create_default_context(cafile=certifi.where()))
     if (work / "nio-session.json").exists():
@@ -120,7 +121,7 @@ async def setup(work: Path) -> None:
     (work / "accounts.json").write_text(json.dumps(acc))
     os.chmod(work / "accounts.json", 0o600)
     c = await partner(work)
-    a_id = f"@{acc['a'][0]}:{HS}"
+    a_id = f"@{acc['a'][0]}:{SN}"
     r = await c.room_create(name="psst search check", is_direct=True, invite=[a_id], initial_state=[
         {"type": "m.room.encryption", "state_key": "", "content": {"algorithm": "m.megolm.v1.aes-sha2"}}])
     assert isinstance(r, RoomCreateResponse), r
@@ -154,7 +155,7 @@ async def wait_for_phone_device(c: AsyncClient, user_id: str, timeout: int = 600
 async def seed(work: Path) -> None:
     acc, room = load(work, "accounts.json"), load(work, "room.json")["room_id"]
     c = await partner(work)
-    a_id = f"@{acc['a'][0]}:{HS}"
+    a_id = f"@{acc['a'][0]}:{SN}"
     await wait_for_phone_device(c, a_id)
     await c.sync(timeout=3000)
     c.users_for_key_query.add(a_id)
@@ -183,8 +184,8 @@ def teardown(work: Path) -> None:
     acc = load(work, "accounts.json") if (work / "accounts.json").exists() else {}
     if (work / "room.json").exists():
         room = load(work, "room.json")["room_id"]
-        # room version 12 ids have no server part ("!<hash>"), older ones end in ":chat.macet.eu"
-        assert re.fullmatch(r"![A-Za-z0-9._~-]+(:" + re.escape(HS) + ")?", room), room
+        # room version 12 ids have no server part ("!<hash>"), older ones end in ":chat.psst.pro"
+        assert re.fullmatch(r"![A-Za-z0-9._~-]+(:" + re.escape(SN) + ")?", room), room
         ssh("cd /opt/psst/server && tok=$(sudo cat secrets/admin_token) && curl -s -o /dev/null -X DELETE "
             "-H \"Authorization: Bearer $tok\" -H 'Content-Type: application/json' "
             "-d '{\"purge\": true, \"block\": false}' "

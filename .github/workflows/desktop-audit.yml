@@ -1,6 +1,6 @@
 # PSST feature audit of the desktop apps (docs/FEATURE-MATRIX.md, DECISIONS D64): the Windows MSI and the macOS DMG
 # from a "Web + Desktop" run, installed on GitHub runners and driven over CDP (scripts/audit/desktop-audit.mjs)
-# against production chat.macet.eu. Partner and third member are Element Web sessions on the same runner.
+# against production chat.psst.pro. Partner and third member are Element Web sessions on the same runner.
 # Test accounts only: secret PSST_AUDIT_DESKTOP_ACCOUNTS = {"windows": {a,b,c}, "macos": {a,b,c}} (deleted afterwards).
 # suite=alerts: only Settings → "Notifications & calls" (scripts/audit/alerts-desktop.mjs, D75), one account per OS in
 # secret PSST_AUDIT_ALERTS_ACCOUNTS = {"windows": {user,password}, "macos": {user,password}}.

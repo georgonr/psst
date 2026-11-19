@@ -1,4 +1,4 @@
-// PSST produkcia: prihlási <user> do app.macet.eu (MAS), otvorí miestnosť a začne hovor (zvoní druhej strane).
+// PSST produkcia: prihlási <user> do app.psst.pro (MAS), otvorí miestnosť a začne hovor (zvoní druhej strane).
 //   node prod-ring.mjs <out> <roomId> <user> <pass> [sekúnd v hovore=40]
 import { chromium } from "playwright";
 import fs from "node:fs"; import path from "node:path";
@@ -7,12 +7,12 @@ fs.mkdirSync(out, { recursive: true });
 const b = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"] });
 const ctx = await b.newContext({ viewport: { width: 1280, height: 860 }, permissions: ["camera", "microphone"] });
 const p = await ctx.newPage();
-await p.goto("https://app.macet.eu/#/login");
+await p.goto("https://app.psst.pro/#/login");
 await p.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().click({ timeout: 90000 });
 await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
 await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', pass);
 await p.locator("button[type=submit]").first().click();
-for (let i = 0; i < 20 && !p.url().startsWith("https://app.macet.eu"); i++) {
+for (let i = 0; i < 20 && !p.url().startsWith("https://app.psst.pro"); i++) {
     await p.locator('button[type=submit]:has-text("Continue"), button:has-text("Allow")').first().click({ timeout: 1500 }).catch(() => {});
     await p.waitForTimeout(1000);
 }
@@ -20,7 +20,7 @@ await p.waitForSelector(".mx_LeftPanel, .mx_RoomListPanel, .mx_SpacePanel, .mx_A
 await p.waitForTimeout(6000);
 await p.screenshot({ path: path.join(out, "ring-1-after-login.png") });
 for (let i = 0; i < 4; i++) await p.keyboard.press("Escape").catch(() => {});
-await p.goto(`https://app.macet.eu/#/room/${roomId}`);
+await p.goto(`https://app.psst.pro/#/room/${roomId}`);
 await p.waitForSelector(".mx_RoomView", { timeout: 60000 }); await p.waitForTimeout(4000);
 for (let i = 0; i < 2; i++) await p.keyboard.press("Escape").catch(() => {});
 await p.locator('[aria-label="Video call"], [aria-label="Voice call"]').first().click({ timeout: 30000 });

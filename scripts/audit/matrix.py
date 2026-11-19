@@ -63,7 +63,7 @@ ROWS = [
         ("block", "Blokovanie používateľa"),
         ("leave", "Opustenie miestnosti"),
         ("members", "Správa členov a práv"),
-        ("admin", "Admin stránka (app.macet.eu/admin)"),
+        ("admin", "Admin stránka (app.psst.pro/admin)"),
         ("download_page", "Stránka na stiahnutie"),
         ("update_check", "Kontrola novej verzie"),
     ]),
@@ -91,7 +91,7 @@ ROWS = [
         ("search_lifecycle", "Po reštarte appky, po aktualizácii zo staršieho buildu, po odhlásení a novom prihlásení"),
     ], ("android",)),
     ("Android: overenie zariadenia QR kódom (dávka 15, D81)", [
-        ("qr_android_scans", "Android naskenuje QR kód z webu (app.macet.eu) a zariadenie je overené"),
+        ("qr_android_scans", "Android naskenuje QR kód z webu (app.psst.pro) a zariadenie je overené"),
         ("qr_android_android", "Android ↔ Android: jeden ukáže QR, druhý naskenuje (obe role)"),
         ("qr_directions", "Začne nové zariadenie aj už overené zariadenie"),
         ("qr_emoji_fallback", "Vždy aj „Porovnať emoji“; druhá strana len s emoji → rovno emoji"),
@@ -102,7 +102,7 @@ ROWS = [
         ("qr_desktop", "Android ↔ psst desktop (Windows/macOS)"),
         ("qr_update", "Aktualizácia z b37 a čistá inštalácia"),
     ], ("android",)),
-    ("Prezentačná stránka psst.macet.eu (dávka 16, D82)", [
+    ("Prezentačná stránka psst.pro (dávka 16, D82)", [
         ("landing", "Stránka SK/EN: jazyk podľa prehliadača, prepínač, tlačidlá Stiahnuť / Prihlásiť sa, bez cudzích zdrojov"),
         ("landing_ops", "HTTPS s vlastným certifikátom, bezpečnostné hlavičky, healthcheck, nasadenie bez výpadku"),
         ("noindex", "Vyhľadávače: stránka indexovateľná, prihlásenie a /admin noindex"),
@@ -167,10 +167,10 @@ def main():
     head = [
         "# PSST — matica funkcií",
         "",
-        f"Stav k {date.today().isoformat()}, testované na produkčnom serveri chat.macet.eu výhradne na testovacích účtoch "
+        f"Stav k {date.today().isoformat()}, testované na produkčnom serveri chat.psst.pro výhradne na testovacích účtoch "
         "(po teste deaktivované). Postup a skripty: `scripts/audit/` (DECISIONS D64), podrobnosti v REPORT.md.",
         "",
-        "- **Web**: Element Web app.macet.eu v Chromiu (Playwright), partner = ďalšia webová relácia.",
+        "- **Web**: Element Web app.psst.pro v Chromiu (Playwright), partner = ďalšia webová relácia.",
         "- **Windows / macOS**: nainštalované MSI / DMG na GitHub runneroch (windows-latest, macos-latest), riadené cez CDP.",
         "- **Android**: APK v emulátore (API 34, Google APIs = Google Play services, FCM), ovládané cez adb/uiautomator.",
         "- **iOS**: simulátor na GitHub runneri (XCUITest `PsstAuditTests`), nepodpísaný build — bez APNs, kamery a mikrofónu.",

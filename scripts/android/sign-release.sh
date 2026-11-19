@@ -163,7 +163,7 @@ unset PSST_STORE_PASS PSST_KEY_PASS
 
 if [ "$PUBLISH" = 1 ]; then
   python3 "$REPO_ROOT/scripts/release/publish.py" android "$BUILD" "$DATE" --note "$PSST_NOTE" "${SIGNED[@]}"
-  # download page https://app.macet.eu/download (D59): upload + HTTPS SHA-256 check; failure = build failure
+  # download page https://app.psst.pro/download (D59): upload + HTTPS SHA-256 check; failure = build failure
   if [ "${PSST_SKIP_DOWNLOAD_PAGE:-0}" != 1 ]; then
     "$REPO_ROOT/scripts/release/upload-download.sh" android "$REPO_ROOT/dist/android/psst-android-$DATE-b$BUILD-arm64.apk" "$PSST_NOTE"
   fi

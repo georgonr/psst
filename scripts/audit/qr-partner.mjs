@@ -1,5 +1,5 @@
 // PSST audit helper for QR code device verification (D81, docs/android-qr-verification.md): Element Web sessions
-// (app.macet.eu, or psst desktop over CDP) driven step by step while the Android side is driven over adb.
+// (app.psst.pro, or psst desktop over CDP) driven step by step while the Android side is driven over adb.
 //   node qr-partner.mjs <accounts-file> <out-dir> [cdp-url]
 // <accounts-file>: lines "<user> <password>" (qa-* test accounts only); "<user>#2" in a command = another session of
 // that user in its own browser profile. With [cdp-url] the FIRST account's session is
@@ -61,7 +61,7 @@ async function open(user) {
     } else {
         const ctx = await chromium.launchPersistentContext(`${out}/profiles/${user}`, { viewport: { width: 1280, height: 900 } });
         p = ctx.pages()[0] ?? await ctx.newPage();
-        await p.goto("https://app.macet.eu/#/home");
+        await p.goto("https://app.psst.pro/#/home");
     }
     await signInIfNeeded(p, user);
     await sleep(2000);
@@ -111,8 +111,8 @@ async function dm(a, b, n) {
         const r = (await c.createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who], initial_state: enc })).room_id;
         await c.setAccountData("m.direct", { [who]: [r] });
         return r;
-    }, [`@${b}:chat.macet.eu`, enc]);
-    await pb.evaluate(async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); }, [room, `@${a}:chat.macet.eu`]);
+    }, [`@${b}:psst.pro`, enc]);
+    await pb.evaluate(async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); }, [room, `@${a}:psst.pro`]);
     await sleep(3000);
     for (let i = 1; i <= n; i++) await pa.evaluate(([r, t]) => window.mxMatrixClientPeg.get().sendTextMessage(r, t), [room, `Stará správa ${i} pred overením: tajné číslo ${1000 + i}`]);
     fs.writeFileSync(`${out}/room-${a}-${b}.txt`, room);

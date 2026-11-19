@@ -2,7 +2,7 @@
 //   node desktop-audit.mjs <app-binary> <out-dir> <accounts.json> <platform: windows|macos>
 // accounts.json: {"a": desktop user, "b": partner (Element Web), "c": third (Element Web)} — fresh test accounts.
 // The app is driven over CDP; MAS login: the URL the app opens in the system browser is captured in the renderer,
-// signed in with Playwright and the eu.macet.* callback handed back to the app (as protocol.ts does).
+// signed in with Playwright and the pro.psst.app callback handed back to the app (as protocol.ts does).
 import { chromium } from "playwright";
 import { spawn, execSync } from "node:child_process";
 import fs from "node:fs";
@@ -13,7 +13,8 @@ import { runFeatures, runAccountFlows, writeResults, sleep, cli, startCall, join
 const [BIN, OUT, ACC_FILE, PLATFORM] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
 const A = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
-const HS = "chat.macet.eu", WEB = "https://app.macet.eu";
+const HS = "chat.psst.pro", WEB = "https://app.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
 const results = [];
 const record = (id, status, note = "") => { results.push({ id, status, note: String(note).slice(0, 300) }); console.log(`${status.toUpperCase().padEnd(8)} ${id}  ${note}`); };
 const MEDIA = ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required",
@@ -45,7 +46,7 @@ me.on("dialog", (d) => d.accept().catch(() => {}));
 await me.context().addInitScript(PC_HOOK).catch(() => {});
 await me.waitForSelector(".mx_Login_fullWidthButton, .mx_AuthPage", { timeout: 120000 });
 await sleep(3000);
-const dl = await me.locator('a[href="https://app.macet.eu/download/"]').count();
+const dl = await me.locator('a[href="https://app.psst.pro/download/"]').count();
 record("download_page", dl ? "ok" : "fail", `odkaz „Download apps“ na prihlasovacej obrazovke ${dl > 0}`);
 
 async function desktopLogin(user, password) {
@@ -60,7 +61,7 @@ async function desktopLogin(user, password) {
     if (!authUrl) throw new Error("MAS URL not captured");
     const b2 = await chromium.launch(); const p2 = await (await b2.newContext()).newPage();
     let callback = "";
-    p2.on("response", async (r) => { const loc = (await r.allHeaders().catch(() => ({})))["location"] || ""; if (/^(eu\.macet\.|psst:)/.test(loc)) callback = loc; });
+    p2.on("response", async (r) => { const loc = (await r.allHeaders().catch(() => ({})))["location"] || ""; if (/^(pro\.psst\.|eu\.macet\.psst|psst:)/.test(loc)) callback = loc; });
     await p2.goto(authUrl);
     await p2.fill('input[name="username"]', user, { timeout: 30000 }); await p2.fill('input[name="password"]', password);
     await p2.click("button[type=submit]");
@@ -98,7 +99,7 @@ async function webLogin(user, password) {
 // ================================================================ run
 try {
     const st = await desktopLogin(A.a.user, A.a.password);
-    record("login", st === "app" ? "ok" : "fail", `prihlásenie cez MAS (systémový prehliadač → ${PLATFORM === "macos" ? "eu.macet.app://" : "protocol handler"}) → ${st}`);
+    record("login", st === "app" ? "ok" : "fail", `prihlásenie cez MAS (systémový prehliadač → ${PLATFORM === "macos" ? "pro.psst.app://" : "protocol handler"}) → ${st}`);
 } catch (e) { record("login", "fail", String(e.message).slice(0, 200)); writeResults(OUT, PLATFORM, results); process.exit(1); }
 const partner = await webLogin(A.b.user, A.b.password);
 const third = await webLogin(A.c.user, A.c.password);
@@ -157,7 +158,7 @@ try {
         execSync(`powershell -NoProfile -Command "Add-Type -Name W -Namespace P -MemberDefinition '[DllImport(\\"user32.dll\\")] public static extern bool PostMessage(System.IntPtr h, uint m, System.IntPtr w, System.IntPtr l);'; $h=(Get-Process psst | Where-Object MainWindowHandle -ne 0 | Select-Object -First 1).MainWindowHandle; [void][P.W]::PostMessage($h, 0x0010, [System.IntPtr]::Zero, [System.IntPtr]::Zero)"`);
     }
     await sleep(4000);
-    const dm = await partner.evaluate((u) => { const c = window.mxMatrixClientPeg.get(); const d = c.getAccountData("m.direct")?.getContent() || {}; return (d[u] || [])[0]; }, `@${A.a.user}:${HS}`);
+    const dm = await partner.evaluate((u) => { const c = window.mxMatrixClientPeg.get(); const d = c.getAccountData("m.direct")?.getContent() || {}; return (d[u] || [])[0]; }, `@${A.a.user}:${SN}`);
     await partner.evaluate(([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, `closed ${Date.now()}`]);
     let after = before;
     for (let i = 0; i < 30 && after <= before; i++) { await sleep(1000); after = await me.evaluate(() => (window.__psstNotes || []).length).catch(() => -1); }
@@ -176,7 +177,7 @@ try {
     execSync(block, { stdio: "inherit" });
     // the window may be hidden after notif_closed → show it again (second launch focuses the running instance)
     launch(); await sleep(6000); me = await mainPage();
-    const dm = await partner.evaluate((u) => { const c = window.mxMatrixClientPeg.get(); const d = c.getAccountData("m.direct")?.getContent() || {}; return (d[u] || [])[0]; }, `@${A.a.user}:${HS}`);
+    const dm = await partner.evaluate((u) => { const c = window.mxMatrixClientPeg.get(); const d = c.getAccountData("m.direct")?.getContent() || {}; return (d[u] || [])[0]; }, `@${A.a.user}:${SN}`);
     await me.evaluate(() => { location.hash = "#/home"; });
     await startCall(partner, dm, "Video call");
     const r = await joinFromToast(me);
@@ -197,7 +198,7 @@ try {
     execSync(unblock, { stdio: "inherit" });
 } catch (e) { record("call_udp_blocked", "fail", String(e.message).slice(0, 200)); }
 
-// update check against app.macet.eu/download
+// update check against app.psst.pro/download
 const m = /psst update check: installed b(\d+), available b(\d+)/.exec(appLog);
 record("update_check", m ? "ok" : "fail", m ? m[0] : "v logu chýba „psst update check“ (spúšťa sa 60 s po štarte)");
 

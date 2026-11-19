@@ -11,7 +11,7 @@ Spúšťať po smoke_test.py (potrebuje server/secrets/admin_token):
 - adresár NIE je dostupný bez prihlásenia, erik kanál nájde v adresári a pripojí sa cez alias,
 - dana pošle do kanála šifrovaný súbor (m.file, E2EE príloha), erik ho stiahne a dešifruje,
 - to isté v E2EE DM dana → erik (obrázok m.image).
-Domény *.macet.eu sa mapujú na 127.0.0.1 len v tomto procese.
+Domény *.psst.pro sa mapujú na 127.0.0.1 len v tomto procese.
 """
 import asyncio
 import hashlib
@@ -29,11 +29,12 @@ import urllib3
 
 ROOT = Path(__file__).resolve().parents[2]
 SERVER = ROOT / "server"
-DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.macet.eu")
+DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.psst.pro")
+SN = os.environ.get("SERVER_NAME", "psst.pro")   # Matrix server_name (user IDs), D85
 BASE = f"https://{DOMAIN}"
 
 _orig = socket.getaddrinfo
-socket.getaddrinfo = lambda h, *a, **k: _orig("127.0.0.1" if h in (DOMAIN, "app.macet.eu", "call.macet.eu") else h, *a, **k)
+socket.getaddrinfo = lambda h, *a, **k: _orig("127.0.0.1" if h in (DOMAIN, "app.psst.pro", "call.psst.pro") else h, *a, **k)
 urllib3.disable_warnings()
 S = requests.Session()
 S.verify = False
@@ -73,7 +74,7 @@ async def main():
     cfg = AsyncClientConfig(store_sync_tokens=True, encryption_enabled=True)
     cl = {}
     for u in ("dana", "erik"):
-        c = AsyncClient(BASE, f"@{u}:{DOMAIN}", store_path=str(tmp), config=cfg, ssl=False)
+        c = AsyncClient(BASE, f"@{u}:{SN}", store_path=str(tmp), config=cfg, ssl=False)
         await c.login(accounts[u], device_name=f"extra-{u}")
         await c.sync(timeout=3000, full_state=True)
         if c.should_upload_keys:
@@ -91,8 +92,8 @@ async def main():
     check("kanál: adresár bez prihlásenia nedostupný", anon.status_code in (401, 403), f"HTTP {anon.status_code}")
     pr = S.get(f"{BASE}/_matrix/client/v3/publicRooms", headers={"Authorization": f"Bearer {erik.access_token}"}).json()
     found = [x for x in pr.get("chunk", []) if x["room_id"] == room]
-    check("kanál: erik ho vidí v adresári (prihlásený)", bool(found), f"{len(pr.get('chunk', []))} kanálov, alias #{alias}:{DOMAIN}")
-    j = await erik.join(f"#{alias}:{DOMAIN}")
+    check("kanál: erik ho vidí v adresári (prihlásený)", bool(found), f"{len(pr.get('chunk', []))} kanálov, alias #{alias}:{SN}")
+    j = await erik.join(f"#{alias}:{SN}")
     check("kanál: erik sa pripojil cez alias", isinstance(j, JoinResponse), getattr(j, "room_id", j))
 
     for c in (dana, erik):

@@ -1,5 +1,5 @@
 // node admin-login-test.mjs <out-dir> <súbor s údajmi (Používateľ:/Heslo:)>
-// prihlásenie admina na https://app.macet.eu (produkcia) + kontrola brandingu; heslo zo súboru, nevypisuje sa
+// prihlásenie admina na https://app.psst.pro (produkcia) + kontrola brandingu; heslo zo súboru, nevypisuje sa
 import { chromium } from "playwright";
 import fs from "fs"; import path from "path";
 import { loginViaMas } from "./psst-auth.mjs";
@@ -9,7 +9,7 @@ const user = /Používateľ:\s*(\S+)/.exec(txt)[1]; const pw = /Heslo:\s*(\S+)/.
 const res = []; const check = (n, ok, d = "") => { res.push({ n, ok }); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  -- " + d : ""}`); };
 const browser = await chromium.launch();
 const page = await (await browser.newContext({ viewport: { width: 1280, height: 860 } })).newPage();
-await page.goto("https://app.macet.eu/#/login");
+await page.goto("https://app.psst.pro/#/login");
 await page.waitForSelector(".mx_ServerPicker_server, button:has-text('Continue')", { timeout: 90000 });
 const title = await page.title();
 check("branding: titulok stránky", /psst/i.test(title), title);
@@ -22,6 +22,6 @@ for (let i = 0; i < 3; i++) await page.keyboard.press("Escape").catch(() => {});
 check("admin geo prihlásený na webe", /app\.macet\.eu\/#\/(home|room|welcome)/.test(page.url()), page.url());
 await page.screenshot({ path: path.join(out, "2-admin-home.png") });
 const uid = await page.evaluate(() => { try { return window.mxMatrixClientPeg?.get()?.getUserId(); } catch { return null; } });
-check("prihlásený ako @geo:chat.macet.eu", uid === "@geo:chat.macet.eu", uid ?? "n/a");
+check("prihlásený ako @geo:psst.pro", uid === "@geo:psst.pro", uid ?? "n/a");
 await browser.close();
 process.exit(res.some((r) => !r.ok) ? 1 : 0);

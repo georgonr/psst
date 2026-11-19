@@ -16,12 +16,12 @@ const b = await chromium.launch({ args: ["--use-fake-ui-for-media-stream", "--us
 const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, permissions: ["camera", "microphone", "notifications"] });
 await ctx.addInitScript(PC_HOOK);
 const p = await ctx.newPage();
-await p.goto("https://app.macet.eu/#/login");
+await p.goto("https://app.psst.pro/#/login");
 await p.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
 await p.waitForURL(/auth/, { timeout: 60000 });
 await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', password);
 await p.locator("button[type=submit]").first().click();
-for (let i = 0; i < 20 && !p.url().startsWith("https://app.macet.eu"); i++) { await p.locator('button[type=submit]:has-text("Continue")').first().click({ timeout: 1500 }).catch(() => {}); await sleep(1000); }
+for (let i = 0; i < 20 && !p.url().startsWith("https://app.psst.pro"); i++) { await p.locator('button[type=submit]:has-text("Continue")').first().click({ timeout: 1500 }).catch(() => {}); await sleep(1000); }
 for (let i = 0; i < 90; i++) { if (await p.locator(".mx_LeftPanel, .mx_RoomListPanel").count()) break; await sleep(1000); }
 await sleep(4000); await dismiss(p);
 // join pending invites (group calls: the room is created by another participant)

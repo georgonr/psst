@@ -1,4 +1,4 @@
-// PSST feature audit — Web (https://app.macet.eu) against production, headless Chromium (docs/FEATURE-MATRIX.md).
+// PSST feature audit — Web (https://app.psst.pro) against production, headless Chromium (docs/FEATURE-MATRIX.md).
 //   node web-audit.mjs <out-dir> <accounts.json> [registration-token]
 // accounts.json: {"a": {"user","password"}, "b": {...}, "c": {...}} — fresh test accounts (a = client under test)
 // Needs playwright (run from a directory with node_modules/playwright, e.g. ~/.local/pw, or NODE_PATH).
@@ -10,7 +10,8 @@ import { runFeatures, runAccountFlows, writeResults, sleep, cli, compose, openRo
 const [OUT, ACC_FILE, REG_TOKEN] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
 const A = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
-const WEB = "https://app.macet.eu", HS = "chat.macet.eu";
+const WEB = "https://app.psst.pro", HS = "chat.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
 const results = [];
 const record = (id, status, note = "") => { results.push({ id, status, note: String(note).slice(0, 300) }); console.log(`${status.toUpperCase().padEnd(8)} ${id}  ${note}`); };
 const MEDIA = ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream", "--autoplay-policy=no-user-gesture-required",
@@ -81,7 +82,7 @@ const me = await newPage(), partner = await newPage(), third = await newPage();
 // ---- login screen: download link, locked homeserver
 await me.goto(`${WEB}/#/login`);
 await me.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().waitFor({ timeout: 90000 });
-const dl = await me.locator('a[href="https://app.macet.eu/download/"]').count();
+const dl = await me.locator('a[href="https://app.psst.pro/download/"]').count();
 record("download_page", dl ? "ok" : "fail", `odkaz „Download apps“ na prihlasovacej obrazovke ${dl > 0}`);
 
 // ---- registration with an invitation token (new account, deactivated with the others)
@@ -104,7 +105,7 @@ if (REG_TOKEN) {
         const ok = await reg.waitForSelector(APP, { timeout: 120000 }).then(() => true, () => false);
         const uid = await reg.evaluate(() => window.mxMatrixClientPeg?.get()?.getUserId()).catch(() => null);
         await shot(reg, "registered");
-        record("register", ok && uid === `@${user}:${HS}` ? "ok" : "fail", `registrácia s pozývacím tokenom → ${uid}`);
+        record("register", ok && uid === `@${user}:${SN}` ? "ok" : "fail", `registrácia s pozývacím tokenom → ${uid}`);
         fs.writeFileSync(path.join(OUT, "registered-user.txt"), user + "\n");
         await reg.context().close();
     } catch (e) { record("register", "fail", String(e.message).slice(0, 200)); }
@@ -123,7 +124,7 @@ if (!process.env.PSST_AUDIT_ONLY_ACCOUNT) {
     await runFeatures({ me, partner, third, users: { me: A.a.user, partner: A.b.user, third: A.c.user }, record, out: OUT, platform: "web" });
 } else {
     // a little encrypted history to check later on the new / re-logged-in session
-    const dm = await cli(me, async (who) => (await window.mxMatrixClientPeg.get().createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] })).room_id, `@${A.b.user}:${HS}`);
+    const dm = await cli(me, async (who) => (await window.mxMatrixClientPeg.get().createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] })).room_id, `@${A.b.user}:${SN}`);
     await cli(partner, async (r) => { await window.mxMatrixClientPeg.get().joinRoom(r); }, dm);
     await sleep(3000);
     for (let i = 0; i < 3; i++) await cli(me, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, `history ${i} ${Date.now()}`]);
@@ -163,8 +164,8 @@ if (!process.env.PSST_AUDIT_ONLY_ACCOUNT) try {
     const st = await login(me2, A.d.user, A.d.password);
     if (st !== "app") throw new Error("login d → " + st);
     // partner calls d in a fresh DM
-    const dm = await cli(partner, async (who) => { const c = window.mxMatrixClientPeg.get(); const r = await c.createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] }); await c.setAccountData("m.direct", { [who]: [r.room_id] }); return r.room_id; }, `@${A.d.user}:${HS}`);
-    await cli(me2, async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); }, [dm, `@${A.b.user}:${HS}`]);
+    const dm = await cli(partner, async (who) => { const c = window.mxMatrixClientPeg.get(); const r = await c.createRoom({ preset: "trusted_private_chat", is_direct: true, invite: [who] }); await c.setAccountData("m.direct", { [who]: [r.room_id] }); return r.room_id; }, `@${A.d.user}:${SN}`);
+    await cli(me2, async ([r, who]) => { const c = window.mxMatrixClientPeg.get(); await c.joinRoom(r); await c.setAccountData("m.direct", { [who]: [r] }); }, [dm, `@${A.b.user}:${SN}`]);
     await sleep(4000);
     await startCall(partner, dm, "Video call");
     const r = await joinFromToast(me2);

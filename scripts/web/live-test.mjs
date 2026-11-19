@@ -1,6 +1,6 @@
 // PSST — Element Web proti bežiacemu lokálnemu stacku (server/ cez docker compose).
 //   node live-test.mjs <out-dir> <user> <password>
-// Chromium mapuje *.macet.eu na 127.0.0.1 (--host-resolver-rules) a akceptuje self-signed cert.
+// Chromium mapuje *.psst.pro na 127.0.0.1 (--host-resolver-rules) a akceptuje self-signed cert.
 // Po prihlásení čaká na správu s textom zo súboru <out-dir>/expect.txt (pošle ju iný klient).
 import { chromium } from "playwright";
 import { HOST_RULES, loginViaMas } from "./psst-auth.mjs";
@@ -24,10 +24,10 @@ const page = await ctx.newPage();
 const hosts = new Set();
 page.on("request", (r) => hosts.add(new URL(r.url()).host));
 
-await page.goto("https://app.macet.eu/#/login");
+await page.goto("https://app.psst.pro/#/login");
 await page.waitForSelector(".mx_ServerPicker_server, .mx_Login_fullWidthButton, button:has-text('Continue')", { timeout: 90000 });
 const server = await page.locator(".mx_ServerPicker_server").innerText().catch(() => "");
-check("login: account provider chat.macet.eu", server.includes("chat.macet.eu"), server);
+check("login: account provider chat.psst.pro", server.includes("psst.pro"), server);
 check("login: bez tlačidla na zmenu homeservera", (await page.locator(".mx_ServerPicker_change").count()) === 0);
 check("login: homeserver dostupný (bez chyby pripojenia)", (await page.locator(".mx_Login_error").count()) === 0);
 await page.screenshot({ path: path.join(out, "1-login.png") });
@@ -65,8 +65,8 @@ check("kanál: prijatá a dešifrovaná E2EE správa od iného klienta", seen, e
 const shield = await page.locator(".mx_EventTile_e2eIcon_warning, .mx_EventTile_e2eIcon_decryption_failure").count();
 check("kanál: bez chyby dešifrovania", shield === 0 || seen, `warning ikony: ${shield}`);
 
-const external = [...hosts].filter((h) => !/(^|\.)macet\.eu(:\d+)?$/.test(h) && !h.startsWith("localhost"));
-check("žiadne požiadavky mimo *.macet.eu", external.length === 0, external.join(", "));
+const external = [...hosts].filter((h) => !/(^|\.)psst\.pro(:\d+)?$/.test(h) && !h.startsWith("localhost"));
+check("žiadne požiadavky mimo *.psst.pro", external.length === 0, external.join(", "));
 fs.writeFileSync(path.join(out, "result.json"), JSON.stringify(results, null, 2));
 await browser.close();
 const fails = results.filter((r) => !r.ok).length;

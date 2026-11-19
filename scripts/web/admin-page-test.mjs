@@ -1,4 +1,4 @@
-// PSST — test administračnej stránky https://app.macet.eu/admin na produkcii (D56).
+// PSST — test administračnej stránky https://app.psst.pro/admin na produkcii (D56).
 //   node admin-page-test.mjs <out-dir> <accounts.json> [<pw-user>]
 //     accounts.json: {"<admin user>": "pw", "<plain user>": "pw", "<pw-user>": "pw"} (order matters: admin first, plain second)
 //     ADMIN_TEST_ONLY=pwreset  → len prihlásenie admina + test "Nastaviť nové heslo" (bez pozvánok/registrácií)
@@ -19,7 +19,7 @@ const ONLY = process.env.ADMIN_TEST_ONLY || "";
 fs.mkdirSync(out, { recursive: true });
 const acc = JSON.parse(fs.readFileSync(accFile, "utf8"));
 const [ADM, PLAIN] = Object.keys(acc); // first = admin account, second = plain account
-const A = "https://app.macet.eu/admin";
+const A = "https://app.psst.pro/admin";
 const res = [];
 const check = (n, ok, d = "") => { res.push({ n, ok, d }); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  -- " + d : ""}`); };
 const shot = (p, n) => p.screenshot({ path: path.join(out, n + ".png"), fullPage: true });
@@ -36,7 +36,7 @@ async function adminLogin(user, pw, viewport = { width: 1280, height: 900 }) {
     let final = null;
     page.on("response", (r) => { if (r.url().includes("/admin/callback")) final = r.status(); });
     await page.locator("button[type=submit]").first().click();
-    for (let i = 0; i < 20 && !page.url().startsWith("https://app.macet.eu/admin"); i++) {
+    for (let i = 0; i < 20 && !page.url().startsWith("https://app.psst.pro/admin"); i++) {
         await page.locator('button[type=submit]:has-text("Continue"), button:has-text("Allow")').first().click({ timeout: 1500 }).catch(() => {});
         await page.waitForTimeout(1000);
     }
@@ -118,7 +118,7 @@ check("registrácia zrušeným kódom B → odmietnutá", !reg2.ok, (reg2.error 
 // 5) CSRF / Origin
 const csrf1 = await adm.ctx.request.post(A + "/invites", { form: { uses: "1", days: "1", note: "csrf" }, headers: { Origin: "https://evil.example" }, maxRedirects: 0 });
 check("POST z cudzieho pôvodu → 403", csrf1.status() === 403, String(csrf1.status()));
-const csrf2 = await adm.ctx.request.post(A + "/invites", { form: { uses: "1", days: "1", note: "csrf", csrf: "zly" }, headers: { Origin: "https://app.macet.eu" }, maxRedirects: 0 });
+const csrf2 = await adm.ctx.request.post(A + "/invites", { form: { uses: "1", days: "1", note: "csrf", csrf: "zly" }, headers: { Origin: "https://app.psst.pro" }, maxRedirects: 0 });
 check("POST bez platného CSRF tokenu → 403", csrf2.status() === 403, String(csrf2.status()));
 
 // 6) mobile layout
@@ -147,7 +147,7 @@ if (PWUSER) {
     check("admin účty: bez tlačidla Nastaviť nové heslo", adminRows.every((t) => !/Nastaviť nové heslo/.test(t)), `${adminRows.length} admin riadkov`);
     const form = mrow(adm.page, PWUSER).locator('form[action$="/password"]');
     const action = await form.getAttribute("action");
-    const bad = await adm.ctx.request.post("https://app.macet.eu" + action, { form: { csrf: "zly" }, headers: { Origin: "https://app.macet.eu" }, maxRedirects: 0 });
+    const bad = await adm.ctx.request.post("https://app.psst.pro" + action, { form: { csrf: "zly" }, headers: { Origin: "https://app.psst.pro" }, maxRedirects: 0 });
     check("nové heslo: POST bez platného CSRF → 403", bad.status() === 403, String(bad.status()));
     let confirmText = "";
     const onDialog = (d) => { confirmText = d.message(); };
@@ -174,7 +174,7 @@ if (PWUSER) {
     }
     const c1 = await browser.newContext({ viewport: { width: 1280, height: 860 } });
     const p1 = await c1.newPage();
-    await p1.goto("https://app.macet.eu/#/login");
+    await p1.goto("https://app.psst.pro/#/login");
     let loginOk = true, loginErr = "";
     await loginViaMas(p1, PWUSER, newPw).catch((e) => { loginOk = false; loginErr = String(e).slice(0, 150); });
     check("prihlásenie do appky (Element Web → MAS) novým heslom → zoznam miestností", loginOk && (await p1.locator(".mx_LeftPanel, .mx_RoomListPanel").count()) > 0, loginErr || p1.url());
@@ -182,7 +182,7 @@ if (PWUSER) {
     await c1.close();
     const c2 = await browser.newContext({ viewport: { width: 1280, height: 860 } });
     const p2 = await c2.newPage();
-    await p2.goto("https://app.macet.eu/#/login");
+    await p2.goto("https://app.psst.pro/#/login");
     await p2.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().click({ timeout: 90000 });
     await p2.waitForURL(MAS_URL_RE, { timeout: 60000 });
     await p2.fill('input[name="username"]', PWUSER);

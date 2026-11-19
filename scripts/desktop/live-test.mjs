@@ -1,6 +1,6 @@
 // PSST — macOS desktop (psst.app) proti lokálnemu stacku.
 //   node live-test.mjs <psst.app> <out-dir> <user> <password>
-// Spustí appku s Chromium prepínačmi (mapovanie *.macet.eu → 127.0.0.1, self-signed cert),
+// Spustí appku s Chromium prepínačmi (mapovanie *.psst.pro → 127.0.0.1, self-signed cert),
 // pripojí sa cez CDP (remote debugging) a prihlási sa testovacím účtom.
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
@@ -17,7 +17,7 @@ const check = (name, ok, detail = "") => {
 const profile = fs.mkdtempSync("/tmp/psst-desktop-profile-");
 const proc = spawn(path.join(app, "Contents/MacOS/psst"), [
     "--remote-debugging-port=9333",
-    "--host-resolver-rules=" + ["chat", "app", "call", "push"].map((h) => `MAP ${h}.macet.eu ${process.env.PSST_HOST_IP || "127.0.0.1"}`).join(", "),
+    "--host-resolver-rules=" + ["chat.psst.pro", "app.psst.pro", "call.psst.pro", "psst.pro"].map((h) => `MAP ${h} ${process.env.PSST_HOST_IP || "127.0.0.1"}`).join(", "),
     "--ignore-certificate-errors",
     // bez prístupu ku kľúčenke macOS (inak nový ad-hoc podpis vyvolá dialóg a zablokuje appku)
     "--use-mock-keychain",
@@ -42,14 +42,14 @@ try {
     await page.waitForSelector(".mx_ServerPicker_server, .mx_Login_fullWidthButton", { timeout: 90000 });
     check("okno má titulok psst", (await page.title()).toLowerCase().includes("psst"), await page.title());
     const server = await page.locator(".mx_ServerPicker_server").innerText();
-    check("login: chat.macet.eu, bez zmeny homeservera", server.includes("chat.macet.eu") && (await page.locator(".mx_ServerPicker_change").count()) === 0, server);
+    check("login: chat.psst.pro, bez zmeny homeservera", server.includes("psst.pro") && (await page.locator(".mx_ServerPicker_change").count()) === 0, server);
     const cont = await page.locator('.mx_Login_fullWidthButton, button:has-text("Continue"), button:has-text("Pokračovať"), [role=button]:has-text("Pokračovať")').count();
     check("login ponúka prihlásenie cez MAS (Continue → MAS v systémovom prehliadači)", cont > 0, `tlačidlá: ${cont}`);
     await page.screenshot({ path: path.join(out, "1-login.png") });
     // Create account (registrácia s pozvánkou) — tiež cez MAS
     await page.goto(page.url().split("#")[0] + "#/register");
     await page.waitForTimeout(4000);
-    check("registrácia: obrazovka Create account (chat.macet.eu)", (await page.locator("body").innerText()).includes("chat.macet.eu"));
+    check("registrácia: obrazovka Create account (chat.psst.pro)", (await page.locator("body").innerText()).includes("psst.pro"));
     await page.screenshot({ path: path.join(out, "2-register.png") });
 } catch (e) {
     check("priebeh testu", false, String(e).slice(0, 300));

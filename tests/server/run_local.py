@@ -8,12 +8,13 @@ Usage: ~/.local/psst-venv/bin/python tests/server/run_local.py
 import os, runpy, socket, sys
 from pathlib import Path
 
-HOSTS = {os.environ.get(k, d) for k, d in (("MATRIX_DOMAIN", "chat.macet.eu"),
-                                           ("APP_DOMAIN", "app.macet.eu"),
-                                           ("CALL_DOMAIN", "call.macet.eu"),
-                                           ("AUTH_DOMAIN", "auth.macet.eu"),
-                                           ("NTFY_DOMAIN", "ntfy.macet.eu"),
-                                           ("TURN_DOMAIN", "turn.macet.eu"))}
+HOSTS = {os.environ.get(k, d) for k, d in (("MATRIX_DOMAIN", "chat.psst.pro"),
+                                           ("APP_DOMAIN", "app.psst.pro"),
+                                           ("CALL_DOMAIN", "call.psst.pro"),
+                                           ("AUTH_DOMAIN", "chat.psst.pro"),
+                                           ("TURN_DOMAIN", "call.psst.pro"),
+                                           ("SERVER_NAME", "psst.pro"),
+                                           ("WWW_DOMAIN", "www.psst.pro"))}
 _orig = socket.getaddrinfo
 
 def _gai(host, *a, **kw):

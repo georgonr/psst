@@ -11,7 +11,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const HS = "chat.macet.eu";
+const HS = "chat.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
 const FIX = path.join(path.dirname(fileURLToPath(import.meta.url)), "fixtures");
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -159,7 +160,7 @@ export async function hangUp(...pages) {
 // ------------------------------------------------------------------------------------------- suite
 export async function runFeatures(ctx) {
     const { me, partner, third, users, record, out, platform } = ctx;
-    const ME = `@${users.me}:${HS}`, PA = `@${users.partner}:${HS}`, TH = `@${users.third}:${HS}`;
+    const ME = `@${users.me}:${SN}`, PA = `@${users.partner}:${SN}`, TH = `@${users.third}:${SN}`;
     const shot = (p, n) => p.screenshot({ path: path.join(out, `${platform}-${n}.png`) }).catch(() => {});
     const step = async (id, fn) => {
         await dismiss(me);

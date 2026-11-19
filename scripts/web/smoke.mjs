@@ -56,8 +56,8 @@ function check(name, ok, detail = "") {
 // 1. Shipped config.json
 const cfg = await (await fetch(base + "config.json")).json();
 const hs = cfg.default_server_config?.["m.homeserver"] ?? {};
-check("config: m.homeserver.base_url == https://chat.macet.eu", hs.base_url === "https://chat.macet.eu", hs.base_url);
-check("config: m.homeserver.server_name == chat.macet.eu", hs.server_name === "chat.macet.eu", hs.server_name);
+check("config: m.homeserver.base_url == https://chat.psst.pro", hs.base_url === "https://chat.psst.pro", hs.base_url);
+check("config: m.homeserver.server_name == psst.pro", hs.server_name === "psst.pro", hs.server_name);
 check("config: disable_custom_urls == true", cfg.disable_custom_urls === true);
 check("config: disable_guests == true", cfg.disable_guests === true);
 check("config: brand == psst", cfg.brand === "psst", cfg.brand);
@@ -98,7 +98,7 @@ try {
     check("login: server picker rendered", false, e.message);
 }
 await page.screenshot({ path: path.join(outDir, "login.png"), fullPage: true });
-check("login: shows chat.macet.eu", serverText.includes("chat.macet.eu"), serverText);
+check("login: shows chat.psst.pro", serverText.includes("psst.pro"), serverText);
 const editButtons = await page.locator(".mx_ServerPicker_change").count();
 check("login: no option to change homeserver (no Edit button)", editButtons === 0, `edit buttons: ${editButtons}`);
 const title = await page.title();

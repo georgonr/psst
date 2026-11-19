@@ -22,7 +22,7 @@ FORBIDDEN = [
     (re.compile(r"homeserver url|server url|enter.*server", re.I), "server address input"),
 ]
 # Informational / error texts that mention "account provider" but offer no way to pick another server
-# (seen live: CI has no reachable chat.macet.eu, and the QR-login screen explains a server capability).
+# (seen live: CI has no reachable chat.psst.pro, and the QR-login screen explains a server capability).
 INFO_ALLOW = re.compile(
     r"couldn.t reach this account provider|only available if your account provider supports it|"
     r"about to sign in to chat\.macet\.eu",

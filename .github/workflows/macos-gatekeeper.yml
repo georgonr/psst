@@ -1,4 +1,4 @@
-# PSST (D69): download the macOS DMG published on https://app.macet.eu/download over HTTPS on a Mac, give it the
+# PSST (D69): download the macOS DMG published on https://app.psst.pro/download over HTTPS on a Mac, give it the
 # quarantine attribute exactly like a browser download, and ask Gatekeeper about the DMG and the app inside it.
 # Called by web-desktop.yml after every publish; can also be run by hand. With expect_signed (or when the page's
 # latest.json says the build is signed) every check must pass, otherwise the results are only reported.
@@ -22,10 +22,10 @@ jobs:
         name: Gatekeeper (spctl, codesign, stapler) on downloaded DMG
         runs-on: macos-15
         steps:
-            - name: Download DMG from app.macet.eu over HTTPS (quarantined)
+            - name: Download DMG from app.psst.pro over HTTPS (quarantined)
               id: dl
               run: |
-                  BASE=https://app.macet.eu/download
+                  BASE=https://app.psst.pro/download
                   mkdir -p "$RUNNER_TEMP/dl" && cd "$RUNNER_TEMP/dl"
                   curl -fsSL --retry 3 -o latest.json "$BASE/latest.json"
                   read -r FILE SHA SIGNED < <(python3 -c "import json; e=json.load(open('latest.json'))['macos']; print(e['file'], e['sha256'], str(bool(e.get('signed'))).lower())")

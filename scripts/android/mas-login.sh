@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PSST audit helper: fill the MAS sign-in form shown in the Chrome custom tab on the emulator, then consent.
 #   scripts/android/mas-login.sh <user> <password>
-# Expects the MAS "Sign in" page to be on screen (tap "Sign in to chat.macet.eu" first).
+# Expects the MAS "Sign in" page to be on screen (tap "Sign in to psst.pro" first).
 set -euo pipefail
 export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
 UI="python3 $(cd "$(dirname "$0")" && pwd)/ui.py"

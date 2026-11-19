@@ -26,8 +26,9 @@ const lines = fs.readFileSync(accountsFile, "utf8").trim().split("\n").map((l) =
 const acc = Object.fromEntries(lines);
 const [A, B, C] = lines.map((l) => l[0]);
 if (![A, B, C].every((u) => /^qa-[a-z0-9-]+$/.test(u))) throw new Error("test accounts must be qa-*");
-const HS = "chat.macet.eu";
-const mx = (u) => `@${u}:${HS}`;
+const HS = "chat.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
+const mx = (u) => `@${u}:${SN}`;
 
 // ---------------------------------------------------------------------------------------------------------- corpus
 const WORDS = ("dobrý deň ako sa máš zajtra stretnutie kancelária obed káva čaj počasie dážď slnko víkend výlet hory more " +
@@ -79,16 +80,16 @@ async function login(user) {
     contexts.push(ctx);
     const p = ctx.pages()[0] ?? await ctx.newPage();
     log(`${user}: opening the web app`);
-    await p.goto("https://app.macet.eu/#/home");
+    await p.goto("https://app.psst.pro/#/home");
     for (let i = 0; i < 30; i++) { if (await p.locator(`${APP}, button:has-text("Use recovery key"), button:has-text("Continue")`).count()) break; await sleep(1000); }
     if (await p.locator(`${APP}, button:has-text("Use recovery key")`).count() === 0) {
         // no stored session in the profile: sign in (MAS)
         log(`${user}: signing in`);
-        await p.goto("https://app.macet.eu/#/login");
+        await p.goto("https://app.psst.pro/#/login");
         await p.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
         await p.waitForURL(/auth/, { timeout: 60000 });
         // MAS: sign-in form, or (a MAS session is still in the profile) only the consent "Continue"
-        for (let i = 0; i < 60 && !p.url().startsWith("https://app.macet.eu"); i++) {
+        for (let i = 0; i < 60 && !p.url().startsWith("https://app.psst.pro"); i++) {
             if (await p.locator('input[name="username"]').count()) {
                 await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', acc[user]);
                 await p.locator("button[type=submit]").first().click();

@@ -5,7 +5,7 @@
 #
 # Verifies that
 #  (a) the APK installs, its label is "psst" and it starts,
-#  (b) onboarding offers "Sign in to chat.macet.eu" and there is no way to pick / type another homeserver
+#  (b) onboarding offers "Sign in to psst.pro" and there is no way to pick / type another homeserver
 #      (no "Sign in manually", "Change account provider", "Other", server input field, matrix.org, ...),
 #      also after tapping through sign-in, the QR-code sign-in and an injected mobile.element.io login link,
 #  (c) the app does not claim element.io links.
@@ -16,7 +16,7 @@ APK="$1"
 OUT="$2"
 PKG="eu.macet.psst"
 ACTIVITY="io.element.android.x.MainActivity"
-HOMESERVER="chat.macet.eu"
+HOMESERVER="psst.pro"   # server_name shown on the sign-in button (homeserver chat.psst.pro, D85)
 SIGN_IN_TEXT="Sign in to ${HOMESERVER}"
 HERE="$(cd "$(dirname "$0")" && pwd)"
 CHECK="python3 ${HERE}/check_ui.py"
@@ -125,7 +125,7 @@ adb shell pm list packages | grep -q "package:${PKG}$" && pass "package present"
 adb shell appops set "$PKG" USE_FULL_SCREEN_INTENT allow >/dev/null 2>&1 || true
 adb shell dumpsys deviceidle whitelist +"$PKG" >/dev/null 2>&1 || true
 
-# (c) element.io links must not resolve to psst any more; app.macet.eu should
+# (c) element.io links must not resolve to psst any more; app.psst.pro should
 for url in "https://mobile.element.io/element/?account_provider=matrix.org" "https://app.element.io/#/room/#a:matrix.org"; do
   if adb shell cmd package query-activities --brief -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "'$url'" | grep -q "$PKG"; then
     fail "psst handles $url"
@@ -133,8 +133,8 @@ for url in "https://mobile.element.io/element/?account_provider=matrix.org" "htt
     pass "psst does not handle $url"
   fi
 done
-adb shell cmd package query-activities --brief -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "'https://app.macet.eu/#/room/#a:chat.macet.eu'" \
-  | grep -q "$PKG" && pass "psst handles app.macet.eu links" || log "INFO: app.macet.eu link not resolved to psst"
+adb shell cmd package query-activities --brief -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "'https://app.psst.pro/#/room/#a:psst.pro'" \
+  | grep -q "$PKG" && pass "psst handles app.psst.pro links" || log "INFO: app.psst.pro link not resolved to psst"
 
 adb logcat -c
 adb shell am start -W -n "$PKG/$ACTIVITY" | tee -a "$RESULT"

@@ -357,10 +357,10 @@ jobs:
                   if-no-files-found: error
                   retention-days: 30
 
-    # PSST download page https://app.macet.eu/download (D59): every desktop build is uploaded right away,
+    # PSST download page https://app.psst.pro/download (D59): every desktop build is uploaded right away,
     # the previous version is removed from the server, and the file served over HTTPS must match (SHA-256).
     publish-downloads:
-        name: Publish to app.macet.eu/download
+        name: Publish to app.psst.pro/download
         needs: [web, desktop-mac, desktop-win]
         if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest

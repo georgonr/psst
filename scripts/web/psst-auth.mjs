@@ -1,11 +1,11 @@
-// PSST — spoločné kroky pre Playwright testy: prihlásenie a registrácia cez MAS (chat.macet.eu/auth/, alebo auth.macet.eu).
+// PSST — spoločné kroky pre Playwright testy: prihlásenie a registrácia cez MAS (chat.psst.pro/auth/, alebo auth.psst.pro).
 // Element Web → "Continue"/"Create account" → stránka MAS → (súhlas) → späť do appky.
 // PSST_HOST_IP: kam mapovať domény (127.0.0.1 na Macu, 172.30.0.250 = nginx v Docker sieti "psst")
 const IP = (typeof process !== "undefined" && process.env.PSST_HOST_IP) || "127.0.0.1";
-// MAS beží na https://chat.macet.eu/auth/ (D42) alebo na vlastnej subdoméne auth.macet.eu
-export const MAS_URL_RE = /(auth\.macet\.eu|macet\.eu\/auth\/)/;
+// MAS beží na https://chat.psst.pro/auth/ (D42) alebo na vlastnej subdoméne auth.psst.pro
+export const MAS_URL_RE = /(auth\.psst\.pro|chat\.psst\.pro\/auth\/)/;
 export const HOST_RULES = "--host-resolver-rules=" +
-    ["chat", "app", "call", "auth", "ntfy", "turn"].map((h) => `MAP ${h}.macet.eu ${IP}`).join(", ");
+    ["chat.psst.pro", "app.psst.pro", "call.psst.pro", "auth.psst.pro", "psst.pro", "www.psst.pro"].map((h) => `MAP ${h} ${IP}`).join(", ");
 
 async function clickIfVisible(page, selector, timeout = 1500) {
     const loc = page.locator(selector).first();
@@ -21,7 +21,7 @@ async function clickIfVisible(page, selector, timeout = 1500) {
 // Na stránke MAS: po prihlásení/registrácii môže prísť súhlas ("Continue"/"Allow") pre klienta psst.
 async function finishConsent(page) {
     for (let i = 0; i < 20; i++) {
-        if (page.url().startsWith("https://app.macet.eu") || page.url().startsWith("vector://")) return;
+        if (page.url().startsWith("https://app.psst.pro") || page.url().startsWith("vector://")) return;
         await clickIfVisible(page, 'button[type=submit]:has-text("Continue"), button:has-text("Allow"), button:has-text("Pokračovať")', 1000);
         await page.waitForTimeout(1000);
     }
@@ -47,7 +47,7 @@ export async function loginViaMas(page, user, password) {
 // Registrácia s pozývacím tokenom cez MAS. Vráti { ok, error } — pri neplatnom tokene ok=false a text chyby.
 // Tok MAS 1.29: (1) meno, heslo, potvrdenie, súhlas s podmienkami → (2) stránka "Registration token" → (3) súhlas → appka
 export async function registerViaMas(page, user, password, token) {
-    await page.goto("https://app.macet.eu/#/register");
+    await page.goto("https://app.psst.pro/#/register");
     await page.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
     await page.waitForURL(MAS_URL_RE, { timeout: 60000 });
     await page.waitForSelector('input[name="username"]', { timeout: 60000 });

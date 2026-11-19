@@ -1,5 +1,5 @@
 # PSST: the public download page must never be behind the latest published build (D59).
-# Compares https://app.macet.eu/download/latest.json with release/latest.json (written by scripts/release/publish.py).
+# Compares https://app.psst.pro/download/latest.json with release/latest.json (written by scripts/release/publish.py).
 name: Download page check
 on:
     push:

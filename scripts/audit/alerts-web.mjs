@@ -1,6 +1,6 @@
-// PSST (D75): Playwright test of Settings → "Notifications & calls" on the web, against production chat.macet.eu.
+// PSST (D75): Playwright test of Settings → "Notifications & calls" on the web, against production chat.psst.pro.
 //   node alerts-web.mjs <out-dir> <user> <password> [<local webapp dir>]
-// With a local webapp dir, https://app.macet.eu/* is served from that directory (same origin, so MAS login works).
+// With a local webapp dir, https://app.psst.pro/* is served from that directory (same origin, so MAS login works).
 // Uses a fresh test account. Permissions are driven through the browser (grant / CDP deny), never faked in the page.
 import { chromium } from "playwright";
 import fs from "node:fs";
@@ -11,7 +11,7 @@ import {
 
 const [OUT, USER, PASSWORD, LOCAL] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
-const WEB = "https://app.macet.eu";
+const WEB = "https://app.psst.pro";
 const results = [];
 const record = (id, status, note = "") => {
     results.push({ id, status, note: typeof note === "string" ? note.slice(0, 600) : note });

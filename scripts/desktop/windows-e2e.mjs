@@ -1,9 +1,9 @@
-// PSST Windows desktop — end-to-end test of the installed MSI against production chat.macet.eu (D60).
+// PSST Windows desktop — end-to-end test of the installed MSI against production chat.psst.pro (D60).
 //   node windows-e2e.mjs <psst.exe> <out-dir> <accounts.json> <expected-build>
 // accounts.json: {"desktop": {"user","password"}, "partner": {...}, "third": {...}} — fresh per run
 //   (scripts/desktop/e2e-accounts.sh create); partner = Element Web, third = 3rd group member
 //
-// The desktop app is driven over CDP (--remote-debugging-port). The partner is Element Web (app.macet.eu) in
+// The desktop app is driven over CDP (--remote-debugging-port). The partner is Element Web (app.psst.pro) in
 // headless Chromium, so E2EE runs in real clients on both sides. MAS login: the URL the app wants to open in the
 // system browser is captured in the renderer, signed in with Playwright, and the callback handed back to the app.
 import { chromium } from "playwright";
@@ -17,8 +17,9 @@ fs.mkdirSync(OUT, { recursive: true });
 const ROLES = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
 const ACC = Object.fromEntries(Object.values(ROLES).map((r) => [r.user, r.password]));
 const U_DESK = ROLES.desktop.user, U_PART = ROLES.partner.user, U_THIRD = ROLES.third.user;
-const HS = "chat.macet.eu";
-const WEB = "https://app.macet.eu";
+const HS = "chat.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
+const WEB = "https://app.psst.pro";
 const res = [];
 const metrics = {};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -107,7 +108,7 @@ async function desktopLogin(user) {
     if (!authUrl) throw new Error("MAS URL not captured");
     const b2 = await chromium.launch(); const p2 = await (await b2.newContext()).newPage();
     let callback = "";
-    p2.on("response", async (r) => { const loc = (await r.allHeaders().catch(() => ({})))["location"] || ""; if (/^(eu\.macet\.|psst:)/.test(loc)) callback = loc; });
+    p2.on("response", async (r) => { const loc = (await r.allHeaders().catch(() => ({})))["location"] || ""; if (/^(pro\.psst\.|eu\.macet\.psst|psst:)/.test(loc)) callback = loc; });
     await p2.goto(authUrl);
     await p2.fill('input[name="username"]', user, { timeout: 30000 }); await p2.fill('input[name="password"]', ACC[user]);
     await p2.click("button[type=submit]");
@@ -177,7 +178,7 @@ async function sendViaComposer(p, text) {
 let uid = null, partner = null, dm = null, group = null;
 await step("2.1 prihlásenie cez MAS", async () => {
     uid = await desktopLogin(U_DESK);
-    check("2.1 prihlásenie cez MAS", uid === `@${U_DESK}:${HS}`, uid);
+    check("2.1 prihlásenie cez MAS", uid === `@${U_DESK}:${SN}`, uid);
     await shot(page, "logged-in");
 });
 await step("1.3 stabilita 3 min po štarte", async () => {
@@ -210,7 +211,7 @@ await step("3.1 šifrovaná DM: príjem", async () => {
     // mark as a direct chat on both sides (as Element does when a DM is started from the UI) — Element sends a
     // ringing call notification ("ring") only in DMs, in other rooms just "notification"
     await evalClient(partner, ([r, other]) => window.mxMatrixClientPeg.get().setAccountData("m.direct", { [other]: [r] }), [dm, uid]);
-    await page.evaluate(([r, other]) => window.mxMatrixClientPeg.get().setAccountData("m.direct", { [other]: [r] }), [dm, `@${U_PART}:${HS}`]);
+    await page.evaluate(([r, other]) => window.mxMatrixClientPeg.get().setAccountData("m.direct", { [other]: [r] }), [dm, `@${U_PART}:${SN}`]);
     await sleep(6000);
     const t = "web→win " + Date.now();
     await evalClient(partner, ([r, b]) => window.mxMatrixClientPeg.get().sendTextMessage(r, b), [dm, t]);
@@ -239,7 +240,7 @@ await step("3.4 skupina", async () => {
     group = await evalClient(partner, async (who) => (await window.mxMatrixClientPeg.get().createRoom({
         preset: "private_chat", invite: who, name: "win e2e group",
         initial_state: [{ type: "m.room.encryption", state_key: "", content: { algorithm: "m.megolm.v1.aes-sha2" } }],
-    })).room_id, [uid, `@${U_THIRD}:${HS}`]);
+    })).room_id, [uid, `@${U_THIRD}:${SN}`]);
     await page.evaluate((r) => window.mxMatrixClientPeg.get().joinRoom(r), group);
     // 3rd member joins over plain HTTP (only to make it a group of 3)
     const tok = (await (await fetch(`https://${HS}/_matrix/client/v3/login`, { method: "POST", headers: { "Content-Type": "application/json" },
@@ -412,12 +413,12 @@ await step("2.2 odhlásenie", async () => {
 });
 await step("2.3 opätovné prihlásenie", async () => {
     const u = await desktopLogin(U_DESK);
-    check("2.3 opätovné prihlásenie", u === `@${U_DESK}:${HS}`, u);
+    check("2.3 opätovné prihlásenie", u === `@${U_DESK}:${SN}`, u);
 });
-await step("6.2 kontrola novej verzie mieri na app.macet.eu", async () => {
+await step("6.2 kontrola novej verzie mieri na app.psst.pro", async () => {
     const m = /psst update check: installed b(\d+), available b(\d+)/.exec(appLog);
     const element = /packages\.element\.io|update_base_url.*element/i.test(appLog);
-    check("6.2 aktualizácie: Element updater vypnutý, kontrola cez app.macet.eu/download", !element && !!m, m ? m[0] : "log: " + (appLog.match(/update[^\n]{0,120}/gi) || []).slice(0, 3).join(" | "));
+    check("6.2 aktualizácie: Element updater vypnutý, kontrola cez app.psst.pro/download", !element && !!m, m ? m[0] : "log: " + (appLog.match(/update[^\n]{0,120}/gi) || []).slice(0, 3).join(" | "));
 });
 await step("1.4 stabilita na konci", async () => {
     const m = await monitor("end", 60);

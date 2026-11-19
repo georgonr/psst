@@ -90,7 +90,7 @@ for _ in $(seq 100); do
     *"run in background"*|*"na pozadí"*) ui tap Allow >/dev/null 2>&1 || ui tap Povoliť >/dev/null 2>&1 ;;
     *"Notifications &amp; calls"*|*"Upozornenia a hovory"*) adb shell input keyevent KEYCODE_BACK ;;
     *"New psst version"*|*"Nová verzia"*) ui tap LATER >/dev/null 2>&1 || ui tap NESKÔR >/dev/null 2>&1 ;;
-    *"Sign in to chat.macet.eu"*) ui tap "Sign in to chat.macet.eu" >/dev/null ;;
+    *"Sign in to psst.pro"*) ui tap "Sign in to psst.pro" >/dev/null ;;
     *"Use another account"*) if echo "$t" | grep -q "'$USER_A'"; then ui tap Continue >/dev/null; else ui tap "Use another account" >/dev/null; fi ;;
     *"Account deleted"*) ui tap "Sign in" >/dev/null ;;
     *"'Username'"*"'Password'"*)

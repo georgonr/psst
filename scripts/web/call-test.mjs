@@ -29,7 +29,7 @@ async function login(user, pass) {
     page.on("console", (m) => fs.appendFileSync(logf, `[${m.type()}] ${m.location()?.url?.split("?")[0] ?? ""} ${m.text()}\n`));
     page.on("requestfailed", (r) => fs.appendFileSync(logf, `[requestfailed] ${r.url()} ${r.failure()?.errorText}\n`));
     page.on("response", (r) => { if (r.status() >= 400) fs.appendFileSync(logf, `[http ${r.status()}] ${r.url()}\n`); });
-    await page.goto("https://app.macet.eu/#/login");
+    await page.goto("https://app.psst.pro/#/login");
     try {
         await loginViaMas(page, user, pass);
     } catch (e) {
@@ -39,7 +39,7 @@ async function login(user, pass) {
     }
     await page.waitForTimeout(5000);
     for (let i = 0; i < 4; i++) await page.keyboard.press("Escape").catch(() => {});
-    await page.goto(`https://app.macet.eu/#/room/${roomId}`);
+    await page.goto(`https://app.psst.pro/#/room/${roomId}`);
     await page.waitForSelector(".mx_RoomView", { timeout: 60000 });
     await page.waitForTimeout(3000);
     for (let i = 0; i < 2; i++) await page.keyboard.press("Escape").catch(() => {});

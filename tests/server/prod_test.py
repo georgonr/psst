@@ -27,7 +27,8 @@ from pathlib import Path
 
 import requests
 
-DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.macet.eu")
+DOMAIN = os.environ.get("MATRIX_DOMAIN", "chat.psst.pro")
+SN = os.environ.get("SERVER_NAME", "psst.pro")   # Matrix server_name (user IDs), D85
 BASE = f"https://{DOMAIN}"
 S = requests.Session()   # S.verify = True — produkčný certifikát musí byť platný
 RESULTS = []
@@ -83,7 +84,7 @@ async def main():
     r = S.post(f"{BASE}/_matrix/client/v3/register?kind=guest", json={}, timeout=10)
     check("hosťovský účet zamietnutý", r.status_code in (401, 403, 404), f"HTTP {r.status_code}")
     meta = S.get(f"{BASE}/_matrix/client/v1/auth_metadata", timeout=10).json()
-    check("MAS issuer = https://chat.macet.eu/auth/", meta.get("issuer") == f"{BASE}/auth/", meta.get("issuer"))
+    check("MAS issuer = https://chat.psst.pro/auth/", meta.get("issuer") == f"{BASE}/auth/", meta.get("issuer"))
     reg = S.get(f"{BASE}/auth/register", timeout=10, allow_redirects=True)
     check("MAS registrácia: formulár vyžaduje pozývací token", "token" in reg.text.lower(), f"HTTP {reg.status_code}")
     r = compat_login("eve-neexistuje", "zle-heslo-123456")
@@ -99,8 +100,8 @@ async def main():
     cfg = AsyncClientConfig(store_sync_tokens=True, encryption_enabled=True)
     import ssl, certifi   # aiohttp bez certifi nevidí CA (Python z python.org) → nio by donekonečna opakoval
     tls = ssl.create_default_context(cafile=certifi.where())
-    a = AsyncClient(BASE, f"@{ua}:{DOMAIN}", store_path=str(store), config=cfg, ssl=tls)
-    b = AsyncClient(BASE, f"@{ub}:{DOMAIN}", store_path=str(store), config=cfg, ssl=tls)
+    a = AsyncClient(BASE, f"@{ua}:{SN}", store_path=str(store), config=cfg, ssl=tls)
+    b = AsyncClient(BASE, f"@{ub}:{SN}", store_path=str(store), config=cfg, ssl=tls)
     for c, p in ((a, pa), (b, pb)):
         await c.login(p, device_name="prod-test")
         await c.sync(timeout=3000, full_state=True)
@@ -147,8 +148,8 @@ async def main():
     anon = S.get(f"{BASE}/_matrix/client/v3/publicRooms", timeout=10)
     check("kanál: adresár bez prihlásenia nedostupný", anon.status_code in (401, 403), f"HTTP {anon.status_code}")
     pr = S.get(f"{BASE}/_matrix/client/v3/publicRooms", headers={"Authorization": f"Bearer {b.access_token}"}, timeout=10).json()
-    check("kanál: b ho vidí v adresári", any(x["room_id"] == chan for x in pr.get("chunk", [])), f"#{alias}:{DOMAIN}")
-    j = await b.join(f"#{alias}:{DOMAIN}")
+    check("kanál: b ho vidí v adresári", any(x["room_id"] == chan for x in pr.get("chunk", [])), f"#{alias}:{SN}")
+    j = await b.join(f"#{alias}:{SN}")
     check("kanál: b sa pripojil cez alias", isinstance(j, JoinResponse), getattr(j, "room_id", j))
     await settle(); await settle()
 

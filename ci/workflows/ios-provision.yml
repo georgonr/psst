@@ -55,7 +55,7 @@ jobs:
                 path: App/App.entitlements
                 properties:
                   aps-environment: development
-                  com.apple.developer.associated-domains: [applinks:app.macet.eu]
+                  com.apple.developer.associated-domains: [applinks:app.psst.pro]
                   com.apple.developer.usernotifications.communication: true
                   com.apple.security.application-groups: [group.eu.macet.psst]
                   keychain-access-groups: [$(AppIdentifierPrefix)eu.macet.psst]

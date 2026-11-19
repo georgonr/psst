@@ -11,8 +11,9 @@ import path from "node:path";
 const [OUT, ACC_FILE] = process.argv.slice(2);
 fs.mkdirSync(OUT, { recursive: true });
 const A = JSON.parse(fs.readFileSync(ACC_FILE, "utf8"));
-const WEB = "https://app.macet.eu", HS = "chat.macet.eu";
-const IOS = `@${A.a.user}:${HS}`;
+const WEB = "https://app.psst.pro", HS = "chat.psst.pro";
+const SN = process.env.PSST_SERVER_NAME || "psst.pro";   // Matrix server_name (user IDs), D85
+const IOS = `@${A.a.user}:${SN}`;
 const state = { started: new Date().toISOString(), received: [], events: {}, verification: {}, log: [] };
 const save = () => fs.writeFileSync(path.join(OUT, "partner.json"), JSON.stringify(state, null, 2));
 const log = (s) => { console.log(s); state.log.push(`${new Date().toISOString().slice(11, 19)} ${s}`); save(); };

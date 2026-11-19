@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PSST: fail if https://app.macet.eu/download is behind the latest published build (D59).
+"""PSST: fail if https://app.psst.pro/download is behind the latest published build (D59).
 
   check-download-page.py [manifest.json]
 
@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PAGE = "https://app.macet.eu/download/latest.json"
+PAGE = "https://app.psst.pro/download/latest.json"
 # dist/latest.json has several files per platform; the page carries one of them
 PAGE_FILE = {"android": "-arm64.apk", "windows": ".msi", "macos": ".dmg"}
 

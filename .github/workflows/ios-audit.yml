@@ -1,5 +1,5 @@
 # PSST iOS feature audit (docs/FEATURE-MATRIX.md, DECISIONS D64): the psst iOS app in the simulator against
-# production chat.macet.eu, driven by XCUITest (forks/ios IntegrationTests/Sources/PsstAuditTests.swift).
+# production chat.psst.pro, driven by XCUITest (forks/ios IntegrationTests/Sources/PsstAuditTests.swift).
 # The partner is Element Web on this runner (scripts/audit/ios-partner.mjs).
 #
 # Test accounts only: secret PSST_AUDIT_IOS_ACCOUNTS = {"a": {"user","password"}, "b": {...}} (fresh accounts,
@@ -103,7 +103,7 @@ jobs:
           nohup node ios-partner.mjs "$RUNNER_TEMP/out" accounts.json > "$RUNNER_TEMP/out/partner.log" 2>&1 &
           for i in $(seq 1 90); do grep -q "signed in" "$RUNNER_TEMP/out/partner.log" && break; sleep 2; done
           cat "$RUNNER_TEMP/out/partner.log"
-          python3 -c "import json;d=json.load(open('accounts.json'));print('PARTNER=@%s:chat.macet.eu' % d['b']['user']);print('IOS_USER=%s' % d['a']['user'])" >> "$GITHUB_ENV"
+          python3 -c "import json;d=json.load(open('accounts.json'));print('PARTNER=@%s:psst.pro' % d['b']['user']);print('IOS_USER=%s' % d['a']['user'])" >> "$GITHUB_ENV"
           python3 -c "import json;d=json.load(open('accounts.json'));print(d['a']['password'])" > "$RUNNER_TEMP/partner/ios.pw"
       - name: Run PsstAuditTests
         working-directory: ios
