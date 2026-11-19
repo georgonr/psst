@@ -1,3 +1,34 @@
+# PSST — report (2026-11-19, dávka 20, nočný beh: príprava na Google Play a App Store)
+
+**Nič sa nezaseklo na veci mimo môjho dosahu.** Do Play Console ani App Store Connect som nič neposlal, okrem iOS
+buildu b2 do TestFlightu. Rozhodnutia sú v DECISIONS.md D87.
+
+1. **Kontakt:** všade je psst@psst.pro, prevádzkovateľ MACET, s.r.o., IČO 35953781. Platí to pre stránky, web a
+   desktop b33, Android b51, iOS b2, /download aj MAS. Let's Encrypt účet má e-mail psst@psst.pro. Úvodná stránka
+   je bez mena, pod „Powered by GT“ má len odkazy Súkromie a Podmienky.
+2. **Právne stránky** (SK aj EN na jednej URL): psst.pro/privacy, /terms, /support. Staré app.psst.pro/*.html
+   presmerujú. OAuth metadáta ostali na app.psst.pro, lebo MAS chce rovnaký host ako client_uri.
+3. **Zmazanie účtu:** psst.pro/delete-account. Obsahuje postup v appke a na webe, e-mail bez prihlásenia, čo sa
+   zmaže a ako dlho ostane v zálohách (6 mesiacov).
+4. **Android b51:** odstránená inštalácia balíkov, poloha (aj kód) aj výnimka z batérie. Výnimka z batérie podľa
+   Android docs, na ktoré odkazuje politika Play, je pre chat s FCM „Not Acceptable“. Krok batérie preto ukáže
+   návod a otvorí App info. `check-manifest.py` zlyhá, ak sa povolenia vrátia (aj AD_ID). Texty vyhlásení a 2
+   videá sú v `play-listing/DECLARATIONS.md` (psst.pro/video/…).
+5. **Nahlásenia na /admin:** správy, miestnosti a používatelia (kto, čo, dôvod, kedy), stav vybavené alebo nie,
+   akcie Zablokovať a Zmazať (správu, miestnosť alebo správy člena), všetko do audit logu. Admin nevidí obsah
+   správ, DB rola k nemu nemá prístup.
+6. **Účty review a review-partner:** nie sú admin, majú šifrovanú DM a skupinu, zálohu kľúčov a kľúč na
+   obnovenie. Údaje a návod sú v `~/proj/psst-review.txt` (600).
+7. **Podklady:** `play-listing/` (FACTS b51, FORMS, DECLARATIONS, texty) a `appstore-listing/` (texty, FORMS,
+   APP-REVIEW-NOTES, snímky 6,9″, 6,3″ a iPad 13″).
+8. **PEPK:** `encryption_public_key.pem` bol k dispozícii, zip je v `~/psst-keys/play/psst-signing-key.zip` (600).
+   Certifikát v ňom má odtlačok 3A:64…:38:99 ako vydané APK.
+9. **Buildy:**
+   - Android b51: APK arm64, armv7, AAB na /download aj v dist/android;
+   - iOS b2 v TestFlighte (VALID);
+   - web/desktop b32 a b33 (macOS Gatekeeper PASS).
+   Stránka /download sedí s release/latest.json.
+
 # PSST — report (2026-11-19, dávka 19: macOS Developer ID, iOS TestFlight, podklady pre Google Play)
 
 **Všetky tri časti sú hotové, nič sa nezaseklo.** Podrobnosti sú v DECISIONS.md D86.

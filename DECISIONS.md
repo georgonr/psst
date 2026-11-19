@@ -908,3 +908,33 @@ nezmaže), Zmazať miestnosť (purge), Zmazať správy člena (redakcia vo všet
 **Účty pre kontrolórov:** `review` a `review-partner` (silné heslá, nie admin, nedeaktivujú sa), šifrovaná DM
 a skupina „Weekend trip“ zo zálohovaných webových relácií; údaje + kľúče na obnovenie + anglický návod v
 `~/proj/psst-review.txt` (600). V repozitári len návod bez hesla (`appstore-listing/APP-REVIEW-NOTES.txt`).
+
+**Overenie D87:**
+- **Android b51**, emulátor Android 15:
+  - inštalácia cez prihlásený b47 (b47 aj sám ponúkol b51);
+  - správa pri zhasnutom displeji: displej sa rozsvietil, `notification_alert` s vibráciou a zvukom;
+  - hovor na celú obrazovku cez zamknutý displej (`IncomingCallActivity`);
+  - hovor na pozadí: `CallForegroundService` typu microphone, médiá tečú;
+  - QR overenie (sken QR z webu) a QR prihlásenie (kód 2 číslice + MAS);
+  - search-gate PASS;
+  - nahlásenie správy aj miestnosti;
+  - O aplikácii;
+  - krok batérie: návod → App info → Allow background usage → Unrestricted → psst vo `deviceidle whitelist`.
+- **Videá pre Play** sú nahraté cez `adb emu screenrecord` (zachytí aj zamknutý displej, `screenrecord` v zariadení
+  pri zhasnutom displeji nenahrá nič).
+- **iOS** (CI `ios-store.yml`, XCUITest `PsstStoreTests`):
+  - snímky App Store v natívnom rozlíšení na 3 simulátoroch, história obnovená kľúčom na obnovenie;
+  - Report room funguje, odkazy v O aplikácii sú;
+  - „Report content“ v menu správy sa otvára.
+- **Web:**
+  - nahlásenie správy a miestnosti;
+  - akcie admina: zmazanie len nahlásenej udalosti (overené v DB), purge miestnosti, zablokovanie, vybavené/znova;
+  - Help & About má odkazy a kontakt.
+- **Testovacie nástroje:**
+  - `search-gate.sh` a `emulator-test.sh` poznajú nový dialóg batérie;
+  - `search-gate.sh` vyplní formulár MAS podľa polohy, keď Chrome nesprístupní web v strome prístupnosti;
+  - psst34 so `swiftshader` visel pri studenom štarte (snapshot bol z `-gpu host`), preto som použil psst35.
+- **/download** má pri Androide aj armv7 APK a AAB toho istého buildu (`android-armv7`, `android-aab` v
+  latest.json, upload skript ich pozná).
+- **Drobnosť na ďalší build:** dialóg batérie hovorí „Batéria → Bez obmedzení“. Na Android 15 je medzi tým ešte
+  „Allow background usage“.

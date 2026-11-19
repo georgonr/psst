@@ -62,7 +62,7 @@ Dôkaz: `play-listing/FACTS.md` bod 1 a 3 (žiadne analytické ani reklamné kni
 |---|---|
 | Promotional Text | `en-US/promotional-text.txt` |
 | Description | `en-US/description.txt` (SK: `sk/description.txt`) |
-| Keywords | `en-US/keywords.txt` (70 bajtov) |
+| Keywords | `en-US/keywords.txt` (79 bajtov) |
 | Support URL | `https://psst.pro/support` (kontakt psst@psst.pro, nahlásenie, zmazanie účtu) |
 | Marketing URL | `https://psst.pro` |
 | Screenshots | `screenshots/iphone-6.9/` (1320×2868), `screenshots/iphone-6.3/` (1206×2622), `screenshots/ipad-13/` (2064×2752) |

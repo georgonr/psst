@@ -273,5 +273,30 @@
   "id": "m86_delete",
   "status": "na",
   "note": "„Manage account & devices“ v Nastaveniach (iOS audit sessions) vedie na MAS; zmazanie na iPhone neoverené"
+ },
+ {
+  "id": "m87_legal",
+  "status": "ok",
+  "note": "iOS b2 kód (simulátor, CI ios-store): O aplikácii → Zmazanie účtu psst.pro/delete-account a Kontakt psst@psst.pro"
+ },
+ {
+  "id": "m87_report",
+  "status": "ok",
+  "note": "simulátor: skupina → Report room → dôvod → Report → /admin Nahlásenia; „Report content“ v menu správy sa otvára (odoslanie správy: viď REPORT)"
+ },
+ {
+  "id": "m87_perms",
+  "status": "na",
+  "note": "týka sa len Androidu"
+ },
+ {
+  "id": "m87_alerts",
+  "status": "na",
+  "note": "týka sa len Androidu"
+ },
+ {
+  "id": "m87_store",
+  "status": "ok",
+  "note": "simulátor: nové zariadenie → kľúč na obnovenie → šifrovaná história čitateľná (snímky App Store, iPhone 6,9″/6,3″ aj iPad 13″)"
  }
 ]
