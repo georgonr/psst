@@ -511,7 +511,7 @@ def c_rtc_legacy():
     a = CTX["users"]["alice"]
     ot = S.post(f"{BASE}/_matrix/client/v3/user/{a['user_id']}/openid/request_token",
                 headers=auth(a["access_token"]), json={}, timeout=10).json()
-    expect("access_token" in ot and ot.get("matrix_server_name") == DOMAIN, f"openid {ot}")
+    expect("access_token" in ot and ot.get("matrix_server_name") == SN, f"openid {ot}")
     r = S.post(f"{BASE}/livekit/jwt/sfu/get", json={"room": CTX["dm_room"], "openid_token": ot,
                                                     "device_id": a["device_id"]}, timeout=30)
     expect(r.status_code == 200, f"/sfu/get {r.status_code} {r.text[:300]}")
