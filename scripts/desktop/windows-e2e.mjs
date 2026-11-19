@@ -136,7 +136,7 @@ async function webLogin(user) {
     const p = await ctx.newPage();
     await p.goto(`${WEB}/#/login`);
     await p.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().click({ timeout: 90000 });
-    await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
+    await p.waitForURL(/chat\.psst\.pro\/auth/, { timeout: 60000 });
     await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', ACC[user]);
     await p.locator("button[type=submit]").first().click();
     for (let i = 0; i < 20 && !p.url().startsWith(WEB); i++) { await p.locator('button[type=submit]:has-text("Continue")').first().click({ timeout: 1500 }).catch(() => {}); await sleep(1000); }

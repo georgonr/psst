@@ -1,7 +1,7 @@
 // PSST (D85): which session does the desktop app restore from an existing profile?
 //   node session-state.mjs <psst.app> <profile-dir> <out.png> [wait-seconds]
 // Prints JSON {url, userId, homeserver, screen} — used to check what an updated app does with a session of the
-// old server (macet.eu → psst.pro): it must end on the sign-in screen of the new server, not hang.
+// old server (before the move to psst.pro, D85): it must end on the sign-in screen of the new server, not hang.
 import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import path from "node:path";

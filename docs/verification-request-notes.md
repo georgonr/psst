@@ -21,7 +21,7 @@ Code path on the new session (screen "Confirm your digital identity", `Views.COM
 
 ```
 PUT /_matrix/client/v3/sendToDevice/m.key.verification.request/{random txnId}
-{"messages": {"@user:chat.macet.eu": {"<DEVICEID>": {
+{"messages": {"@user:psst.pro": {"<DEVICEID>": {
     "from_device": "<new session device id>",
     "transaction_id": "<random flow id, same for all recipients>",
     "methods": ["m.sas.v1", "m.qr_code.show.v1", "m.reciprocate.v1"],

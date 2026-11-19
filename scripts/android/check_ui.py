@@ -25,7 +25,7 @@ FORBIDDEN = [
 # (seen live: CI has no reachable chat.psst.pro, and the QR-login screen explains a server capability).
 INFO_ALLOW = re.compile(
     r"couldn.t reach this account provider|only available if your account provider supports it|"
-    r"about to sign in to chat\.macet\.eu",
+    r"about to sign in to (chat\.)?psst\.pro",
     re.I,
 )
 # Not a lock violation, but reported for branding review.

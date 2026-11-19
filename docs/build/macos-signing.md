@@ -1,6 +1,6 @@
 # macOS: podpis Developer ID + notarizácia (D69)
 
-**Stav 2026-11-16:** DMG z https://app.macet.eu/download nie je podpísaný ani notarizovaný → Gatekeeper ho pri
+**Stav 2026-11-16:** DMG z https://app.psst.pro/download nie je podpísaný ani notarizovaný → Gatekeeper ho pri
 stiahnutí z webu blokuje („Presunúť do koša“). Stránka na stiahnutie preto pri macOS ukazuje slovenský návod
 (Systémové nastavenia → Súkromie a bezpečnosť → *Napriek tomu otvoriť*). Návod zmizne sám pri prvom podpísanom builde.
 
@@ -58,11 +58,11 @@ do kľúčenky a nastaví **šifrované** GitHub secrets `PSST_MAC_CERT_P12_BASE
   mikrofón, vypnutá library validation), notarizuje ho API kľúčom a priloží (staple) lístok; potom sa podpíše aj DMG,
   notarizuje cez `xcrun notarytool submit --wait` a `stapler staple`. Overenie v jobe: `codesign --verify --deep
   --strict`, `spctl -a -t exec` (app), `spctl -a -t open --context context:primary-signature` (DMG), `stapler validate`.
-- **Publish to app.macet.eu/download**: nahrá DMG ako doteraz; pri podpísanom builde navyše
+- **Publish to app.psst.pro/download**: nahrá DMG ako doteraz; pri podpísanom builde navyše
   `ssh psst-dl@… signed macos <build> <sha256>` → `latest.json` dostane `"signed": true` a stránka už nezobrazuje
   návod pre nepodpísanú appku. Každý nový upload bez tohto kroku návod vráti.
 - **Gatekeeper check of the published DMG** (`macos-gatekeeper.yml`, aj ručne): na macos-15 stiahne DMG z
-  https://app.macet.eu/download cez HTTPS, nastaví `com.apple.quarantine` ako prehliadač a spustí
+  https://app.psst.pro/download cez HTTPS, nastaví `com.apple.quarantine` ako prehliadač a spustí
   `spctl -a -vvv -t install` + `-t open --context context:primary-signature` (DMG), `spctl -a -vvv -t exec` +
   `codesign --verify --deep --strict` (app v DMG), `xcrun stapler validate` (DMG aj app). Pri podpísanom builde
   musí všetko prejsť, inak len zapíše výsledok.

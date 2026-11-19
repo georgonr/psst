@@ -27,7 +27,7 @@ async function newPage(b = browser) {
     return p;
 }
 async function masForm(p, user, password) {
-    await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
+    await p.waitForURL(/chat\.psst\.pro\/auth/, { timeout: 60000 });
     // MAS may still have a browser session for this account → "Continue to psst?" without the form
     for (let i = 0; i < 30; i++) {
         if (await p.locator('input[name="username"]').count()) break;
@@ -92,7 +92,7 @@ if (REG_TOKEN) {
         const user = `qa-aureg${Date.now() % 1000000}`, pw = `Pw-${Date.now()}-x`;
         await reg.goto(`${WEB}/#/register`);
         await reg.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
-        await reg.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
+        await reg.waitForURL(/chat\.psst\.pro\/auth/, { timeout: 60000 });
         await reg.fill('input[name="username"]', user); await reg.fill('input[name="password"]', pw); await reg.fill('input[name="password_confirm"]', pw);
         await reg.check('input[name="accept_terms"]').catch(() => {});
         for (let i = 0; i < 5 && !/\/token/.test(reg.url()); i++) { await sleep(2500); await reg.locator("button[type=submit]").first().click().catch(() => {}); await reg.waitForURL(/\/token/, { timeout: 5000 }).catch(() => {}); }

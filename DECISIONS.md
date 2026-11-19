@@ -753,3 +753,56 @@ automatická kontrola hľadania.** Dávka 16 hlásila, že b42 aj b43 nenájdu n
   Očakávané počty počíta `search_check.py` z textov správ podľa pravidiel indexu. Účty a miestnosť sa zmažú aj pri
   chybe. Kontrola potrebuje Mac s emulátorom, ssh `psst` a test venv. V GitHub Actions nebeží, lebo by
   potrebovala prístup na produkčný server na zakladanie účtov.
+
+## Presun na finálnu doménu psst.pro (2026-11-19, osemnásta dávka)
+
+**D85 — psst beží na psst.pro, založený načisto. Staré adresy na macet.eu sú vypnuté.**
+- **Adresy (natrvalo):**
+  - Matrix `server_name` je **psst.pro**, ID majú tvar `@meno:psst.pro`;
+  - homeserver a prihlasovanie (MAS na `/auth/`) bežia na **chat.psst.pro**;
+  - web, `/download` a `/admin` sú na **app.psst.pro**;
+  - hovory (Element Call) a TURN/TLS na 443 sú na **call.psst.pro**;
+  - úvodná stránka a `.well-known/matrix/{client,server}` sú na **psst.pro**, `www.psst.pro` presmeruje na psst.pro;
+  - bývalá doména `push.` (ntfy) sa už nezakladá.
+- **Prečo server_name ≠ homeserver:** ID sú krátke (`@geo:psst.pro`) a na psst.pro je úvodná stránka.
+  - Klienti nájdu homeserver cez `/.well-known/matrix/client`.
+  - `m.server` ukazuje na `chat.psst.pro:8448`. Port 8448 je zvonka zatvorený (UFW, nepublikovaný), takže
+    federácia nefunguje.
+  - V Docker sieti tú istú cestu používa lk-jwt-service na overenie OpenID tokenov hovorov: psst.pro → .well-known
+    → chat.psst.pro:8448 → interný vhost so samotným `openid/userinfo`. Oba názvy sú v sieti alias nginx.
+- **Certifikát:** jeden Let's Encrypt certifikát (`psst`) pre všetkých päť názvov, s automatickou obnovou
+  (kontajner certbot). Samostatný certifikát pre úvodnú stránku (D82) už netreba.
+  - Registrácia v LE je **bez e-mailu** (`deploy.sh … none`). LE expiračné e-maily aj tak už neposiela a
+    `healthcheck.sh` stráži platnosť.
+  - Kontakt prevádzkovateľa na stránkach Podmienky a Súkromie je **@geo:psst.pro** (správa v psst). Predtým tam bol
+    e-mail na starej doméne a reťazec „macet.eu“ nesmie ostať.
+- **Neznáme názvy nedostanú nič:** nginx na 443 odmietne TLS handshake pre neznámy SNI (`ssl_reject_handshake`) a
+  na :80 vráti 444 (bez presmerovania). Bývalé názvy, ktorých DNS ešte ukazuje na server, tak nedostanú obsah psst
+  ani certifikát.
+- **Načisto:** nová databáza, nový podpisový kľúč Synapse a nové tajomstvá (MAS kľúče, VAPID, LiveKit, TURN, DB,
+  admin). Účty, správy, miestnosti, pozvánky ani relácie sa nepreniesli.
+  - Prenesené sú len kľúče, ktoré nesúvisia s doménou: FCM service account, APNs kľúč, verejný kľúč na nahrávanie
+    na `/download` a heslová fráza záloh.
+  - Heslová fráza ostala rovnaká, aby otvorila novú aj poslednú zálohu starého stavu.
+- **Posledná záloha starého stavu:** `/opt/psst/archive-macet-final/` na serveri, mimo rotácie.
+  - Je to šifrovaný archív + `.sha256`, `backup.pass` a `README.txt` (root, 700/600).
+  - Overené: SHA-256 sedí, archív sa dešifruje a rozbalí, `pg_restore --list` prečíta obe databázy (177 a 34
+    tabuliek s dátami), podpisový kľúč aj médiá (749 súborov) sú v ňom.
+  - Ponechať do 2026-12-19, potom ho zmazať ručne (príkaz je v README).
+- **Identifikátory sa nemenia:**
+  - balík a bundle `eu.macet.psst` (+ `.nse`, `.shareextension`), App Group `group.eu.macet.psst`;
+  - pusher app_id `eu.macet.psst*`, keystore, Firebase projekt, APNs kľúč.
+  - Zmenila sa len **URL schéma OAuth callbacku** desktopu, Androidu a iOS: `eu.macet.app` → `pro.psst.app`
+    (reverse-DNS `app.psst.pro`, client_uri). Je to adresa, nie identifikátor appky.
+- **Android:** povolený je jediný account provider `Managed(serverName = psst.pro, baseUrl = https://chat.psst.pro,
+  canUseServerName = false)`.
+  - Tlačidlo hovorí „Sign in to psst.pro“ a appka sa pripája priamo na homeserver bez .well-known.
+  - QR prihlásenie z webu nesie URL homeservera, takže sa zhoduje.
+- **Aktualizácia zo starej appky:**
+  - **Android:** `AppMigration11` pri aktualizácii zmaže lokálne každú reláciu, ktorej ID nie je `@…:psst.pro`.
+    Zmaže záznam, súbory relácie a naplánované úlohy, k starému serveru sa nepripája. Appka sa otvorí na
+    prihlásení nového servera.
+  - **Web a desktop:** `restoreSessionFromStorage` zahodí uloženú reláciu pre iný homeserver, než má build v
+    konfigurácii (vlastné servery sú vypnuté), a ukáže prihlásenie.
+  - Staré buildy (Android b44, desktop b27) o novej verzii samy nevedia, lebo kontrolujú adresu na starej doméne,
+    ktorá už neodpovedá. Členov treba upozorniť priamo; odkaz je https://app.psst.pro/download/.

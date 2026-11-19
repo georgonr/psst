@@ -32,7 +32,7 @@ Legend: **needs** = what the feature requires from the server or build, **we pro
    verify a new device, the user must open the old one by hand. Document this for users.
 4. **People can only be found by full MXID.** `user_directory.search_all_users: false` together with
    `limit_profile_requests_to_users_who_share_rooms: true` (`homeserver.yaml:83-88`) hides users with no shared room
-   from search. Element X Android still shows a typed full `@user:chat.macet.eu` as an "unresolved" result
+   from search. Element X Android still shows a typed full `@user:psst.pro` as an "unresolved" result
    (`libraries/usersearch/impl/.../MatrixUserRepository.kt:31-63`), so DMs and invites still work. Element Web warns
    "may not exist" and lets the user continue. This is a privacy choice, but it hurts usability for new users.
    Consider `search_all_users: true`, since the server is closed and token-only.
@@ -69,7 +69,7 @@ Legend: **needs** = what the feature requires from the server or build, **we pro
   `oidc_metadata` for dynamic registration.
 - we provide: `password_registration_token_required: true` (`mas/config.yaml:56`), Synapse `enable_registration: false`
   (`homeserver.yaml:64`), tokens issued from the admin page (MAS admin API). Web `oidc_metadata` in
-  `psst/config.json:126-131`. Android `METADATA_HOST_REVERSED=eu.macet.app` (`BuildTimeConfig.kt:23`).
+  `psst/config.json:126-131`. Android `METADATA_HOST_REVERSED=pro.psst.app` (`BuildTimeConfig.kt:23`).
 - risk: low. MAS per-IP registration limits work because nginx forwards the real client IP (proxy_protocol plus
   `trusted_proxies`). Fallback config drift (item 7).
 
@@ -113,7 +113,7 @@ Legend: **needs** = what the feature requires from the server or build, **we pro
   logged-in users, and MSC3266 room summary for Element X previews.
 - we provide: `room_list_publication_rules: allow` (`homeserver.yaml:59-60`), `allow_public_rooms_without_auth: false`,
   `allow_public_rooms_over_federation: false`; web `UIFeature.allowCreatingPublicRooms/Spaces: true`,
-  `room_directory.servers: [chat.macet.eu]`. The comment says MSC3266 is stable in 1.165 (`homeserver.yaml:104`).
+  `room_directory.servers: [chat.psst.pro]`. The comment says MSC3266 is stable in 1.165 (`homeserver.yaml:104`).
 - risk: E2EE on channels (item 5). Verify MSC3266 and MSC4222 by checking `/_matrix/client/versions` for v1.15+ or the
   unstable flags (not done here). Any user can publish to the directory; there is no moderation rule.
 
@@ -152,7 +152,7 @@ Legend: **needs** = what the feature requires from the server or build, **we pro
   / `.ios.dev` (sandbox) apns, topic `eu.macet.psst`. Android: `PUSHER_HTTP_URL` points to our Sygnal
   (`FirebaseConfig.kt:17`), `EVENT_ID_ONLY` (`RustPushersService.kt:40`), FCM only (`BuildTimeConfig.kt:47-48`).
   Synapse sends encrypted events as `prio: high`, so FCM wakes the app in Doze. iOS: pusher app id
-  `<bundle>.ios.prod|dev` (`AppSettings.swift:231-237`), gateway `https://chat.macet.eu` (`:241`), `eventIdOnly` with
+  `<bundle>.ios.prod|dev` (`AppSettings.swift:231-237`), gateway `https://chat.psst.pro` (`:241`), `eventIdOnly` with
   `mutable-content` (`NotificationService.swift:141-151`). The App Group is set in `app.yml:6` and in every
   entitlements file, and CI requires it in all three profiles (`ios-release.yml:197-200`). The NSE target exists
   (`NSE/SupportingFiles/target.yml:58-75`). Release builds use `aps-environment: production` (`ios-release.yml:181`).
@@ -174,7 +174,7 @@ Legend: **needs** = what the feature requires from the server or build, **we pro
   (`compose.yml:85-88`). LiveKit `auto_create: false` (`livekit.yaml:24`). Standalone Element Call uses
   `matrix_rtc_mode: compatibility` (`element-call/config.json:8`). Call membership is set to power level 0 (D24).
 - risk: low. Element Web uses an embedded Element Call build and Element X bundles its own; versions can drift from
-  `element-call:v0.28.2` at call.macet.eu. Keep them in step at upgrades. Legacy `m.call.*` from third-party clients
+  `element-call:v0.28.2` at call.psst.pro. Keep them in step at upgrades. Legacy `m.call.*` from third-party clients
   are not supported (Synapse has no `turn_uris`; on purpose).
 
 ## Screen sharing
@@ -188,10 +188,10 @@ Legend: **needs** = what the feature requires from the server or build, **we pro
 ## Calls behind blocked UDP
 - needs: ICE/TCP to the SFU (7881) and TURN/TLS on 443.
 - we provide: LiveKit `tcp_port 7881`, `udp_port 7882` (`livekit.yaml:7-9`) and `turn_servers` TLS on 443
-  (`:14-19`). The nginx stream sends call.macet.eu traffic without h2/http1 ALPN to coturn
+  (`:14-19`). The nginx stream sends call.psst.pro traffic without h2/http1 ALPN to coturn
   (`nginx.conf:20-23,34-43`). coturn relays only to the SFU (`turnserver.conf:18-21`). Relay-only was verified (D35).
 - risk: a TURN client that sends ALPN `http/1.1` would be routed to HTTPS instead of coturn. libwebrtc sends no ALPN,
-  so this is fine today. call.macet.eu gets SSL Labs grade A instead of A+ (D46). The whole design depends on the
+  so this is fine today. call.psst.pro gets SSL Labs grade A instead of A+ (D46). The whole design depends on the
   ALPN heuristic. A separate `turn.` DNS name would be more robust, but DNS is fixed (D42).
 
 ## Profile + avatar

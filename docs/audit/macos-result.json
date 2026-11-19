@@ -12,7 +12,7 @@
  {
   "id": "login",
   "status": "ok",
-  "note": "prihlásenie cez MAS (systémový prehliadač → eu.macet.app://) → app"
+  "note": "prihlásenie cez MAS (systémový prehliadač → pro.psst.app://) → app"
  },
  {
   "id": "about_build",
@@ -167,7 +167,7 @@
  {
   "id": "password",
   "status": "ok",
-  "note": "Settings → Account → „Manage account“ → https://chat.macet.eu/auth/account/ (MAS: Change password; zmena hesla overená na Androide)"
+  "note": "Settings → Account → „Manage account“ → https://chat.psst.pro/auth/account/ (MAS: Change password; zmena hesla overená na Androide)"
  },
  {
   "id": "verify_unverified_state",

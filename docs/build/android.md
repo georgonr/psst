@@ -67,7 +67,7 @@ umask 077; mkdir -p ~/psst-keys; chmod 700 ~/psst-keys
 export PSST_KS_PASS="$(openssl rand -base64 36 | tr -d '/+=\n' | cut -c1-40)"
 /usr/local/opt/openjdk@17/bin/keytool -genkeypair -keystore ~/psst-keys/psst-release.jks -storetype PKCS12 \
   -storepass:env PSST_KS_PASS -keypass:env PSST_KS_PASS -alias psst -keyalg RSA -keysize 4096 \
-  -validity 10000 -dname "CN=psst, O=macet.eu"
+  -validity 10000 -dname "CN=psst, O=psst.pro"   # nový kľúč; vydaný psst má O = pôvodná doména (D85)
 # heslá -> ~/psst-keys/keystore.properties (storeFile, storePassword, keyAlias, keyPassword), chmod 600
 ```
 
@@ -103,7 +103,7 @@ Overenie ručne:
 keytool -printcert -jarfile dist/android/psst-fdroid.aab
 ```
 
-Očakávaný certifikát: `CN=psst, O=macet.eu`, SHA-256
+Očakávaný certifikát: `CN=psst` (O = pôvodná doména; certifikát sa nemení, D85), SHA-256
 `3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99`.
 
 ## Aktualizácia na nový upstream

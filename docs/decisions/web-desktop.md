@@ -12,7 +12,7 @@ CI ho pred buildom skopíruje (`cp psst/config.json config.json`). Rovnako to ro
 `config.json` sám skopíruje do `webapp/`. Desktop **nemá vlastnú kópiu**: balí `webapp/` z toho istého
 behu (vrátane `config.json`), takže web a desktop majú konfiguráciu identickú z princípu (CI to overuje `cmp`).
 
-**W2 — Homeserver napevno:** `default_server_config` = `https://chat.macet.eu` / `chat.macet.eu`,
+**W2 — Homeserver napevno:** `default_server_config` = `https://chat.psst.pro` / `chat.psst.pro`,
 `disable_custom_urls: true` (zmizne tlačidlo „Edit“ aj výber servera), `disable_guests: true`,
 `disable_3pid_login: true` (Synapse nemá e-mail/SMS), bez identity servera
 (`UIFeature.identityServer/thirdPartyId: false`), `default_federate: false` (federácia je na serveri vypnutá).
@@ -68,8 +68,8 @@ aby boli merge z upstreamu bez konfliktov.
 **W9 — `index.html`, PWA manifest, statické chybové stránky** prepísané na „psst“ (title, app-name,
 theme-color `#0F172A`, manifest name/short_name/id `eu.macet.psst`, maskable ikony, bez
 `related_applications` s Element apkami). `unable-to-load.html` / `incompatible-browser.html`: psst logo,
-odkaz na app.macet.eu, odstránená sekcia „Use Element on mobile“ s App Store/Play odkazmi.
-Default `og:image` → `https://app.macet.eu/vector-icons/512.png` (webpack).
+odkaz na app.psst.pro, odstránená sekcia „Use Element on mobile“ s App Store/Play odkazmi.
+Default `og:image` → `https://app.psst.pro/vector-icons/512.png` (webpack).
 
 **W10 — Minimálne zmeny kódu (každá `// PSST:`):**
 1. `AuthFooter.tsx` — odstránený napevno zadaný odkaz „Powered by Matrix“ (matrix.org); päta zobrazuje
@@ -81,7 +81,7 @@ Default `og:image` → `https://app.macet.eu/vector-icons/512.png` (webpack).
    SetupEncryptionBody, SecurityRoomSettingsTab, NotificationSettings2, LogoutDialog, UserIdentityWarning)
    → `SdkConfig.get("help_url")`.
 4. `ElectronPlatform.tsx` — SSO callback schéma `psst` namiesto `element`; default OAuth `client_uri`
-   `https://macet.eu` namiesto `https://element.io`.
+   `https://app.psst.pro` (D85; pôvodne apex starej domény) namiesto `https://element.io`.
 5. `apps/desktop/src/protocol.ts` — legacy schéma `psst` namiesto `element`.
 6. `webpack.config.ts` — default og:image (viď W9).
 
@@ -92,13 +92,13 @@ Default `og:image` → `https://app.macet.eu/vector-icons/512.png` (webpack).
 CI ho navyše explicitne podáva cez `VARIANT_PATH`. `package.json`: productName/author/homepage psst
 (meno balíčka `element-desktop` ostáva kvôli pnpm `--filter`).
 
-**D-2 — URL schémy:** primárna `eu.macet.psst` (reverse-DNS macet.eu → v scope MAS/OIDC politiky pre
-`client_uri https://macet.eu`), legacy SSO schéma `psst`. `element://` ani `io.element.desktop://`
+**D-2 — URL schémy:** OAuth callback `pro.psst.app` (reverse-DNS `app.psst.pro` → v scope MAS/OIDC politiky pre
+`client_uri https://app.psst.pro`, D85), ďalej `eu.macet.psst` (identifikátor appky) a legacy SSO schéma `psst`. `element://` ani `io.element.desktop://`
 neregistrujeme, aby psst nekolidoval s nainštalovaným Element Desktop.
 
 **D-3 — Žiadny auto-updater:** konfig neobsahuje `update_base_url` → `electron-main` vypíše
 „No update_base_url is defined: auto update is disabled“; nič nekontaktuje packages.element.io.
-`web_base_url: https://app.macet.eu/` (popout widgetov), `help_url` na GitHub (menu Help).
+`web_base_url: https://app.psst.pro/` (popout widgetov), `help_url` na GitHub (menu Help).
 Squirrel.Windows aj tak inštaluje per-user; MSI per-machine (upstream nastavenie).
 
 **D-4 — Ikony desktopu:** `build/icon.icns` (psst.icns), `build/icon.ico`, `build/icon.png` (512),
@@ -131,7 +131,7 @@ aby push do forku nespúšťal Element publikovacie/Netlify/Localazy joby.
 
 **C-3 — Smoke test** (`scripts/web/smoke.mjs`, Playwright Chromium): servuje rozbalený dist lokálne,
 overí `config.json` (homeserver, disable_custom_urls, žiadne posthog/sentry/rageshake/integrácie/element.io URL),
-manifest, prítomnosť embedded Element Call, a na `#/login`: server `chat.macet.eu`, žiadne tlačidlo „Edit“,
+manifest, prítomnosť embedded Element Call, a na `#/login`: server `chat.psst.pro`, žiadne tlačidlo „Edit“,
 title „psst“, psst wordmark, aktívna téma (`--accent-color: #38BDF8`). Screenshoty `login.png`, `register.png`
 v artefakte `psst-web-smoke`. Test nepotrebuje bežiaci homeserver (Element validuje `default_server_config`
 pri štarte len syntakticky).

@@ -66,26 +66,26 @@ gradient (`launch-background`) ostal — je neutrálny, bez loga.
 
 ## Homeserver
 
-**I11 — Uzamknutie na chat.macet.eu (ako Android):** `accountProviders = [.managed(serverName: "chat.macet.eu",
-baseURL: "https://chat.macet.eu")]`, `allowOtherAccountProviders = false`. Upstream z toho sám odvodí:
-tlačidlo „Sign in to chat.macet.eu" priamo na úvodnej obrazovke (žiadny výber servera, žiadne „Change server"),
+**I11 — Uzamknutie na chat.psst.pro (ako Android):** `accountProviders = [.managed(serverName: "chat.psst.pro",
+baseURL: "https://chat.psst.pro")]`, `allowOtherAccountProviders = false`. Upstream z toho sám odvodí:
+tlačidlo „Sign in to psst.pro" priamo na úvodnej obrazovke (žiadny výber servera, žiadne „Change server"),
 skryté „Create account", QR prihlásenie odmietne server mimo zoznamu, provisioning linky na iné servery sú
-ignorované. Server name je `chat.macet.eu`, takže SDK robí discovery cez `.well-known` tejto domény.
+ignorované. Server name je `chat.psst.pro`, takže SDK robí discovery cez `.well-known` tejto domény.
 
 ## Element-hosted endpointy
 
-**I12 — OAuth (MAS) metadáta na doméne macet.eu.** `client_uri = https://macet.eu/psst/ios`,
-`logo_uri = https://macet.eu/psst/logo.png`, `tos_uri = https://macet.eu/psst/terms`,
-`policy_uri = https://macet.eu/psst/privacy`, redirect `eu.macet.psst:/oauth/callback`. Dôvod: politika MAS
+**I12 — OAuth (MAS) metadáta (nahradené: dnes `client_uri = https://app.psst.pro`, redirect
+`pro.psst.app:/oauth/callback`, D85).** Pôvodne `client_uri`, `logo_uri`, `tos_uri` a `policy_uri` na apexe pôvodnej
+domény (`/psst/ios`, `/psst/logo.png`, `/psst/terms`, `/psst/privacy`), redirect `eu.macet.psst:/oauth/callback`. Dôvod: politika MAS
 pri dynamickej registrácii vyžaduje logo/tos/policy na rovnakom hoste ako `client_uri` a private-use schému
-redirectu = obrátený host `client_uri` (+ prípona) — `eu.macet.psst` vyhovuje pre `macet.eu` a schéma je už
+redirectu = obrátený host `client_uri` (+ prípona) — `eu.macet.psst` vyhovovala pre apex pôvodnej domény a schéma je už
 zaregistrovaná v `CFBundleURLSchemes`. Pôvodný redirect `https://element.io/oauth/ios/…` by fungoval len s
-Element associated domain. Dôsledok: stránky `/psst/terms`, `/psst/privacy`, `/psst/logo.png` treba na
-macet.eu zverejniť (inak MAS zobrazí nefunkčné odkazy). Ak server nepoužíva MAS (len heslo), na nič z toho nezáleží.
+Element associated domain. Dôsledok: stránky `/psst/terms`, `/psst/privacy`, `/psst/logo.png` by bolo treba na
+apexe zverejniť (inak MAS zobrazí nefunkčné odkazy). Ak server nepoužíva MAS (len heslo), na nič z toho nezáleží.
 Copyright odkaz vedie na LICENSE vo forku.
 
-**I13 — Push gateway `https://chat.macet.eu`** (namiesto Element/matrix.org Sygnalu, ktorý pre `eu.macet.psst`
-aj tak nemá APNs kľúč). Vlastný Sygnal je mimo rozsah → **push notifikácie nefungujú**, kým na chat.macet.eu
+**I13 — Push gateway `https://chat.psst.pro`** (namiesto Element/matrix.org Sygnalu, ktorý pre `eu.macet.psst`
+aj tak nemá APNs kľúč). Vlastný Sygnal je mimo rozsah → **push notifikácie nefungujú**, kým na chat.psst.pro
 nebude Sygnal s APNs kľúčom (`.p8`) pre bundle `eu.macet.psst` a app ID `eu.macet.psst.ios.prod`
 (`.ios.dev` pre Debug). Registrácia pushera na homeserveri prebehne, doručenie zlyhá na strane servera.
 
@@ -100,9 +100,9 @@ merge, pričom bez DSN/kľúča sa SDK vôbec neinicializujú (žiadna sieťová
 prijaté polohy sa v timeline zobrazia ako rozmazaný placeholder. Zapnutie = vlastný MapTiler kľúč v
 `bundledMapTilerConfiguration` (alebo vlastný tile server s rovnakým API).
 
-**I16 — Associated domains:** `applinks:app.macet.eu` namiesto element.io/matrix.to; `webcredentials:*.element.io`
-odstránené. Universal linky začnú fungovať až keď `https://app.macet.eu/.well-known/apple-app-site-association`
-bude obsahovať `<TEAM_ID>.eu.macet.psst`. `elementWebHosts` a `accountProvisioningHost` = `app.macet.eu`.
+**I16 — Associated domains:** `applinks:app.psst.pro` namiesto element.io/matrix.to; `webcredentials:*.element.io`
+odstránené. Universal linky začnú fungovať až keď `https://app.psst.pro/.well-known/apple-app-site-association`
+bude obsahovať `<TEAM_ID>.eu.macet.psst`. `elementWebHosts` a `accountProvisioningHost` = `app.psst.pro`.
 `matrix:` URL schéma ostáva.
 
 **I17 — Odkazy na nápovedu (element.io/help#…) ponechané.** Sú to len informačné stránky otvárané používateľom
@@ -110,7 +110,7 @@ bude obsahovať `<TEAM_ID>.eu.macet.psst`. `elementWebHosts` a `accountProvision
 
 **I18 — Element Call:** používa sa web app zabalený v balíku `EmbeddedElementCall` 0.28.2 (`elementCallBaseURL =
 EmbeddedElementCall.appURL`, lokálny súbor v app bundli) — nikdy `call.element.io`. LiveKit focus (MatrixRTC
-transport) sa berie z `.well-known` homeservera chat.macet.eu (`org.matrix.msc4143.rtc_foci`). Natívny
+transport) sa berie z `.well-known` homeservera chat.psst.pro (`org.matrix.msc4143.rtc_foci`). Natívny
 `ElementCall` stack ostáva vypnutý (upstream default).
 
 ## Licencia

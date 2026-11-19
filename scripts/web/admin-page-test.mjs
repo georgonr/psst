@@ -30,7 +30,7 @@ async function adminLogin(user, pw, viewport = { width: 1280, height: 900 }) {
     const page = await ctx.newPage();
     page.on("dialog", (d) => d.accept());
     await page.goto(A);
-    await page.waitForURL(/macet\.eu\/auth\//, { timeout: 60000 });
+    await page.waitForURL(/chat\.psst\.pro\/auth\//, { timeout: 60000 });
     await page.fill('input[name="username"]', user);
     await page.fill('input[name="password"]', pw);
     let final = null;

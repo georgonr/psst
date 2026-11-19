@@ -37,7 +37,7 @@ async function signInIfNeeded(p, profile) {
     await p.evaluate(() => { location.hash = "#/login"; });
     await p.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
     await p.waitForURL(/auth/, { timeout: 60000 });
-    for (let i = 0; i < 60 && !/app\.macet\.eu|vector:\/\/|file:\/\//.test(p.url()); i++) {
+    for (let i = 0; i < 60 && !/app\.psst\.pro|vector:\/\/|file:\/\//.test(p.url()); i++) {
         if (await p.locator('input[name="username"]').count()) {
             await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', acc[user]);
             await p.locator("button[type=submit]").first().click();
@@ -176,7 +176,7 @@ for (;;) {
         if (verb === "texts") await texts(a1);
         if (verb === "mas-approve") {
             const pages = (await open(a1)).context().pages();
-            const m = pages.find((x) => /chat\.macet\.eu/.test(x.url()));
+            const m = pages.find((x) => /chat\.psst\.pro/.test(x.url()));
             if (!m) throw new Error(`no MAS tab: ${pages.map((x) => x.url()).join(", ")}`);
             await m.bringToFront();
             for (let i = 0; i < 15; i++) {

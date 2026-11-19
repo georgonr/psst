@@ -1,7 +1,7 @@
 # psst
 
-**psst** je súkromný messenger postavený na [Matrixe](https://matrix.org/) — vlastný Synapse homeserver
-`chat.macet.eu` a klienti Element s vlastným brandingom pre web, Windows, macOS, Android a iOS.
+**psst** je súkromný messenger postavený na [Matrixe](https://matrix.org/) — vlastný Synapse homeserver pre
+**psst.pro** (ID `@meno:psst.pro`) a klienti Element s vlastným brandingom pre web, Windows, macOS, Android a iOS.
 
 - uzavretý server: federácia vypnutá, verejná registrácia zakázaná, účty len cez **pozývacie tokeny**
   (registrácia priamo v appkách cez Matrix Authentication Service)
@@ -14,12 +14,12 @@
 
 | | |
 |---|---|
-| Homeserver | `chat.macet.eu` |
-| Web | `app.macet.eu` |
-| Element Call (samostatne) | `call.macet.eu` |
-| Prihlásenie / registrácia (MAS) | `auth.macet.eu` |
-| Push brána (Sygnal: FCM + APNs) | `chat.macet.eu/_matrix/push/v1/notify` |
-| TURN | `turn.macet.eu` |
+| Matrix server_name (ID `@meno:psst.pro`), úvodná stránka | `psst.pro` (`www.psst.pro` presmeruje) |
+| Homeserver | `chat.psst.pro` |
+| Prihlásenie / registrácia (MAS) | `chat.psst.pro/auth/` |
+| Web, stiahnutie appiek, administrácia | `app.psst.pro`, `app.psst.pro/download/`, `app.psst.pro/admin` |
+| Element Call (samostatne) + TURN/TLS na 443 | `call.psst.pro` |
+| Push brána (Sygnal: FCM + APNs + Web Push) | `chat.psst.pro/_matrix/push/v1/notify` |
 | Bundle / package id | `eu.macet.psst` |
 
 ## Štruktúra repa
@@ -57,7 +57,7 @@ gh auth refresh -h github.com -s workflow   # token musí mať scope `workflow`
 
 | Platforma | Workflow | Výstup |
 |---|---|---|
-| Web (app.macet.eu) | `web-desktop.yml` → job `web` + `web-smoke` | `psst-web-dist` (tar.gz) |
+| Web (app.psst.pro) | `web-desktop.yml` → job `web` + `web-smoke` | `psst-web-dist` (tar.gz) |
 | macOS | `web-desktop.yml` → `desktop-mac` | nepodpísaný universal `.dmg` + `.zip` |
 | Windows | `web-desktop.yml` → `desktop-win` | `psst Setup <ver>.exe` + `.msi` |
 | Android | `android.yml` → `apk`, `aab`, `emulator` | nepodpísané APK (arm64, armv7, x86_64) + AAB → podpis lokálne `scripts/android/sign-release.sh` |

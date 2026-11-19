@@ -57,7 +57,7 @@ async function waitApp(label) {
 // ---------------------------------------------------------------- login (no permission granted yet)
 await p.goto(`${WEB}/#/login`);
 await p.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().click({ timeout: 90000 });
-await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
+await p.waitForURL(/chat\.psst\.pro\/auth/, { timeout: 60000 });
 await p.fill('input[name="username"]', USER);
 await p.fill('input[name="password"]', PASSWORD);
 await p.locator("button[type=submit]").first().click();

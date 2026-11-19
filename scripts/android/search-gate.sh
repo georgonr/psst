@@ -82,6 +82,9 @@ PASS_A="$("$PY" -I -c "import json,sys;print(json.load(open(sys.argv[1]))['a'][1
 # ---------- sign in (MAS in a Chrome custom tab) ----------
 adb shell am start -n "$PKG/$ACT" >/dev/null
 signed_in=0
+# a tap can miss when the screen changes between reading and tapping (e.g. a system ANR dialog pops up): that must
+# not end the check (set -e), the next round reads the screen again
+set +e
 for _ in $(seq 100); do
   t="$(texts)"
   case "$t" in
@@ -107,6 +110,7 @@ for _ in $(seq 100); do
   esac
   sleep 3
 done
+set -e
 ui shot "$WORK/signed-in.png"
 [ "$signed_in" = 1 ] || fail "could not sign in the test account (screen: $(texts | head -c 300))"
 for b in Close Zavrieť OK; do ui tap "$b" >/dev/null 2>&1 || true; done

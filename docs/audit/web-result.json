@@ -7,7 +7,7 @@
  {
   "id": "register",
   "status": "ok",
-  "note": "b25: registrácia s pozývacím tokenom → @qa-aureg613129:chat.macet.eu"
+  "note": "b25: registrácia s pozývacím tokenom → @qa-aureg613129:psst.pro"
  },
  {
   "id": "login",
@@ -167,7 +167,7 @@
  {
   "id": "password",
   "status": "ok",
-  "note": "b25: Settings → Account → „Manage account“ → https://chat.macet.eu/auth/account/ (MAS: Change password; zmena hesla overená na Androide)"
+  "note": "b25: Settings → Account → „Manage account“ → https://chat.psst.pro/auth/account/ (MAS: Change password; zmena hesla overená na Androide)"
  },
  {
   "id": "verify_unverified_state",
@@ -272,7 +272,7 @@
  {
   "id": "landing",
   "status": "ok",
-  "note": "2026-11-17: https://psst.macet.eu — / → /sk/ (sk-SK) alebo /en/ (en-US), prepínač SK/EN si voľbu pamätá (localStorage), obe tlačidlá viditeľné bez posúvania na 360/390/1440 px a znova na konci, odkazy app.macet.eu/download/ a app.macet.eu/, 0 požiadaviek mimo domény, 0 cookies, 0 chýb CSP, alt texty, skip link"
+  "note": "2026-11-17: https://psst.pro — / → /sk/ (sk-SK) alebo /en/ (en-US), prepínač SK/EN si voľbu pamätá (localStorage), obe tlačidlá viditeľné bez posúvania na 360/390/1440 px a znova na konci, odkazy app.psst.pro/download/ a app.psst.pro/, 0 požiadaviek mimo domény, 0 cookies, 0 chýb CSP, alt texty, skip link"
  },
  {
   "id": "landing_ops",
@@ -282,6 +282,6 @@
  {
   "id": "noindex",
   "status": "ok",
-  "note": "psst.macet.eu robots + sitemap; app.macet.eu/robots.txt povolí len /download/ a právne texty, web app a /admin X-Robots-Tag noindex, MAS prihlásenie noindex, chat.macet.eu/robots.txt Disallow"
+  "note": "psst.pro robots + sitemap; app.psst.pro/robots.txt povolí len /download/ a právne texty, web app a /admin X-Robots-Tag noindex, MAS prihlásenie noindex, chat.psst.pro/robots.txt Disallow"
  }
 ]

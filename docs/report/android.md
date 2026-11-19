@@ -10,12 +10,12 @@ Stav k 2026-11-13.
   1. `4a8b2682` build konfigurácia: `eu.macet.psst`, „psst“, bez analytiky (noop), bez Firebase push a
      Firebase App Distribution, žiadne fallbacky na element.io, nepodpísaný release, ABI splity arm64-v8a /
      armeabi-v7a / x86_64, `fdroid` default flavour, `.gitignore` pre keystory.
-  2. `8422be43` zámok na `chat.macet.eu` (`DefaultEnterpriseService`: allow list = [chat.macet.eu],
+  2. `8422be43` zámok na `chat.psst.pro` (`DefaultEnterpriseService`: allow list = [chat.psst.pro],
      `canConnectToAnyAccountProvider = false`), ignorované `mobile.element.io` login odkazy, Element Classic import len
      z povoleného servera, vypnutá Element Pro kontrola a rageshake, akcent `#38BDF8` (`PsstColors`).
   3. `f4b79689` branding: launcher (adaptívna + monochrome), legacy mipmapy, notifikačná ikona, Play Store ikona,
      psst logo na onboardingu, názvy aplikácie, farba notifikácií.
-  4. `10581852` app links: element.io hosty nahradené `app.macet.eu`.
+  4. `10581852` app links: element.io hosty nahradené `app.psst.pro`.
   5. `4f4ceecb` About → „Source code (AGPL-3.0)“ → https://github.com/georgonr/psst-android.
   6. `b5196242` GMS location backend odstránený aj z `gplay`.
   7. `f21ab543` Maestro smoke test (`.maestro/psst/`) namiesto upstreamových testov.
@@ -57,14 +57,14 @@ Statická validácia: YAML workflowu a Maestro flowov sa parsuje (Ruby `YAML.loa
 ## Podpisovanie — overené lokálne
 
 - Keystore: `~/psst-keys/psst-release.jks` (PKCS12, RSA 4096, platnosť 10000 dní do 2054-03-31, alias `psst`,
-  `CN=psst, O=macet.eu`), heslá v `~/psst-keys/keystore.properties` (chmod 600, adresár 700). Nič z toho nie je
+  `CN=psst` (O = pôvodná doména; certifikát sa nemení, D85)), heslá v `~/psst-keys/keystore.properties` (chmod 600, adresár 700). Nič z toho nie je
   v gite ani na GitHube.
 - **Certifikát SHA-256:**
   `3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99`
   (`3a6428cf51ee8f5e10e84fac5ca8a6b3c3b8c34d2674db0f2224d1d0097d3899`)
 - Build-tools 37.0.0 (macOS, universal binárky, x86_64 OK) v `~/.psst-tools/build-tools-37.0.0`.
 - `sign-release.sh` overený na minimálnych testovacích artefaktoch (APK vyrobené `aapt2 link`, AAB zip):
-  2 APK → `Verified using v1/v2/v3 scheme: true`, certifikát `CN=psst, O=macet.eu` so správnym SHA-256;
+  2 APK → `Verified using v1/v2/v3 scheme: true`, certifikát `CN=psst` (O = pôvodná doména; certifikát sa nemení, D85) so správnym SHA-256;
   AAB → jarsigner verified, rovnaký certifikát; `SHA256SUMS` vytvorený. Skutočné psst APK/AAB sa podpíšu po CI.
 
 ## Otvorené body
@@ -72,11 +72,11 @@ Statická validácia: YAML workflowu a Maestro flowov sa parsuje (Ruby `YAML.loa
 1. **Workflow scope** — bez neho nebeží žiadne CI (build, emulátor, podpísané artefakty).
 2. **Google Play upload** vyžaduje Play Console účet používateľa; odporúčané Play App Signing s naším kľúčom ako
    upload key (AAB podpísaný `sign-release.sh`).
-3. **assetlinks.json** na `https://app.macet.eu/.well-known/assetlinks.json` (package `eu.macet.psst`, fingerprint
-   vyššie), inak sa app.macet.eu odkazy neotvoria automaticky v aplikácii.
+3. **assetlinks.json** na `https://app.psst.pro/.well-known/assetlinks.json` (package `eu.macet.psst`, fingerprint
+   vyššie), inak sa app.psst.pro odkazy neotvoria automaticky v aplikácii.
 4. **Push**: používateľ potrebuje UnifiedPush distribútora (ntfy …); bez neho žiadne notifikácie na pozadí.
-5. **Právne stránky** `https://app.macet.eu/terms.html` a `/privacy.html` musí dodať web/server (odkazuje na ne
-   About obrazovka a OAuth metadáta). `URL_LOGO` = `https://app.macet.eu/favicon.ico`.
+5. **Právne stránky** `https://app.psst.pro/terms.html` a `/privacy.html` musí dodať web/server (odkazuje na ne
+   About obrazovka a OAuth metadáta). `URL_LOGO` = `https://app.psst.pro/favicon.ico`.
 6. **Mapy** (zdieľanie polohy) bez MapTiler kľúča nie sú dostupné.
 7. Niektoré preložené texty môžu stále spomínať „Element“ (napr. „Element Call“, „Element Pro“) — emulátorový test
    ich vypíše ako `WARN`, nie ako chybu.

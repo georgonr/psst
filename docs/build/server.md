@@ -27,10 +27,10 @@ curl -s "https://hub.docker.com/v2/repositories/library/postgres/tags?page_size=
 ## Produkčné nasadenie (na serveri)
 
 ```sh
-# predpoklady: Docker Engine + compose plugin, openssl, git; DNS A/AAAA chat./app./call.macet.eu → server
+# predpoklady: Docker Engine + compose plugin, openssl, git; DNS A/AAAA chat./app./call.psst.pro → server
 git clone https://github.com/georgonr/psst.git /opt/psst
 cd /opt/psst/server
-LETSENCRYPT_EMAIL=admin@macet.eu ./deploy.sh        # prvýkrát aj pri každej aktualizácii
+sudo ./deploy.sh <IP> none        # prvýkrát aj pri každej aktualizácii
 scripts/create-admin.sh admin                        # prvý admin (raz)
 gh auth login && scripts/fetch-web.sh                # PSST web z artefaktu psst-web-dist
 scripts/new-invite.sh 1 7                            # pozývací token
@@ -57,7 +57,7 @@ Kroky workflowu:
 ```sh
 cd server
 COMPOSE_FILE=compose.yml docker compose --env-file .env.example config --quiet   # validácia produkčného compose
-echo "127.0.0.1 chat.macet.eu app.macet.eu call.macet.eu" | sudo tee -a /etc/hosts
+echo "127.0.0.1 chat.psst.pro app.psst.pro call.psst.pro" | sudo tee -a /etc/hosts
 export COMPOSE_FILE=compose.yml:compose.test.yml LIVEKIT_USE_EXTERNAL_IP=false
 ./deploy.sh --no-letsencrypt
 docker compose exec -T nginx nginx -t

@@ -15,12 +15,12 @@
 
 1. **Rebrand** — `app.yml`: bundle id `eu.macet.psst` (+ `.nse`, `.shareextension`), app group
    `group.eu.macet.psst`, keychain group `$(DEVELOPMENT_TEAM).eu.macet.psst`, názov `psst`, bez team ID;
-   odstránená Element Classic migrácia; associated domains `applinks:app.macet.eu`; BG task ID
+   odstránená Element Classic migrácia; associated domains `applinks:app.psst.pro`; BG task ID
    `eu.macet.psst.background.*`; ikona (AppIcon.appiconset namiesto AppIcon.icon); akcent #38BDF8
    (asset catalog + Compound tokeny cez `DefaultCompoundHook`); logo na úvodnej obrazovke = psst logo.
-2. **Uzamknutie servera + endpointy** — `accountProviders = [chat.macet.eu]`, `allowOtherAccountProviders = false`;
-   OAuth `client_uri`/logo/terms/privacy na `macet.eu`, redirect `eu.macet.psst:/oauth/callback`;
-   push gateway `https://chat.macet.eu`; `elementWebHosts`/provisioning host `app.macet.eu`;
+2. **Uzamknutie servera + endpointy** — `accountProviders = [chat.psst.pro]`, `allowOtherAccountProviders = false`;
+   OAuth `client_uri`/logo/terms/privacy na apexe pôvodnej domény, redirect `eu.macet.psst:/oauth/callback` (dnes app.psst.pro a `pro.psst.app`, D85);
+   push gateway `https://chat.psst.pro`; `elementWebHosts`/provisioning host `app.psst.pro`;
    About → „Source code (AGPL-3.0)" → https://github.com/georgonr/psst-ios; nadpis úvodnej obrazovky = „psst".
 3. **Bez analytiky** — `Secrets.swift` všetko `nil`; PostHog, Sentry (app + Rust), rageshake a analytics terms
    vypnuté natvrdo v `AppSettings`; Element Call bez PostHog/Sentry; MapTiler bez kľúča (mapy vypnuté).
@@ -70,10 +70,10 @@ workflowy prešli `actionlint`. Swift zmeny sú malé a v štýle okolitého kó
 - **Apple Developer účet** (99 USD/rok) — potrebný pre App ID, profily, certifikát, TestFlight/App Store.
 - **Provisioning profily** pre 3 App ID; entitlement NSE filtering treba od Apple vyžiadať (inak ho release
   workflow odstráni).
-- **APNs push**: bez vlastného Sygnalu na chat.macet.eu s APNs `.p8` kľúčom pre `eu.macet.psst` notifikácie
+- **APNs push**: bez vlastného Sygnalu na chat.psst.pro s APNs `.p8` kľúčom pre `eu.macet.psst` notifikácie
   nechodia (app ID pushera `eu.macet.psst.ios.prod` / `.ios.dev`).
-- **macet.eu** musí hostovať `/psst/terms`, `/psst/privacy`, `/psst/logo.png` (OAuth/MAS metadáta) a
-  `app.macet.eu/.well-known/apple-app-site-association` pre universal linky.
+- **apex pôvodnej domény** musel hostovať `/psst/terms`, `/psst/privacy`, `/psst/logo.png` (OAuth/MAS metadáta) a
+  `app.psst.pro/.well-known/apple-app-site-association` pre universal linky.
 - **Mapy/zdieľanie polohy** vypnuté (chýba vlastný MapTiler kľúč).
 - PostHog/Sentry knižnice sú stále nalinkované (neaktívne) — úplné odstránenie je možné neskôr.
 - Unit testy upstreamu nie sú upravené na psst nastavenia (nespúšťajú sa).

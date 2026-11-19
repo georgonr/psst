@@ -217,12 +217,12 @@
  {
   "id": "admin",
   "status": "na",
-  "note": "admin stránka je webová (app.macet.eu/admin), testovaná v stĺpci Web"
+  "note": "admin stránka je webová (app.psst.pro/admin), testovaná v stĺpci Web"
  },
  {
   "id": "update_check",
   "status": "ok",
-  "note": "b20 ponúkol „New psst version – build 21“ (app.macet.eu/download/latest.json); tlačidlo Download otváralo psst namiesto prehliadača (App Link na celú doménu) → opravené v b23: /download/ otvorí prehliadač, odkazy /#/… ďalej psst (overené, App Links stále „verified“)"
+  "note": "b20 ponúkol „New psst version – build 21“ (app.psst.pro/download/latest.json); tlačidlo Download otváralo psst namiesto prehliadača (App Link na celú doménu) → opravené v b23: /download/ otvorí prehliadač, odkazy /#/… ďalej psst (overené, App Links stále „verified“)"
  },
  {
   "id": "alerts_settings",

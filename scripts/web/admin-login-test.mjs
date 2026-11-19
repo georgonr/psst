@@ -19,7 +19,7 @@ await page.screenshot({ path: path.join(out, "1-login-branding.png") });
 await loginViaMas(page, user, pw);
 await page.waitForTimeout(5000);
 for (let i = 0; i < 3; i++) await page.keyboard.press("Escape").catch(() => {});
-check("admin geo prihlásený na webe", /app\.macet\.eu\/#\/(home|room|welcome)/.test(page.url()), page.url());
+check("admin geo prihlásený na webe", /app\.psst\.pro\/#\/(home|room|welcome)/.test(page.url()), page.url());
 await page.screenshot({ path: path.join(out, "2-admin-home.png") });
 const uid = await page.evaluate(() => { try { return window.mxMatrixClientPeg?.get()?.getUserId(); } catch { return null; } });
 check("prihlásený ako @geo:psst.pro", uid === "@geo:psst.pro", uid ?? "n/a");

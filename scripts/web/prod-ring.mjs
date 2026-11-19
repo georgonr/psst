@@ -9,7 +9,7 @@ const ctx = await b.newContext({ viewport: { width: 1280, height: 860 }, permiss
 const p = await ctx.newPage();
 await p.goto("https://app.psst.pro/#/login");
 await p.locator('.mx_Login_fullWidthButton, button:has-text("Continue")').first().click({ timeout: 90000 });
-await p.waitForURL(/chat\.macet\.eu\/auth/, { timeout: 60000 });
+await p.waitForURL(/chat\.psst\.pro\/auth/, { timeout: 60000 });
 await p.fill('input[name="username"]', user); await p.fill('input[name="password"]', pass);
 await p.locator("button[type=submit]").first().click();
 for (let i = 0; i < 20 && !p.url().startsWith("https://app.psst.pro"); i++) {

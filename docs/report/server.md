@@ -5,7 +5,7 @@
 * `server/` — docker compose stack nasaditeľný jedným príkazom `./deploy.sh`:
   Synapse `v1.165.0` + PostgreSQL `18.7-alpine` (C collation), LiveKit `v1.13.11`,
   lk-jwt-service `0.10.0` (application service MSC4502/MSC4512 + legacy endpointy), Element Call
-  `v0.28.2` (`call.macet.eu`), nginx `1.30.6-alpine` (chat./app./call.macet.eu, .well-known s `rtc_foci`),
+  `v0.28.2` (`call.psst.pro`), nginx `1.30.6-alpine` (chat./app./call.psst.pro, .well-known s `rtc_foci`),
   certbot `v5.10.0` (bootstrap dummy → LE webroot → reload, automatická obnova).
 * Šablóny konfigurácií `server/templates/` (Synapse, AS registrácia, LiveKit, nginx, Element Call,
   default `config.json` pre PSST web), tajomstvá generované do `server/.env` (nikdy v gite).
@@ -46,8 +46,8 @@ preto v `ci/workflows/server-smoke.yml`; po `gh auth refresh -h github.com -s wo
 | 6.4 | MatrixRTC legacy `/sfu/get` + `/get_token` (OpenID cez interný 8448) + LiveKit validate | pending: requires workflow scope |
 | 6.5 | MatrixRTC C-S `/rtc/livekit/get_token` (Synapse → AS proxy), nečlen 403 | pending: requires workflow scope |
 | 6.6 | všetky kontajnery healthy | pending: requires workflow scope |
-| 7.1 | app.macet.eu index/config.json/hlavičky | pending: requires workflow scope |
-| 7.2 | call.macet.eu + HTTP→HTTPS + ACME webroot | pending: requires workflow scope |
+| 7.1 | app.psst.pro index/config.json/hlavičky | pending: requires workflow scope |
+| 7.2 | call.psst.pro + HTTP→HTTPS + ACME webroot | pending: requires workflow scope |
 | — | `scripts/backup.sh` obsahuje `db.dump` + `signing.key` | pending: requires workflow scope |
 
 ### Lokálna statická validácia (vykonaná, bez Dockeru)
@@ -73,12 +73,12 @@ Twirp volania zachovávajú path prefix `/livekit/sfu`), Element Call v0.28.2 se
 1. **CI**: `gh auth refresh -h github.com -s workflow` → `scripts/enable-ci.sh` → `gh workflow run server-smoke.yml`;
    najrizikovejšie miesta pri prvom behu: MatrixRTC kontroly 6.4/6.5 (AS proxy MSC4512, interný OpenID
    8448 cez nginx alias) a E2EE cez matrix-nio 0.26 (vodozemac).
-2. **DNS**: A (a AAAA) záznamy `chat.macet.eu`, `app.macet.eu`, `call.macet.eu` → IP servera (nevytvorené).
+2. **DNS**: A (a AAAA) záznamy `chat.psst.pro`, `app.psst.pro`, `call.psst.pro` → IP servera (nevytvorené).
 3. **Server/hostiteľ**: nie je vybraný/nasadený; potrebný Linux VPS s Dockerom (≥2 vCPU / 4 GB).
 4. **Firewall**: otvoriť len 80/tcp, 443/tcp, 7881/tcp, 7882/udp (+ SSH).
 5. **TURN** nie je nasadený (klienti za firewallom blokujúcim UDP aj TCP 7881 sa na hovor nepripoja).
 6. **PSST web**: `scripts/fetch-web.sh` závisí od artefaktu `psst-web-dist` z web CI (tiež blokovaného
-   rovnakým workflow scope); dovtedy app.macet.eu ukazuje dočasnú stránku.
+   rovnakým workflow scope); dovtedy app.psst.pro ukazuje dočasnú stránku.
 7. `LETSENCRYPT_EMAIL` treba zadať pri prvom `./deploy.sh`.
-8. Element Call standalone (`call.macet.eu`) funguje len s existujúcimi PSST účtami (registrácia na
+8. Element Call standalone (`call.psst.pro`) funguje len s existujúcimi PSST účtami (registrácia na
    tokeny → žiadni anonymní hostia).

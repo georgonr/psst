@@ -10,11 +10,11 @@ riadkov diffu a ťažké zlučovanie z upstreamu; používateľ ani systém ho n
 (`PRODUCTION_APPLICATION_NAME`, `DESKTOP_APPLICATION_NAME`) = „psst“, takže texty typu „Welcome to …“ hovoria o psst.
 
 **A2 — Zámok homeservera cez `EnterpriseService`, nie cez úpravy obrazoviek.**
-`features/enterprise/impl-foss/.../DefaultEnterpriseService.kt`: `accountProviderAllowList() = [chat.macet.eu]`,
+`features/enterprise/impl-foss/.../DefaultEnterpriseService.kt`: `accountProviderAllowList() = [chat.psst.pro]`,
 `canConnectToAnyAccountProvider() = false`, `isAllowedToConnectToAccountProvider()` povolí len zhodu s týmto
 zoznamom. Upstream už presne tieto hodnoty používa pre Element Pro / MDM: onboarding potom ukáže len tlačidlo
-„Sign in to chat.macet.eu“ (+ QR prihlásenie), nikdy „Sign in manually“ / „Change account provider“ / textové pole
-servera, a predvolený poskytovateľ je `chat.macet.eu` (nie matrix.org ani história). Všetky ďalšie vstupy (QR kód,
+„Sign in to psst.pro“ (+ QR prihlásenie), nikdy „Sign in manually“ / „Change account provider“ / textové pole
+servera, a predvolený poskytovateľ je `chat.psst.pro` (nie matrix.org ani história). Všetky ďalšie vstupy (QR kód,
 login odkazy, zmena servera) prechádzajú cez `AccountProviderAccessControl`, ktorý iný server odmietne.
 Prečo nie mazanie obrazoviek: minimálny diff = jednoduché zlučovanie nových verzií upstreamu.
 Doména je v `BuildTimeConfig.PSST_HOMESERVER` a do kódu sa dostane cez `BuildConfig`.
@@ -49,20 +49,20 @@ konfiguráciu natvrdo prázdnu (predtým z env premenných CI).
 neposiela na `rageshakes.element.io`. Vlastný rageshake server je mimo rozsahu.
 
 **A8 — Odkazy a URL.** Žiadny fallback na `element.io` (cookie policy, copyright, AUP, privacy, OAuth client URI).
-OAuth metadáta: `client_uri = https://app.macet.eu`, redirect schéma `eu.macet.app` (MAS vyžaduje reverzný
-(sub)doménový zápis hostu `client_uri`; `eu.macet.psst` by zodpovedalo `psst.macet.eu`, ktorá neexistuje).
-Copyright → LICENSE vo forku, AUP/privacy → `https://app.macet.eu/terms.html`, `/privacy.html` (stránky musí
+OAuth metadáta: `client_uri = https://app.psst.pro`, redirect schéma `pro.psst.app` (MAS vyžaduje reverzný
+(sub)doménový zápis hostu `client_uri`; `eu.macet.psst` by zodpovedalo `psst.pro`, ktorá neexistuje).
+Copyright → LICENSE vo forku, AUP/privacy → `https://app.psst.pro/terms.html`, `/privacy.html` (stránky musí
 dodať web/server). Odkazy „Learn more“ (`element.io/help#…`) ostali — sú to len verejné návody otvárané
 v prehliadači, nie konfigurácia ani služba.
 
 **A9 — App links.** Intent-filtre pre `app.element.io`, `develop.element.io`, `staging.element.io`
-a `mobile.element.io` odstránené; pridaný `https://app.macet.eu` (permalinky psst webu `/#/room/...`).
-Overenie (`autoVerify`) vyžaduje na serveri `https://app.macet.eu/.well-known/assetlinks.json` s package
+a `mobile.element.io` odstránené; pridaný `https://app.psst.pro` (permalinky psst webu `/#/room/...`).
+Overenie (`autoVerify`) vyžaduje na serveri `https://app.psst.pro/.well-known/assetlinks.json` s package
 `eu.macet.psst` a SHA-256 certifikátu (viď report). Schémy `matrix:` a `element://` (z matrix.to) ostali.
 
 **A10 — Hovory.** Ponechaný embedded Element Call (balík `element-call-embedded`, načítaný z
 `appassets.androidplatform.net`, nie z `call.element.io`). LiveKit focus sa berie z `rtc_foci` v
-`/.well-known/matrix/client` homeservera (`call.macet.eu`). Žiadna zmena kódu nebola potrebná; analytika EC vypnutá (A6).
+`/.well-known/matrix/client` homeservera (`call.psst.pro`). Žiadna zmena kódu nebola potrebná; analytika EC vypnutá (A6).
 
 **A11 — Branding.** Ikony z `scripts/make-icons.sh` (hlavné repo): adaptívna ikona (pozadie `#0F172A`, popredie,
 monochromatická vrstva), legacy PNG mipmapy, notifikačná ikona (`libraries/designsystem/.../ic_notification.xml`),
@@ -94,7 +94,7 @@ GitHub odmieta push súborov v `.github/workflows/`; workflow je uložený mimo 
 nahradené psst smoke testom (rovnaké kontroly ako emulátorový test) — upstreamové testy vyžadovali účet na matrix.org.
 
 **A17 — Emulátorový test** (`scripts/android/emulator-test.sh` + `check_ui.py`): API 34 `google_apis` x86_64,
-inštalácia release APK, kontrola `application-label:'psst'`, onboarding musí ukázať „Sign in to chat.macet.eu“ a
+inštalácia release APK, kontrola `application-label:'psst'`, onboarding musí ukázať „Sign in to psst.pro“ a
 v žiadnom UI dumpe (onboarding, po kliknutí na sign-in, QR obrazovka, po injektovanom `mobile.element.io` odkaze)
 sa nesmie objaviť „Sign in manually“, „Change account provider“, „Other“, „Create account“, `matrix.org`,
 `element.io` ani editovateľné pole so serverom. Overuje aj, že element.io odkazy sa už neotvárajú v psst.

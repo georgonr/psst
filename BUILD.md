@@ -38,7 +38,7 @@ gh auth refresh -h github.com -s workflow       # jednorazovo — bez toho GitHu
   `scripts/release/publish.py` do `dist/archive/<platforma>/` (nič nemaže). Prehľad: **`dist/LATEST.md`**
   (súbor, build, dátum, SHA-256, čo sa zmenilo).
 
-## Stránka na stiahnutie — https://app.macet.eu/download (D59)
+## Stránka na stiahnutie — https://app.psst.pro/download (D59)
 
 Verejná stránka s aktuálnym Android APK (arm64), Windows MSI a macOS DMG — číslo buildu, dátum, veľkosť, SHA-256,
 návod na inštaláciu. Na serveri sú vždy len aktuálne súbory (`/opt/psst/server/downloads/`), staršie len v
@@ -47,7 +47,7 @@ návod na inštaláciu. Na serveri sú vždy len aktuálne súbory (`/opt/psst/s
 | Build | Kto nahrá | Ako |
 |---|---|---|
 | Android | `scripts/android/sign-release.sh` (lokálne, po podpise) | `scripts/release/upload-download.sh android …-arm64.apk` |
-| Windows + macOS | CI `web-desktop.yml`, job *Publish to app.macet.eu/download* | `scripts/release/upload-download.sh windows|macos …` |
+| Windows + macOS | CI `web-desktop.yml`, job *Publish to app.psst.pro/download* | `scripts/release/upload-download.sh windows|macos …` |
 
 `upload-download.sh` nahrá súbor cez SSH ako `psst-dl` (kľúč smie len `server/scripts/downloads.py`: overí SHA-256
 prijatého súboru, odmietne starší build, prepíše stránku a `latest.json`, zmaže predošlý súbor platformy) a potom
@@ -111,7 +111,7 @@ scripts/ios/release-testflight.sh                        # podpísaný build →
 ## 6. Server
 
 ```sh
-cd server && LETSENCRYPT_EMAIL=admin@macet.eu ./deploy.sh   # na cieľovom serveri, nie lokálne
+cd server && sudo ./deploy.sh <IP> none   # na cieľovom serveri, nie lokálne
 gh workflow run server-smoke.yml -R georgonr/psst            # lokálny test celého stacku v CI
 ```
 
@@ -205,7 +205,7 @@ cd server && scripts/backup.sh && scripts/restore.sh backups/daily/psst-….tar.
 
 Živé testy klientov proti lokálnemu stacku: `scripts/web/live-test.mjs`, `scripts/web/call-test.mjs`,
 `scripts/desktop/live-test.mjs` (Playwright), Android `scripts/android/ui.py` + emulátor s `-writable-system`
-(testovací certifikát v systémových CA, `10.0.2.2 chat.macet.eu …` v `/system/etc/hosts`). Podrobnosti v REPORT.md.
+(testovací certifikát v systémových CA, `10.0.2.2 chat.psst.pro …` v `/system/etc/hosts`). Podrobnosti v REPORT.md.
 
 PSST web pre server: GitHub Release `web-<verzia>` s `psst-web.tar.gz` (stiahne `server/scripts/fetch-web.sh`):
 `gh release create web-<verzia> dist/psst-web.tar.gz --latest`.
