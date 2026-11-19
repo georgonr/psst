@@ -204,7 +204,7 @@ umask 022
 
 # ----------------------------------------------------------------- 3. render
 mkdir -p data/config/coturn data/config/synapse data/config/livekit data/config/nginx data/config/nginx-main \
-         data/config/element-call data/config/mas \
+         data/config/element-call data/config/app-default data/config/mas \
          data/config/sygnal data/synapse data/postgres data/certbot/conf data/certbot/www \
 
 chmod 700 data
@@ -463,7 +463,7 @@ if [ "$(id -u)" = 0 ] && [ "$LOCAL_TEST" = 0 ]; then
 else
   # (lokálny test / bez roota) nginx v kontajneri musí stránku čítať — umask 077 z vrchu skriptu by ju skryl
   mkdir -p downloads/files; chmod 755 downloads downloads/files
-  (umask 022; PSST_DOWNLOADS="$PWD/downloads" APP_DOMAIN="$APP_DOMAIN" python3 scripts/downloads.py render >/dev/null) || true
+  (umask 022; PSST_DOWNLOADS="$PWD/downloads" APP_DOMAIN="$APP_DOMAIN" WEB_DOMAIN="${WEB_DOMAIN:-$SERVER_NAME}" python3 scripts/downloads.py render >/dev/null) || true
   chmod -R a+rX downloads
 fi
 # administrácia: read-only prístup k 2 tabuľkám MAS (kto sa ktorou pozvánkou zaregistroval) + Synapse admin token
@@ -475,6 +475,16 @@ ALTER ROLE psst_admin_ro WITH LOGIN PASSWORD '$(cat secrets/admin/db_password)' 
 GRANT CONNECT ON DATABASE mas TO psst_admin_ro;
 GRANT USAGE ON SCHEMA public TO psst_admin_ro;
 GRANT SELECT ON user_registrations, user_registration_tokens TO psst_admin_ro;
+SQL
+# Nahlásenia (D87): len tabuľky nahlásení a stĺpce metadát (kto, kde, kedy, typ) — nikdy obsah udalostí
+compose exec -T postgres psql -U synapse -d synapse -v ON_ERROR_STOP=1 -q >/dev/null <<SQL || warn "DB rola psst_admin_ro (synapse): zlyhalo"
+GRANT CONNECT ON DATABASE synapse TO psst_admin_ro;
+GRANT USAGE ON SCHEMA public TO psst_admin_ro;
+GRANT SELECT ON event_reports, room_reports, user_reports TO psst_admin_ro;
+GRANT SELECT (event_id, room_id, sender, type, origin_server_ts) ON events TO psst_admin_ro;
+GRANT SELECT (event_id, redacts) ON redactions TO psst_admin_ro;
+GRANT SELECT (room_id, name, encryption, join_rules, room_type) ON room_stats_state TO psst_admin_ro;
+GRANT SELECT (room_id, creator) ON rooms TO psst_admin_ro;
 SQL
 [ -s secrets/admin_token ] || PSST_QUIET=1 scripts/members.sh list >/dev/null 2>&1 || warn "Synapse admin token sa nepodarilo vydať"
 ADM_BEFORE="$(cat secrets/admin-run/* 2>/dev/null | cksum)"

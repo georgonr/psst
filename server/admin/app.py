@@ -1,10 +1,12 @@
-"""PSST admin — správa pozvánok a členov na https://<APP_DOMAIN>/admin (DECISIONS D56).
+"""PSST admin — správa pozvánok, členov a nahlásení na https://<APP_DOMAIN>/admin (DECISIONS D56, D87).
 
 - prihlásenie výhradne cez MAS (OIDC authorization code + PKCE), prístup len pre účty s admin právom v MAS
 - pozvánky = registračné tokeny MAS (tie isté, ktoré vyžaduje registrácia v appkách), cez MAS admin API
 - blokovanie = MAS lock/unlock (+ príznak locked v Synapse, ako scripts/members.sh)
 - nové heslo = MAS admin API set-password, náhodné dočasné heslo sa ukáže raz (D70); relácie člena ostávajú
 - admin tokeny/tajomstvá len v kontajneri (súbory zo server/secrets), nikdy v prehliadači
+- nahlásenia (D87): správy/miestnosti/používatelia z tabuliek Synapse (read-only, bez obsahu správ), stav vybavené,
+  akcie zablokovať člena a zmazať obsah (Synapse admin API), všetko do auditného logu
 - session na serveri (cookie len náhodné ID), CSRF token, rate limiting, audit log (JSON lines)
 """
 import asyncio
@@ -35,6 +37,8 @@ CLIENT_ID = os.environ["ADMIN_CLIENT_ID"]
 CLIENT_SECRET = open("/secrets/admin_client_secret").read().strip()
 SYNAPSE_ADMIN_TOKEN_FILE = "/secrets/admin_token"
 DB_DSN = "postgresql://psst_admin_ro:{}@postgres/mas".format(open("/secrets/admin_db_password").read().strip())
+# Nahlásenia (D87): read-only rola vidí v DB synapse len tabuľky nahlásení a stĺpce metadát (deploy.sh), nie obsah
+SYN_DSN = DB_DSN.rsplit("/", 1)[0] + "/synapse"
 DATA = os.environ.get("ADMIN_DATA", "/data")
 PROTECTED = {u.strip() for u in os.environ.get("ADMIN_PROTECTED_USERS", "geo,psstadmin").split(",") if u.strip()}
 SERVICE_USERS = {"psstadmin"}
@@ -50,6 +54,7 @@ PENDING: dict[str, dict] = {}   # OIDC state -> {verifier, nonce, ts}
 HITS: dict[str, deque] = defaultdict(deque)
 _admin_token = {"value": None, "exp": 0}
 _pool = None
+_syn_pool = None
 
 
 # ------------------------------------------------------------------ infra
@@ -67,6 +72,9 @@ def audit(user: str, ip: str, action: str, **details):
 def notes_db():
     c = sqlite3.connect(os.path.join(DATA, "notes.sqlite"))
     c.execute("create table if not exists notes (token_id text primary key, note text, created_by text, created_at text)")
+    # stav nahlásení (D87): Synapse stav nemá → vybavené/nevybavené + posledná akcia správcu
+    c.execute("create table if not exists report_state (kind text, rid integer, status text, by text, at text, "
+              "action text, primary key (kind, rid))")
     return c
 
 
@@ -90,6 +98,13 @@ async def pool():
     if _pool is None:
         _pool = await asyncpg.create_pool(DB_DSN, min_size=1, max_size=3)
     return _pool
+
+
+async def syn_pool():
+    global _syn_pool
+    if _syn_pool is None:
+        _syn_pool = await asyncpg.create_pool(SYN_DSN, min_size=1, max_size=2)
+    return _syn_pool
 
 
 async def mas_admin_token() -> str:
@@ -402,6 +417,11 @@ async def index(req: Request, created: str = ""):
             out.append(f'<section class="ok"><h2>Pozvánka vytvorená</h2><p>Kód: <code id="code">{esc(a["token"])}</code> '
                        f'<button class="sec" onclick="cp(\'code\',this)">Kopírovať kód</button></p>'
                        f'<div class="msg" id="msg">{esc(msg)}</div><p><button onclick="cp(\'msg\',this)">Kopírovať text na poslanie</button></p></section>')
+    try:
+        out.append(reports_section(await load_reports(), s["csrf"]))
+    except Exception as e:  # noqa: BLE001
+        audit(s["user"], client_ip(req), "reports_load_failed", error=str(e)[:300])
+        out.append('<section id="reports"><h2>Nahlásenia</h2><p class="mut">Nahlásenia sa nepodarilo načítať.</p></section>')
     out.append(f'''<section><h2>Nová pozvánka</h2><form method="post" action="/admin/invites"><input type="hidden" name="csrf" value="{esc(s["csrf"])}">
 <div class="row"><div><label>Počet použití</label><input name="uses" type="number" min="1" max="100" value="1" required></div>
 <div><label>Platnosť (dni)</label><input name="days" type="number" min="1" max="365" value="7" required></div>
@@ -463,6 +483,237 @@ async def index(req: Request, created: str = ""):
                'Nové heslo: vygeneruje sa dočasné heslo a zobrazí sa raz; prihlásené zariadenia člena ostávajú prihlásené.</p></section>')
     out.append("""<script>function cp(id,b){navigator.clipboard.writeText(document.getElementById(id).innerText).then(()=>{const t=b.innerText;b.innerText='Skopírované';setTimeout(()=>b.innerText=t,1500)})}</script>""")
     return HTMLResponse(page("Správa", "".join(out), s["user"], s["csrf"]))
+
+
+# ------------------------------------------------------------------ nahlásenia (D87)
+# Zdroj: tabuľky Synapse event_reports (správa), room_reports (miestnosť), user_reports (používateľ). Admin vidí len
+# kto, koho/čo, kedy a dôvod, ktorý nahlasovateľ sám napísal — obsah šifrovaných (ani iných) správ sa nečíta.
+KIND_LABEL = {"event": "správa", "room": "miestnosť", "user": "používateľ"}
+REDACT_REASON = "Odstránené správcom psst po nahlásení / Removed by the psst administrator after a report"
+
+
+def local_name(mxid: str | None) -> str | None:
+    if mxid and mxid.startswith("@") and mxid.endswith(":" + SERVER_NAME):
+        return mxid[1:].rsplit(":", 1)[0]
+    return None
+
+
+def report_reason(row) -> str:
+    reason = (row["reason"] or "").strip()
+    if not reason and row.get("content"):
+        try:
+            reason = str(json.loads(row["content"]).get("reason") or "").strip()
+        except Exception:  # noqa: BLE001
+            pass
+    return reason[:1000]
+
+
+async def load_reports() -> list[dict]:
+    q = await syn_pool()
+    async with q.acquire() as c:
+        ev = await c.fetch(
+            "select r.id, r.received_ts, r.room_id, r.event_id, r.user_id, r.reason, r.content, "
+            "e.sender, e.type as etype, e.origin_server_ts, s.name as room_name, s.encryption, "
+            "(select count(*) from redactions x where x.redacts = r.event_id) as redacted "
+            "from event_reports r left join events e using (event_id) left join room_stats_state s on s.room_id = r.room_id "
+            "order by r.received_ts desc limit 500")
+        rr = await c.fetch(
+            "select r.id, r.received_ts, r.room_id, r.user_id, r.reason, s.name as room_name, s.encryption, k.creator, "
+            "(k.room_id is not null) as room_exists "
+            "from room_reports r left join room_stats_state s on s.room_id = r.room_id left join rooms k on k.room_id = r.room_id "
+            "order by r.received_ts desc limit 500")
+        ur = await c.fetch("select id, received_ts, target_user_id, user_id, reason from user_reports "
+                           "order by received_ts desc limit 500")
+    out = []
+    for r in ev:
+        r = dict(r)
+        out.append({"kind": "event", "id": r["id"], "ts": r["received_ts"], "reporter": r["user_id"],
+                    "reason": report_reason(r), "room_id": r["room_id"], "room_name": r["room_name"],
+                    "event_id": r["event_id"], "target": r["sender"], "etype": r["etype"],
+                    "encrypted": r["etype"] == "m.room.encrypted" or bool(r["encryption"]),
+                    "gone": r["sender"] is None or bool(r["redacted"])})
+    for r in rr:
+        r = dict(r)
+        out.append({"kind": "room", "id": r["id"], "ts": r["received_ts"], "reporter": r["user_id"],
+                    "reason": report_reason(r), "room_id": r["room_id"], "room_name": r["room_name"],
+                    "target": r["creator"], "encrypted": bool(r["encryption"]), "gone": not r["room_exists"]})
+    for r in ur:
+        r = dict(r)
+        out.append({"kind": "user", "id": r["id"], "ts": r["received_ts"], "reporter": r["user_id"],
+                    "reason": report_reason(r), "target": r["target_user_id"], "gone": False})
+    with notes_db() as db:
+        st = {(k, i): (status, by, at, action) for k, i, status, by, at, action in
+              db.execute("select kind, rid, status, by, at, action from report_state").fetchall()}
+    for r in out:
+        status, by, at, action = st.get((r["kind"], r["id"]), ("open", None, None, None))
+        r.update(status=status, by=by, at=at, action=action)
+    out.sort(key=lambda r: (r["status"] != "open", -r["ts"]))
+    return out
+
+
+async def find_report(kind: str, rid: int) -> dict | None:
+    return next((r for r in await load_reports() if r["kind"] == kind and r["id"] == rid), None)
+
+
+def set_report_state(kind, rid, status, user, action=None):
+    with notes_db() as db:
+        prev = db.execute("select action from report_state where kind=? and rid=?", (kind, rid)).fetchone()
+        acts = "; ".join(x for x in [prev[0] if prev else None, action] if x) or None
+        db.execute("insert or replace into report_state values (?,?,?,?,?,?)",
+                   (kind, rid, status, user, dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"), acts))
+
+
+def who(mxid: str | None) -> str:
+    if not mxid:
+        return "—"
+    n = local_name(mxid)
+    return esc(n) if n else esc(mxid)
+
+
+def reports_section(reports: list[dict], csrf: str) -> str:
+    open_n = sum(1 for r in reports if r["status"] == "open")
+    rows, done = [], []
+    for r in reports:
+        k = r["kind"]
+        if k == "event":
+            what = (f'správa od <b>{who(r["target"])}</b> v miestnosti {esc(r["room_name"] or r["room_id"])}'
+                    f'<br><span class="mut">{"šifrovaná — obsah nevidno" if r["encrypted"] else "nešifrovaná miestnosť"}'
+                    f'{" · už zmazaná" if r["gone"] else ""}</span>')
+        elif k == "room":
+            what = (f'miestnosť <b>{esc(r["room_name"] or "(bez názvu)")}</b><br><span class="mut">{esc(r["room_id"])}'
+                    f'{" · tvorca " + who(r["target"]) if r["target"] else ""}{" · už zmazaná" if r["gone"] else ""}</span>')
+        else:
+            what = f'používateľ <b>{who(r["target"])}</b>'
+        hidden = (f'<input type="hidden" name="csrf" value="{esc(csrf)}">')
+        base = f'/admin/reports/{k}/{r["id"]}'
+        btn = []
+        tname = local_name(r["target"])
+        if tname and tname not in PROTECTED and tname not in SERVICE_USERS:
+            btn.append(f'<form class="inline" method="post" action="{base}/block" onsubmit="return confirm(\'Zablokovať {esc(tname)}?\')">'
+                       f'{hidden}<button class="danger">Zablokovať {"tvorcu" if k == "room" else "člena"}</button></form>')
+        if not r["gone"]:
+            label = {"event": "Zmazať správu", "room": "Zmazať miestnosť", "user": "Zmazať jeho správy"}[k]
+            warn_txt = {"event": "Zmazať nahlásenú správu pre všetkých?",
+                        "room": "Zmazať miestnosť aj s celou históriou? Všetci členovia z nej budú odstránení.",
+                        "user": "Zmazať VŠETKY správy tohto člena vo všetkých jeho miestnostiach?"}[k]
+            if k != "user" or (tname and tname not in PROTECTED):
+                btn.append(f'<form class="inline" method="post" action="{base}/delete" onsubmit="return confirm(\'{warn_txt}\')">'
+                           f'{hidden}<button class="danger">{label}</button></form>')
+        if r["status"] == "open":
+            btn.append(f'<form class="inline" method="post" action="{base}/resolve">{hidden}<button class="sec">Vybavené</button></form>')
+        else:
+            btn.append(f'<form class="inline" method="post" action="{base}/reopen">{hidden}<button class="sec">Znova otvoriť</button></form>')
+        state = ('<span class="badge revoked">nevybavené</span>' if r["status"] == "open" else
+                 f'<span class="badge free">vybavené</span><br><span class="mut">{esc(r["by"] or "")} {fmt(parse_ts(r["at"]))}</span>')
+        if r["action"]:
+            state += f'<br><span class="mut">{esc(r["action"])}</span>'
+        row = (f'<tr><td data-l="Kedy">{fmt(r["ts"])}</td><td data-l="Typ">{KIND_LABEL[k]}</td>'
+               f'<td data-l="Nahlásil">{who(r["reporter"])}</td><td data-l="Koho / čo">{what}</td>'
+               f'<td data-l="Dôvod">{esc(r["reason"]) or "<span class=mut>(bez dôvodu)</span>"}</td>'
+               f'<td data-l="Stav">{state}</td><td>{" ".join(btn)}</td></tr>')
+        (rows if r["status"] == "open" else done).append(row)
+    head = '<tr><th>Kedy</th><th>Typ</th><th>Nahlásil</th><th>Koho / čo</th><th>Dôvod</th><th>Stav</th><th></th></tr>'
+    body = (f'<div class="tbl"><table>{head}{"".join(rows)}</table></div>' if rows else '<p class="mut">Žiadne nevybavené nahlásenia.</p>')
+    folded = (f'<details><summary>Vybavené ({len(done)})</summary><div class="tbl"><table>{head}{"".join(done)}</table></div></details>'
+              if done else "")
+    return (f'<section id="reports"><h2>Nahlásenia{f" ({open_n} nevybavené)" if open_n else ""}</h2>{body}{folded}'
+            '<p class="mut">Nahlásené správy, miestnosti a používatelia z aplikácií. Obsah šifrovaných správ správca nevidí, '
+            'len dôvod, ktorý nahlasovateľ sám napísal. Zmazanie správy pošle do miestnosti označenie „odstránené správcom“; '
+            'zmazanie miestnosti ju odstráni aj s históriou. Každá akcia sa zapíše do auditného logu.</p></section>')
+
+
+async def report_action(req: Request, kind: str, rid: int, what: str):
+    s, r = await require_admin(req)
+    if r:
+        return r
+    if await check_csrf(req, s) is None:
+        return PlainTextResponse("Neplatný CSRF token.", status_code=403)
+    if kind not in KIND_LABEL:
+        return PlainTextResponse("Neznámy typ.", status_code=404)
+    rep = await find_report(kind, rid)
+    if not rep:
+        return PlainTextResponse("Nahlásenie neexistuje.", status_code=404)
+    ip = client_ip(req)
+    detail = {"report": f"{kind}/{rid}", "reporter": rep["reporter"], "target": rep.get("target"),
+              "room_id": rep.get("room_id"), "event_id": rep.get("event_id")}
+    if what == "resolve":
+        set_report_state(kind, rid, "done", s["user"])
+        audit(s["user"], ip, "report_resolve", **detail)
+    elif what == "reopen":
+        set_report_state(kind, rid, "open", s["user"])
+        audit(s["user"], ip, "report_reopen", **detail)
+    elif what == "block":
+        name = local_name(rep.get("target"))
+        if not name or name in PROTECTED or name in SERVICE_USERS or name == s["user"]:
+            audit(s["user"], ip, "report_block_refused", **detail)
+            return PlainTextResponse("Tento účet sa nedá zablokovať.", status_code=403)
+        u = (await mas("GET", f"/users/by-username/{urllib.parse.quote(name)}"))["data"]
+        if u["attributes"].get("admin"):
+            audit(s["user"], ip, "report_block_refused", **detail)
+            return PlainTextResponse("Admin účet sa nedá zablokovať.", status_code=403)
+        await mas("POST", f"/users/{u['id']}/lock")
+        try:
+            await synapse_admin("PUT", f"/_synapse/admin/v2/users/@{name}:{SERVER_NAME}", json={"locked": True})
+        except Exception as e:  # noqa: BLE001
+            audit(s["user"], ip, "synapse_lock_failed", target=name, error=str(e)[:200])
+        set_report_state(kind, rid, "done", s["user"], f"zablokovaný {name}")
+        audit(s["user"], ip, "report_block", **detail)
+    elif what == "delete":
+        if kind == "event":
+            sender, room, ts = rep["target"], rep["room_id"], None
+            async with (await syn_pool()).acquire() as c:
+                row = await c.fetchrow("select origin_server_ts from events where event_id = $1", rep["event_id"])
+                ts = row["origin_server_ts"] if row else None
+                same = await c.fetchval(
+                    "select count(*) from events where sender = $1 and room_id = $2 and origin_server_ts = $3 "
+                    "and type in ('m.room.message', 'm.room.encrypted')", sender, room, ts) if ts else 0
+            if not sender or not ts or not local_name(sender):
+                return PlainTextResponse("Správa už neexistuje alebo nie je z tohto servera.", status_code=409)
+            if same != 1:
+                audit(s["user"], ip, "report_delete_ambiguous", **detail)
+                return PlainTextResponse("Správu sa nepodarilo jednoznačne určiť; nič sa nezmazalo.", status_code=409)
+            # Synapse admin API: redakcia udalostí odosielateľa v miestnosti v presnom čase (limit 1 = len táto správa)
+            j = await synapse_admin("POST", f"/_synapse/admin/v1/user/{urllib.parse.quote(sender)}/redact",
+                                    json={"rooms": [room], "before_ts": ts, "after_ts": ts, "limit": 1, "reason": REDACT_REASON})
+            status = await wait_redaction(j.get("redact_id"))
+            act = "správa zmazaná" if status == "complete" else f"zmazanie správy: {status}"
+        elif kind == "room":
+            await synapse_admin("DELETE", f"/_synapse/admin/v2/rooms/{urllib.parse.quote(rep['room_id'])}",
+                                json={"block": False, "purge": True, "message": REDACT_REASON})
+            act = "miestnosť zmazaná"
+        else:
+            name = local_name(rep["target"])
+            if not name or name in PROTECTED or name in SERVICE_USERS:
+                return PlainTextResponse("Správy tohto účtu sa nedajú takto zmazať.", status_code=403)
+            j = await synapse_admin("POST", f"/_synapse/admin/v1/user/{urllib.parse.quote(rep['target'])}/redact",
+                                    json={"rooms": [], "reason": REDACT_REASON})
+            status = await wait_redaction(j.get("redact_id"))
+            act = f"správy {name} zmazané" if status == "complete" else f"zmazanie správ {name}: {status}"
+        set_report_state(kind, rid, "done", s["user"], act)
+        audit(s["user"], ip, f"report_delete_{kind}", result=act, **detail)
+    else:
+        return PlainTextResponse("Neznáma akcia.", status_code=404)
+    return RedirectResponse("/admin#reports", status_code=303)
+
+
+async def wait_redaction(redact_id: str | None, seconds: int = 20) -> str:
+    if not redact_id:
+        return "neznámy stav"
+    for _ in range(seconds * 2):
+        j = await synapse_admin("GET", f"/_synapse/admin/v1/user/redact_status/{urllib.parse.quote(redact_id)}")
+        if j.get("status") == "complete":
+            return "complete" if not j.get("failed_redactions") else "čiastočne zlyhalo"
+        if j.get("status") == "failed":
+            return "zlyhalo"
+        await asyncio.sleep(0.5)
+    return "beží na pozadí"
+
+
+@app.post("/admin/reports/{kind}/{rid}/{what}")
+async def report_post(req: Request, kind: str, rid: int, what: str):
+    if what not in ("resolve", "reopen", "block", "delete"):
+        return PlainTextResponse("Neznáma akcia.", status_code=404)
+    return await report_action(req, kind, rid, what)
 
 
 ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"

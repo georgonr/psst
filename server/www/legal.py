@@ -61,7 +61,7 @@ PAGES = {
 <li><strong>Obsah:</strong> správy a súbory, ktoré pošlete (v šifrovaných miestnostiach len v zašifrovanej podobe). Účel: doručenie ostatným účastníkom.</li>
 <li><strong>Technické údaje:</strong> IP adresa, typ zariadenia a čas posledného pripojenia k zariadeniu, technické záznamy servera. Účel: prevádzka a bezpečnosť služby, ochrana pred zneužitím.</li>
 <li><strong>Hovory:</strong> server hovorov (LiveKit) vidí, kto a kedy sa pripojil k hovoru a z akej IP adresy.</li>
-<li><strong>Nahlásenia:</strong> ak nahlásite správu, miestnosť alebo používateľa, uložíme kto, čo, kedy a dôvod, ktorý napíšete. Správca nevidí obsah šifrovaných správ, len to, čo do nahlásenia sami napíšete.</li>
+<li><strong>Nahlásenia:</strong> ak nahlásite správu alebo miestnosť (alebo používateľa), uložíme kto, čo, kedy a dôvod, ktorý napíšete. Správca nevidí obsah šifrovaných správ, len to, čo do nahlásenia sami napíšete.</li>
 <li><strong>Upozornenia (push):</strong> identifikátor zariadenia na doručovanie upozornení (push token), pozri bod 5.</li>
 </ul>
 <p>Nespracúvame kontakty z telefónu, polohu, reklamný identifikátor ani údaje o používaní aplikácie.</p>
@@ -133,7 +133,7 @@ PAGES = {
 <li><strong>Content:</strong> messages and files you send (in encrypted rooms only in encrypted form). Purpose: delivering them to the other participants.</li>
 <li><strong>Technical data:</strong> IP address, device type and last-seen time per device, server logs. Purpose: operating and securing the service, preventing abuse.</li>
 <li><strong>Calls:</strong> the call server (LiveKit) sees who joined a call, when, and from which IP address.</li>
-<li><strong>Reports:</strong> if you report a message, room or user, we store who reported what, when, and the reason you write. The administrator cannot see the content of encrypted messages, only what you write in the report.</li>
+<li><strong>Reports:</strong> if you report a message or room (or a user), we store who reported what, when, and the reason you write. The administrator cannot see the content of encrypted messages, only what you write in the report.</li>
 <li><strong>Push notifications:</strong> a device identifier for delivering notifications (push token), see section 5.</li>
 </ul>
 <p>We do not process your phone contacts, location, advertising ID or app usage data.</p>
@@ -199,7 +199,7 @@ PAGES = {
 </ul>
 
 <h2>4. Nahlásenie a blokovanie</h2>
-<p>Každú správu, miestnosť aj používateľa môžete v aplikácii <strong>nahlásiť</strong> prevádzkovateľovi a každého používateľa <strong>zablokovať</strong>, takže jeho správy už neuvidíte. Môžete tiež písať na {MAIL}. Nahlásenia preveríme spravidla <strong>do 24 hodín</strong>. Keďže obsah šifrovaných miestností je šifrovaný, prevádzkovateľ ho bežne nevidí a koná podľa nahlásení a metadát.</p>
+<p>Každú správu aj miestnosť môžete v aplikácii <strong>nahlásiť</strong> prevádzkovateľovi a každého používateľa <strong>zablokovať</strong>, takže jeho správy už neuvidíte. Používateľa nahlásite nahlásením jeho správy alebo e-mailom na {MAIL}. Nahlásenia preveríme spravidla <strong>do 24 hodín</strong>. Keďže obsah šifrovaných miestností je šifrovaný, prevádzkovateľ ho bežne nevidí a koná podľa nahlásení a metadát.</p>
 
 <h2>5. Zásahy prevádzkovateľa</h2>
 <p>Prevádzkovateľ môže nahlásený obsah odstrániť a zablokovať alebo zrušiť účet, ktorý porušuje tieto podmienky alebo ohrozuje službu, a odstrániť miestnosť. Pri závažnej trestnej činnosti môže informovať orgány činné v trestnom konaní.</p>
@@ -247,7 +247,7 @@ PAGES = {
 </ul>
 
 <h2>4. Reporting and blocking</h2>
-<p>In the app you can <strong>report</strong> any message, room or user to the operator and <strong>block</strong> any user so you no longer see their messages. You can also write to {MAIL}. We review reports, as a rule, <strong>within 24 hours</strong>. Because the content of encrypted rooms is encrypted, the operator normally cannot see it and acts on reports and metadata.</p>
+<p>In the app you can <strong>report</strong> any message or room to the operator and <strong>block</strong> any user so you no longer see their messages. To report a user, report one of their messages or e-mail {MAIL}. We review reports, as a rule, <strong>within 24 hours</strong>. Because the content of encrypted rooms is encrypted, the operator normally cannot see it and acts on reports and metadata.</p>
 
 <h2>5. Action by the operator</h2>
 <p>The operator may remove reported content, suspend or close accounts that break these terms or endanger the service, and remove rooms. In cases of serious crime the operator may inform law enforcement.</p>
