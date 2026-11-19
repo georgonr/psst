@@ -20,6 +20,10 @@ on:
         description: "review,shots"
         default: "review,shots"
         required: true
+      devices:
+        description: "IPHONE69 IPHONE63 IPAD13"
+        default: "IPHONE69 IPHONE63 IPAD13"
+        required: true
 
 permissions:
   contents: read
@@ -137,7 +141,7 @@ jobs:
         working-directory: ios
         run: |
           eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['shots'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_RECOVERY_KEY=\"%s\"' % (d['user'], d['password'], d['recovery']))")"
-          for dev in IPHONE69 IPHONE63 IPAD13; do
+          for dev in ${{ inputs.devices }}; do
             udid="${!dev}"; [ -n "$udid" ] || { echo "no simulator for $dev"; continue; }
             xcrun simctl shutdown all >/dev/null 2>&1 || true
             xcrun simctl erase "$udid"
