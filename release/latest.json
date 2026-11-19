@@ -1,45 +1,45 @@
 {
  "web": {
-  "build": 30,
+  "build": 31,
   "date": "20261119",
-  "note": "presun na psst.pro: server chat.psst.pro, ID @meno:psst.pro, web app.psst.pro; relácia starého servera sa po aktualizácii zmaže a ukáže sa prihlásenie (D85)",
+  "note": "macOS podpísaný Developer ID (GexPay, SE) a notarizovaný Apple — Gatekeeper bez varovania (D86)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261119-b30.tar.gz",
-    "sha256": "377a39eea4017746bc99742451e3d9c50343a3316e84f3508ec1c1422b8cc9c0"
+    "name": "psst-web-20261119-b31.tar.gz",
+    "sha256": "2e5a304a36c9a33c63fc9231918fbe450e6b5b4dd1552cb619dce734fe438fb4"
    }
   ]
  },
  "macos": {
-  "build": 30,
+  "build": 31,
   "date": "20261119",
-  "note": "presun na psst.pro: server chat.psst.pro, ID @meno:psst.pro, web app.psst.pro; relácia starého servera sa po aktualizácii zmaže a ukáže sa prihlásenie (D85)",
+  "note": "macOS podpísaný Developer ID (GexPay, SE) a notarizovaný Apple — Gatekeeper bez varovania (D86)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261119-b30.dmg",
-    "sha256": "4cdcc4e975d05c0b99625420a85db0c8eed275bc214815541034ccb9adb33390"
+    "name": "psst-macos-20261119-b31.dmg",
+    "sha256": "1760b1ba0b0d0632ea4218b934f84834896ecbac782851040fe2f9adbdaf2d20"
    },
    {
-    "name": "psst-macos-20261119-b30.zip",
-    "sha256": "9565af62a2e2f9e92b457c735c6179d6c9d2e57cd0c339f8a5aed42bc354fdd8"
+    "name": "psst-macos-20261119-b31.zip",
+    "sha256": "740078cec99ebad1173f8a72b79b89026a5a50f13bdf5e482953521d069b8b92"
    }
   ]
  },
  "windows": {
-  "build": 30,
+  "build": 31,
   "date": "20261119",
-  "note": "presun na psst.pro: server chat.psst.pro, ID @meno:psst.pro, web app.psst.pro; relácia starého servera sa po aktualizácii zmaže a ukáže sa prihlásenie (D85)",
+  "note": "macOS podpísaný Developer ID (GexPay, SE) a notarizovaný Apple — Gatekeeper bez varovania (D86)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261119-b30-setup.exe",
-    "sha256": "c9298bbfdc39bc7075f3edf12ee372c3de56b8b60fab14becdcb2601dbd062ea"
+    "name": "psst-windows-20261119-b31-setup.exe",
+    "sha256": "275165e92d3d23cd2b24f53203d75cf32e86e11acc0633cc08c950063eda582a"
    },
    {
-    "name": "psst-windows-20261119-b30.msi",
-    "sha256": "43cda5c0dab938c95b367b58078d7a3cd763a7b477ce910cfcb48b42e8339880"
+    "name": "psst-windows-20261119-b31.msi",
+    "sha256": "98817fbaf300976f7d8d30416d8ab492113cee6d99db3cca80634ac01dde21db"
    }
   ]
  },
@@ -64,6 +64,18 @@
    {
     "name": "psst-android-20261119-b47.aab",
     "sha256": "1b4bf5b89a88968686c7467b557ff0112a263ff4e03aff3eb8636daae5b3f405"
+   }
+  ]
+ },
+ "ios": {
+  "build": 1,
+  "date": "20261119",
+  "note": "psst.pro: server chat.psst.pro, ID @meno:psst.pro (D85); prvý build v TestFlighte",
+  "dir": "ios",
+  "files": [
+   {
+    "name": "psst-ios-20261119-b1.ipa",
+    "sha256": "6de1991cfb05d3a49a23854ea44b61574408fbb7e80262adee70b2f67df5167c"
    }
   ]
  }
