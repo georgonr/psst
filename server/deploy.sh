@@ -5,8 +5,8 @@
 #
 #   Voľby:
 #     --apple-team-id <ID>  Apple Developer Team ID (iOS push cez Sygnal, universal links)
-#     --contact "<text>"    kontakt prevádzkovateľa na stránkach Podmienky/Súkromie (napr. e-mail)
-#     --hosting "<text>"    kde je server (napr. "Hetzner Online GmbH, Nemecko (EÚ)")
+#     --contact/--hosting   už sa nepoužívajú (D87: prevádzkovateľ a kontakt sú v server/www/legal.py); prijmú sa kvôli
+#                           starým príkazom a ignorujú sa
 #     --staging             certifikát z Let's Encrypt staging (skúška, nie dôveryhodný)
 #     --skip-harden         nemeniť systém (SSH, UFW, fail2ban, aktualizácie, cron)
 #     --skip-preflight      preskočiť pre-flight kontrolu (neodporúča sa)
@@ -171,8 +171,6 @@ for k in $ENV_KEYS; do grep -q "^${k}=" .env || printf '%s=%s\n' "$k" "$(default
 # hodnoty z príkazového riadka majú prednosť (zmena IP/e-mailu/Team ID pri opakovanom nasadení)
 if [ "$LOCAL_TEST" = 0 ]; then set_env SERVER_IP "$SERVER_IP"; set_env LIVEKIT_NODE_IP "$SERVER_IP"; set_env LETSENCRYPT_EMAIL "$LE_EMAIL"; fi
 [ -n "$TEAM_ID" ] && set_env APPLE_TEAM_ID "$TEAM_ID"
-[ -n "$CONTACT" ] && set_env OPERATOR_CONTACT "\"$CONTACT\""
-[ -n "$HOSTING" ] && set_env OPERATOR_HOSTING "\"$HOSTING\""
 # skripty (members/backup/healthcheck) musia používať rovnaké compose súbory
 if [ "$LOCAL_TEST" = 1 ]; then set_env COMPOSE_FILE "compose.yml:compose.test.yml"; else set_env COMPOSE_FILE "compose.yml"; fi
 chmod 600 .env
@@ -206,7 +204,7 @@ umask 022
 
 # ----------------------------------------------------------------- 3. render
 mkdir -p data/config/coturn data/config/synapse data/config/livekit data/config/nginx data/config/nginx-main \
-         data/config/element-call data/config/app-default/legal data/config/mas \
+         data/config/element-call data/config/mas \
          data/config/sygnal data/synapse data/postgres data/certbot/conf data/certbot/www \
 
 chmod 700 data
@@ -295,16 +293,9 @@ rm -f data/config/nginx/psst.conf.bak
 render templates/element-call/config.json       data/config/element-call/config.json
 render templates/app/config.json                data/config/app-default/config.json
 render templates/app/index.html                 data/config/app-default/index.html
-for f in templates/app/legal/*.html; do
-  out="data/config/app-default/legal/$(basename "$f")"
-  render "$f" "$out"
-  # kontakt a hosting prevádzkovateľa (--contact / --hosting); inak zostanú viditeľné zástupné texty
-  esc() { printf '%s' "$1" | sed -e 's/[&|\\]/\\&/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
-  [ -n "${OPERATOR_CONTACT:-}" ] && sed -i.bak "s|\[DOPLNIT_KONTAKT\]|$(esc "$OPERATOR_CONTACT")|g" "$out"
-  [ -n "${OPERATOR_HOSTING:-}" ] && sed -i.bak "s|\[DOPLNIT_POSKYTOVATEL_A_KRAJINA_SERVERA\]|$(esc "$OPERATOR_HOSTING")|g" "$out"
-  rm -f "$out.bak"
-done
-grep -q 'DOPLNIT_KONTAKT' data/config/app-default/legal/terms.html && warn "Podmienky/Súkromie: chýba kontakt — spustite znova s --contact \"vas@email\""
+# Podmienky/Súkromie/Zmazanie účtu sú od D87 na úvodnej stránke (WEB_DOMAIN: /terms, /privacy, /delete-account,
+# server/www/legal.py — prevádzkovateľ a kontakt sú tam). Staré adresy na APP_DOMAIN presmeruje nginx (psst.conf).
+rm -rf data/config/app-default/legal
 mkdir -p data/config/app-default/.well-known
 render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
 render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
@@ -313,7 +304,7 @@ render templates/app/well-known/apple-app-site-association data/config/app-defau
 # Je v spoločnom certifikáte "psst"; vhost nesie aj .well-known/matrix pre server_name.
 if [ -n "${WEB_DOMAIN:-}" ]; then
   SITE="https://${WEB_DOMAIN}" DOWNLOAD="https://${APP_DOMAIN}/download/" LOGIN="https://${APP_DOMAIN}/" python3 www/build.py >/dev/null
-  rsync -a --delete --chmod=D755,F644 --exclude build.py --exclude __pycache__ www/ data/config/app-default/www/
+  rsync -a --delete --chmod=D755,F644 --exclude build.py --exclude legal.py --exclude __pycache__ www/ data/config/app-default/www/
   render templates/nginx/www.conf data/config/nginx/www.conf
 else
   rm -rf data/config/app-default/www data/config/nginx/www.conf
@@ -508,6 +499,17 @@ if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
   else
     make_selfsigned; compose exec -T nginx nginx -s reload || true
     die "Let's Encrypt zlyhal (DNS záznamy? port 80 v cloud firewalle?) — opravte a spustite ./deploy.sh znova"
+  fi
+fi
+# kontaktný e-mail ACME účtu (D87): pri existujúcom certifikáte sa e-mail len doplní/zmení na účte, certifikát ostáva
+if [ "$LETSENCRYPT" = 1 ] && [ ! -f "$CERT_DIR/.psst-dummy" ] && [ "${LETSENCRYPT_EMAIL:-none}" != none ] \
+   && [ "$(cat data/certbot/conf/.psst-account-email 2>/dev/null)" != "$LETSENCRYPT_EMAIL" ]; then
+  if compose run --rm --no-deps -T --entrypoint certbot certbot update_account --email "$LETSENCRYPT_EMAIL" \
+       --no-eff-email --agree-tos --non-interactive >/dev/null 2>&1; then
+    printf '%s' "$LETSENCRYPT_EMAIL" > data/certbot/conf/.psst-account-email
+    log "Let's Encrypt: kontaktný e-mail účtu nastavený na $LETSENCRYPT_EMAIL"
+  else
+    warn "Let's Encrypt: kontaktný e-mail sa nepodarilo nastaviť (certifikát platí ďalej)"
   fi
 fi
 

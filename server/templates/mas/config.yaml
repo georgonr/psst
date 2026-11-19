@@ -95,8 +95,8 @@ policy:
 
 branding:
   service_name: psst
-  policy_uri: https://__APP_DOMAIN__/privacy.html
-  tos_uri: https://__APP_DOMAIN__/terms.html
+  policy_uri: https://__SERVER_NAME__/privacy
+  tos_uri: https://__SERVER_NAME__/terms
 
 telemetry:
   tracing:

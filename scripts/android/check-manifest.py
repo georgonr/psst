@@ -13,6 +13,9 @@ It also checks that the application label is the literal "psst": an @string labe
 APK: `aapt2 dump xmltree` (build-tools from $ANDROID_HOME / $ANDROID_SDK_ROOT or $AAPT2).
 AAB: the protobuf manifests (base/manifest/AndroidManifest.xml and every feature module); strings in protobuf are
 plain UTF-8, so a byte search is exact for these names.
+D87 adds the permissions removed for Google Play (install packages, battery-optimisation exemption, location, AD_ID):
+the check fails if any of them comes back, e.g. through a library update. With --list it also prints every
+uses-permission of an APK (for play-listing/FACTS.md).
 Exit code 0 = clean, 1 = forbidden entry found (or label wrong), 2 = usage/tool error.
 """
 import glob
@@ -30,6 +33,14 @@ FORBIDDEN = {
     "android.service.notification.NotificationListenerService": "notification listener service",
     "android.permission.BIND_ACCESSIBILITY_SERVICE": "accessibility service",
     "android.accessibilityservice.AccessibilityService": "accessibility service",
+    # D87: removed for Google Play (restricted permissions psst does not need) — must never come back
+    "android.permission.REQUEST_INSTALL_PACKAGES": "permission REQUEST_INSTALL_PACKAGES (Play: only for package installers)",
+    "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS": "permission REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (Play: not for FCM chat apps)",
+    "android.permission.ACCESS_FINE_LOCATION": "location permission ACCESS_FINE_LOCATION (feature removed)",
+    "android.permission.ACCESS_COARSE_LOCATION": "location permission ACCESS_COARSE_LOCATION (feature removed)",
+    "android.permission.ACCESS_BACKGROUND_LOCATION": "location permission ACCESS_BACKGROUND_LOCATION",
+    "android.permission.FOREGROUND_SERVICE_LOCATION": "foreground service type location",
+    "com.google.android.gms.permission.AD_ID": "advertising ID permission AD_ID (Play form says: no advertising ID)",
 }
 LABEL = "psst"
 
@@ -60,6 +71,11 @@ def check_apk(path: str) -> list[str]:
     return problems
 
 
+def permissions(path: str) -> list[str]:
+    out = subprocess.run([aapt2(), "dump", "permissions", path], check=True, capture_output=True, text=True).stdout
+    return sorted(set(re.findall(r"uses-permission(?:-sdk-23)?: name='([^']+)'", out)))
+
+
 def check_aab(path: str) -> list[str]:
     problems = []
     with zipfile.ZipFile(path) as z:
@@ -78,8 +94,10 @@ def main() -> int:
     if len(sys.argv) < 2:
         print(__doc__)
         return 2
+    args = [a for a in sys.argv[1:] if a != "--list"]
+    listing = "--list" in sys.argv[1:]
     bad = 0
-    for path in sys.argv[1:]:
+    for path in args:
         if path.endswith(".apk"):
             problems = check_apk(path)
         elif path.endswith(".aab"):
@@ -92,11 +110,14 @@ def main() -> int:
             for p in problems:
                 print(f"FAIL {os.path.basename(path)}: {p}")
         else:
-            print(f"OK   {os.path.basename(path)}: no SMS / notification listener / accessibility; label \"{LABEL}\""
-                  if path.endswith(".apk") else
-                  f"OK   {os.path.basename(path)}: no SMS / notification listener / accessibility")
+            print(f"OK   {os.path.basename(path)}: no SMS / notification listener / accessibility / Play-restricted "
+                  f"permissions (D87)" + (f"; label \"{LABEL}\"" if path.endswith(".apk") else ""))
+        if listing and path.endswith(".apk"):
+            for perm in permissions(path):
+                print(f"     uses-permission {perm}")
     if bad:
-        print("Google Play Protect blocks sideloaded apps with these entries (DECISIONS.md D83). Remove them before release.")
+        print("Forbidden manifest entries: Play Protect blocks SMS / listener / accessibility on sideload (D83); the rest "
+              "were removed for Google Play (D87). Remove them before release.")
     return bad
 
 

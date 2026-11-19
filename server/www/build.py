@@ -12,6 +12,8 @@ Minimálna verzia: logo, nadpis, jedna veta, dve tlačidlá, platformy, prepína
 import html
 import os
 
+from legal import OPERATOR, PAGES
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 SITE = os.environ.get("SITE", "https://psst.pro")
 DOWNLOAD = os.environ.get("DOWNLOAD", "https://app.psst.pro/download/")
@@ -28,6 +30,9 @@ T = {
         "login": "Prihlásiť sa",
         "platforms": "Android · Windows · macOS · web",
         "platforms_label": "Platformy",
+        "legal_label": "Právne informácie",
+        "privacy": "Súkromie",
+        "terms": "Podmienky",
     },
     "en": {
         "lang": "en",
@@ -39,6 +44,9 @@ T = {
         "login": "Sign in",
         "platforms": "Android · Windows · macOS · web",
         "platforms_label": "Platforms",
+        "legal_label": "Legal",
+        "privacy": "Privacy",
+        "terms": "Terms",
     },
 }
 
@@ -89,7 +97,7 @@ def page(t):
 <div class="cta"><a class="btn primary" href="{DOWNLOAD}">{e(t["dl"])}</a><a class="btn ghost" href="{LOGIN}">{e(t["login"])}</a></div>
 <p class="plat" aria-label="{e(t["platforms_label"])}">{e(t["platforms"])}</p>
 </main>
-<footer>Powered by GT</footer>
+<footer>Powered by GT<nav class="legal-links" aria-label="{e(t["legal_label"])}"><a href="/privacy">{e(t["privacy"])}</a><a href="/terms">{e(t["terms"])}</a></nav></footer>
 </body>
 </html>
 '''
@@ -126,6 +134,53 @@ NOT_FOUND = (ROOT.replace('<title>psst</title>', '<title>psst – 404</title>')
              .replace('__MSG__', '<p class="sub"><span lang="sk">Táto stránka neexistuje.</span> <span lang="en">This page does not exist.</span></p>'))
 ROOT = ROOT.replace('__MSG__\n', '')
 
+LEGAL_NAV = [("privacy", "Súkromie", "Privacy"), ("terms", "Podmienky", "Terms"),
+             ("delete-account", "Zmazanie účtu", "Delete account")]
+
+
+def legal_page(slug):
+    """Bilingual legal page (SK + EN on one URL, so a single link works in store forms and apps)."""
+    e = html.escape
+    p = PAGES[slug]
+    sk, en = p["sk"], p["en"]
+    nav = "".join(f'<a href="/{s}"{" aria-current=\"page\"" if s == slug else ""}>'
+                  f'<span lang="sk">{e(a)}</span> / <span lang="en">{e(b)}</span></a>' for s, a, b in LEGAL_NAV)
+    title = f"{sk['title']} / {en['title']} · psst"
+    return f'''<!doctype html>
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{e(title)}</title>
+<meta name="description" content="{e(en['desc'])} / {e(sk['desc'])}">
+<meta name="theme-color" content="#0b0f17">
+<meta name="color-scheme" content="dark">
+<link rel="canonical" href="{SITE}/{slug}">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/img/icon-32.png" sizes="32x32" type="image/png">
+<link rel="stylesheet" href="/assets/site.css">
+</head>
+<body class="doc">
+<header class="doc-head"><a class="doc-logo" href="/"><img src="/assets/logo.svg" alt="" width="32" height="32">psst</a>
+<nav class="doc-lang" aria-label="Jazyk / Language"><a href="#sk" hreflang="sk" lang="sk">Slovensky</a><a href="#en" hreflang="en" lang="en">English</a></nav></header>
+<nav class="doc-nav" aria-label="Právne informácie / Legal">{nav}</nav>
+<main>
+<section id="sk" lang="sk">
+<h1>{e(sk['title'])}</h1>
+{sk['body'].strip()}
+</section>
+<hr>
+<section id="en" lang="en">
+<h1>{e(en['title'])}</h1>
+{en['body'].strip()}
+</section>
+</main>
+<footer class="doc-foot">{e(OPERATOR['name'])} · <a href="mailto:{OPERATOR['email']}">{OPERATOR['email']}</a> · Powered by GT</footer>
+</body>
+</html>
+'''
+
+
 if __name__ == "__main__":
     for code, t in T.items():
         os.makedirs(os.path.join(HERE, code), exist_ok=True)
@@ -135,4 +190,7 @@ if __name__ == "__main__":
         f.write(ROOT)
     with open(os.path.join(HERE, "404.html"), "w", encoding="utf-8") as f:
         f.write(NOT_FOUND)
-    print("ok: index.html, 404.html, sk/index.html, en/index.html")
+    for slug in PAGES:
+        with open(os.path.join(HERE, f"{slug}.html"), "w", encoding="utf-8") as f:
+            f.write(legal_page(slug))
+    print("ok: index.html, 404.html, sk/index.html, en/index.html,", ", ".join(f"{s}.html" for s in PAGES))

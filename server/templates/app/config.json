@@ -28,7 +28,37 @@
             {
                 "text": "Download apps",
                 "url": "https://__APP_DOMAIN__/download/"
+            },
+            {
+                "text": "Privacy / Súkromie",
+                "url": "https://__SERVER_NAME__/privacy"
+            },
+            {
+                "text": "Terms / Podmienky",
+                "url": "https://__SERVER_NAME__/terms"
+            },
+            {
+                "text": "psst@psst.pro",
+                "url": "mailto:psst@psst.pro"
             }
         ]
-    }
+    },
+    "terms_and_conditions_links": [
+        {
+            "text": "Privacy Policy / Zásady ochrany súkromia",
+            "url": "https://__SERVER_NAME__/privacy"
+        },
+        {
+            "text": "Terms of Use / Podmienky používania",
+            "url": "https://__SERVER_NAME__/terms"
+        },
+        {
+            "text": "Delete account / Zmazanie účtu",
+            "url": "https://__SERVER_NAME__/delete-account"
+        },
+        {
+            "text": "Contact / Kontakt: psst@psst.pro",
+            "url": "mailto:psst@psst.pro"
+        }
+    ]
 }

@@ -28,6 +28,7 @@ ROOT = os.path.abspath(ROOT)
 FILES = os.path.join(ROOT, "files")
 STATE = os.path.join(ROOT, "latest.json")
 APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.psst.pro")
+WEB_DOMAIN = os.environ.get("WEB_DOMAIN") or os.environ.get("SERVER_NAME") or "psst.pro"   # /privacy, /terms (D87)
 PLATFORMS = {
     "android": {"name": "Android", "ext": "apk", "pattern": r"psst-android-(\d{8})-b(\d+)-arm64\.apk"},
     "windows": {"name": "Windows", "ext": "msi", "pattern": r"psst-windows-(\d{8})-b(\d+)\.msi"},
@@ -173,7 +174,8 @@ správcu o novú pozvánku a vytvorte si účet (Create account). Stará verzia 
 psst moved to a new server and old accounts and messages were not carried over: ask the admin for a new invite and
 create an account. The old version does not learn about this update by itself.</p>
 <footer>Updated {updated} · <a href="latest.json">latest.json</a> ·
-<a href="https://{APP_DOMAIN}/privacy.html">Privacy</a> · <a href="https://{APP_DOMAIN}/terms.html">Terms</a> ·
+<a href="https://{WEB_DOMAIN}/privacy">Privacy Policy</a> · <a href="https://{WEB_DOMAIN}/terms">Terms</a> ·
+<a href="https://{WEB_DOMAIN}/delete-account">Delete account</a> · <a href="mailto:psst@psst.pro">psst@psst.pro</a> ·
 <a href="https://github.com/georgonr/psst">Source code (AGPL-3.0)</a></footer>
 </div></body></html>"""
 

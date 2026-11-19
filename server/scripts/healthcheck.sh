@@ -36,8 +36,13 @@ check "Synapse → MAS (auth_metadata)"               "https://$MATRIX_DOMAIN/_m
 check "MAS OIDC discovery (registrácia povolená)"   "https://$AUTH_DOMAIN${AUTH_PREFIX:-}/.well-known/openid-configuration" '"create"'
 check "MAS compat login"                            "https://$MATRIX_DOMAIN/_matrix/client/v3/login" "m.login.sso"
 check "PSST web"                                    "https://$APP_DOMAIN/" "<html"
-check "Podmienky / Ochrana súkromia"                "https://$APP_DOMAIN/terms.html" "psst"
-get -o /dev/null -w '%{http_code}' "https://$APP_DOMAIN/privacy.html" | grep -q 200 && ok "privacy.html" || bad "privacy.html"
+# právne stránky na server_name (D87); staré adresy na APP_DOMAIN presmerujú
+LEGAL="${WEB_DOMAIN:-$SERVER_NAME}"
+check "Zásady ochrany súkromia"                     "https://$LEGAL/privacy" "psst@psst.pro"
+check "Podmienky používania"                        "https://$LEGAL/terms" "psst@psst.pro"
+check "Zmazanie účtu"                               "https://$LEGAL/delete-account" "psst@psst.pro"
+get -o /dev/null -w '%{http_code} %{redirect_url}' "https://$APP_DOMAIN/privacy.html" | grep -q "^301 https://$LEGAL/privacy" \
+  && ok "app…/privacy.html presmeruje na $LEGAL/privacy" || bad "app…/privacy.html nepresmeruje"
 # stránka na stiahnutie (D59)
 check "stránka na stiahnutie /download" "https://$APP_DOMAIN/download/" "Download psst"
 # administrácia: bez prihlásenia presmeruje na MAS (D56)

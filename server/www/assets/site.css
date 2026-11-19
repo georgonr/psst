@@ -44,3 +44,26 @@ footer{color:var(--mut);font-size:13px;opacity:.8;padding:8px 0}
   .logo{width:56px;height:56px;margin-bottom:22px}
 }
 @media (max-height:620px){.logo{margin-bottom:16px}.lead{margin-bottom:22px}.plat{margin-top:20px}}
+
+/* pätička úvodnej stránky: dva malé odkazy pod „Powered by GT“ (D87) */
+.legal-links{display:flex;justify-content:center;gap:14px;margin-top:4px}
+.legal-links a{color:var(--mut);font-size:12px;text-decoration:none}
+.legal-links a:hover{color:var(--fg);text-decoration:underline}
+
+/* právne stránky /privacy, /terms, /delete-account (D87) */
+body.doc{max-width:760px;margin:0 auto;padding:16px 16px 48px;font-size:16px}
+.doc-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:4px 0 8px}
+.doc-logo{display:flex;align-items:center;gap:10px;color:var(--fg);text-decoration:none;font-weight:700;font-size:20px}
+.doc-lang,.doc-nav{display:flex;flex-wrap:wrap;gap:6px 16px}
+.doc-lang a,.doc-nav a{color:var(--mut);font-size:14px;text-decoration:none}
+.doc-nav{border-bottom:1px solid var(--bd);padding:4px 0 12px;margin-bottom:8px}
+.doc-nav a[aria-current="page"]{color:var(--fg);font-weight:600}
+.doc a{color:var(--acc2)}
+.doc h1{font-size:clamp(26px,4.5vw,34px);line-height:1.2;letter-spacing:-.02em;margin:28px 0 6px}
+.doc h2{font-size:19px;margin:30px 0 8px}
+.doc ul,.doc ol{padding-left:22px}.doc li{margin:5px 0}
+.doc code{background:var(--card);border:1px solid var(--bd);padding:1px 5px;border-radius:5px;font-size:.92em}
+.doc .meta{color:var(--mut);font-size:14px;margin:0 0 18px}
+.doc .callout{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--acc);border-radius:10px;padding:14px 16px}
+.doc hr{border:0;border-top:1px solid var(--bd);margin:44px 0 0}
+.doc-foot{color:var(--mut);font-size:13px;border-top:1px solid var(--bd);margin-top:40px;padding-top:14px}
