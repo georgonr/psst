@@ -1,69 +1,69 @@
 {
  "web": {
-  "build": 32,
+  "build": 33,
   "date": "20261119",
-  "note": "Odkazy na Súkromie, Podmienky a Zmazanie účtu na psst.pro, kontakt psst@psst.pro (D87)",
+  "note": "Rovnaký obsah ako b32 (build spustený zmenou testovacieho skriptu); odkazy na psst.pro, kontakt psst@psst.pro (D87)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261119-b32.tar.gz",
-    "sha256": "8091cb56cbe80f015c4fd93e159090320b21021b1929b71a64b129c2346aa020"
+    "name": "psst-web-20261119-b33.tar.gz",
+    "sha256": "3e0074d6ffbf494a4148aff676f9ed45c52af9534a9879ee05ad2ef243ac2ab3"
    }
   ]
  },
  "macos": {
-  "build": 32,
+  "build": 33,
   "date": "20261119",
-  "note": "Odkazy na Súkromie, Podmienky a Zmazanie účtu na psst.pro, kontakt psst@psst.pro (D87)",
+  "note": "Rovnaký obsah ako b32 (build spustený zmenou testovacieho skriptu); odkazy na psst.pro, kontakt psst@psst.pro (D87)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261119-b32.dmg",
-    "sha256": "40f007586f500717e44ce4e08a811f96cfafac0799c04c3a2c91d0759e61e8b2"
+    "name": "psst-macos-20261119-b33.dmg",
+    "sha256": "f493c5c39deea42aabf0f19a8e60db84af9a4ac36dbf30e1d1c2cb1006171bbf"
    },
    {
-    "name": "psst-macos-20261119-b32.zip",
-    "sha256": "18f0307a3cf2e3ab360bfd40e599dc2fd28825443bb6ea22415f5a4036eb02c6"
+    "name": "psst-macos-20261119-b33.zip",
+    "sha256": "b501dac7215adbf68028a8f1f8ce6be382e25e4ba4b7023d9ea6b851439f97ce"
    }
   ]
  },
  "windows": {
-  "build": 32,
+  "build": 33,
   "date": "20261119",
-  "note": "Odkazy na Súkromie, Podmienky a Zmazanie účtu na psst.pro, kontakt psst@psst.pro (D87)",
+  "note": "Rovnaký obsah ako b32 (build spustený zmenou testovacieho skriptu); odkazy na psst.pro, kontakt psst@psst.pro (D87)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261119-b32-setup.exe",
-    "sha256": "ead0c22ab05d6088d7d959a51c9f98b8a54e968300bcda0b16820d61bfc667f7"
+    "name": "psst-windows-20261119-b33-setup.exe",
+    "sha256": "5fc34a878e001093cee30030cf1187e5466dda3db2d56c2e19fd9635013c602d"
    },
    {
-    "name": "psst-windows-20261119-b32.msi",
-    "sha256": "4c4ea6f22c996c2b368cc29045639ee65187e7392dccef2b42cdedf5af3900b7"
+    "name": "psst-windows-20261119-b33.msi",
+    "sha256": "12397599aa95eb316bca15f9386d52bfa1e685fae151e111906f65529d996efe"
    }
   ]
  },
  "android": {
-  "build": 47,
+  "build": 51,
   "date": "20261119",
-  "note": "presun na psst.pro: prihlásenie na psst.pro (server chat.psst.pro), relácia starého servera sa po aktualizácii zmaže a appka otvorí prihlásenie (D85)",
+  "note": "Google Play: bez povolení na inštaláciu balíkov, polohu a výnimku z batérie; O aplikácii: zmazanie účtu a kontakt psst@psst.pro (D87)",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261119-b47-arm64.apk",
-    "sha256": "264017ace60f3b22bc7a91c9818ef8b25ef48af702569dcfb47174ba71ae00ad"
+    "name": "psst-android-20261119-b51-arm64.apk",
+    "sha256": "b74e9ff957717622cda6cca64d57e6958ef1045d4063ef0e890e4e4cb2a2a659"
    },
    {
-    "name": "psst-android-20261119-b47-armv7.apk",
-    "sha256": "f36dd1657c159f16b8ea72df47d4e2c2233da02500326759c1359c2ea65ee727"
+    "name": "psst-android-20261119-b51-armv7.apk",
+    "sha256": "cd8fbdb889e1976297b8d1e85e70d2d5f652e1a85f22b0f6308a99af3d7ebfda"
    },
    {
-    "name": "psst-android-20261119-b47-x86_64.apk",
-    "sha256": "46fed5e61a582e1975f48e74494b017c1b8b502b985cfa765af407d6cdfcd69a"
+    "name": "psst-android-20261119-b51-x86_64.apk",
+    "sha256": "186d12098c574aa08ad463272e34d9fce162cd86913aa66245a9abc321c25493"
    },
    {
-    "name": "psst-android-20261119-b47.aab",
-    "sha256": "1b4bf5b89a88968686c7467b557ff0112a263ff4e03aff3eb8636daae5b3f405"
+    "name": "psst-android-20261119-b51.aab",
+    "sha256": "6bc317553c05571f7aceed2490595302c8dcc6df90f1e47f86dfa1cd7a669264"
    }
   ]
  },
