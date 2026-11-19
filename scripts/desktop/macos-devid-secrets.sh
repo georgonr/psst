@@ -74,8 +74,9 @@ fi
 [ "${DRY_RUN:-0}" = 1 ] && { echo "DRY_RUN: p12 OK ($P12), secrets not set"; exit 0; }
 base64 < "$P12" | tr -d '\n' | gh secret set PSST_MAC_CERT_P12_BASE64 -R "$REPO"
 printf '%s' "$PASS" | gh secret set PSST_MAC_CERT_PASSWORD -R "$REPO"
+SECRETS="$(gh secret list -R "$REPO")"   # whole list first: `| grep -q` under pipefail fails on SIGPIPE
 for s in APP_STORE_CONNECT_API_KEY_BASE64 APP_STORE_CONNECT_API_KEY_ID APP_STORE_CONNECT_ISSUER_ID APPLE_TEAM_ID; do
-    gh secret list -R "$REPO" | grep -q "^$s[[:space:]]" || die "secret $s missing (scripts/ios/release-testflight.sh sets it)"
+    printf '%s\n' "$SECRETS" | grep -q "^$s[[:space:]]" || die "secret $s missing (scripts/ios/release-testflight.sh sets it)"
 done
 echo "OK: secrets PSST_MAC_CERT_P12_BASE64 + PSST_MAC_CERT_PASSWORD set in $REPO"
 if [ "$RUN" = 1 ]; then

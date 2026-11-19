@@ -11,7 +11,7 @@ const res = []; const check = (n, ok, d = "") => { res.push({ n, ok, d }); conso
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const profile = process.env.PSST_PROFILE || fs.mkdtempSync("/tmp/psst-desktop-prod-"); fs.mkdirSync(profile, { recursive: true });
 const proc = spawn(path.join(app, "Contents/MacOS/psst"), ["--remote-debugging-port=9333",
-    "--use-mock-keychain", `--profile-dir=${profile}`], { stdio: ["ignore", "pipe", "pipe"] });
+    ...(process.env.PSST_REAL_KEYCHAIN ? [] : ["--use-mock-keychain"]), `--profile-dir=${profile}`], { stdio: ["ignore", "pipe", "pipe"] });
 let log = ""; proc.stdout.on("data", (d) => (log += d)); proc.stderr.on("data", (d) => (log += d));
 // inspector hlavného procesu je v release builde vypnutý (Electron fuse) → URL zachytíme v rendereri
 // --- renderer

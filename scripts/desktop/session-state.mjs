@@ -7,7 +7,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 const [app, profile, shot, waitS = "40"] = process.argv.slice(2);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const proc = spawn(path.join(app, "Contents/MacOS/psst"), ["--remote-debugging-port=9334", "--use-mock-keychain",
+const proc = spawn(path.join(app, "Contents/MacOS/psst"), ["--remote-debugging-port=9334", ...(process.env.PSST_REAL_KEYCHAIN ? [] : ["--use-mock-keychain"]),
     `--profile-dir=${profile}`], { stdio: "ignore" });
 let browser; for (let i = 0; i < 60 && !browser; i++) { try { browser = await chromium.connectOverCDP("http://127.0.0.1:9334"); } catch { await sleep(1000); } }
 let page; for (let i = 0; i < 60 && !page; i++) { page = browser?.contexts().flatMap((c) => c.pages()).find((p) => p.url().startsWith("vector://")); if (!page) await sleep(1000); }

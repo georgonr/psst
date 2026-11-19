@@ -132,6 +132,10 @@ ROWS = [
         ("m85_update", "Aktualizácia zo starej verzie prihlásenej na starý server → prihlasovacia obrazovka nového servera"),
         ("m85_package", "Vydaný balík neobsahuje starú doménu"),
     ]),
+    ("Vydanie: macOS Developer ID, iOS TestFlight, Google Play (dávka 19, D86)", [
+        ("m86_signed", "Podpísaný a notarizovaný build, Gatekeeper / TestFlight bez varovania"),
+        ("m86_delete", "Zmazanie účtu z appky (Manage account → Delete account)"),
+    ]),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}
