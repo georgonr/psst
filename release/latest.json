@@ -1,69 +1,69 @@
 {
  "web": {
-  "build": 27,
-  "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory (D75), Web Push (D76); obrazovka sa po opätovnom prihlásení znova neotvára",
+  "build": 30,
+  "date": "20261119",
+  "note": "presun na psst.pro: server chat.psst.pro, ID @meno:psst.pro, web app.psst.pro; relácia starého servera sa po aktualizácii zmaže a ukáže sa prihlásenie (D85)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261116-b27.tar.gz",
-    "sha256": "b58024a6fb3017b847360d712b5bd4f25030a86571342375d1c6e26336b21b1b"
+    "name": "psst-web-20261119-b30.tar.gz",
+    "sha256": "377a39eea4017746bc99742451e3d9c50343a3316e84f3508ec1c1422b8cc9c0"
    }
   ]
  },
  "macos": {
-  "build": 27,
-  "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory (D75), Web Push (D76); obrazovka sa po opätovnom prihlásení znova neotvára",
+  "build": 30,
+  "date": "20261119",
+  "note": "presun na psst.pro: server chat.psst.pro, ID @meno:psst.pro, web app.psst.pro; relácia starého servera sa po aktualizácii zmaže a ukáže sa prihlásenie (D85)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261116-b27.dmg",
-    "sha256": "87679b015d73f1255f144cea9556d8bf42435b7932b821524fd11e21d48a88dd"
+    "name": "psst-macos-20261119-b30.dmg",
+    "sha256": "4cdcc4e975d05c0b99625420a85db0c8eed275bc214815541034ccb9adb33390"
    },
    {
-    "name": "psst-macos-20261116-b27.zip",
-    "sha256": "1d4b2ceb7f7ff15c615ff363d9827c07460bdb6b69e454c1b59e44123a19b543"
+    "name": "psst-macos-20261119-b30.zip",
+    "sha256": "9565af62a2e2f9e92b457c735c6179d6c9d2e57cd0c339f8a5aed42bc354fdd8"
    }
   ]
  },
  "windows": {
-  "build": 27,
-  "date": "20261116",
-  "note": "Nastavenia → Upozornenia a hovory (D75), Web Push (D76); obrazovka sa po opätovnom prihlásení znova neotvára",
+  "build": 30,
+  "date": "20261119",
+  "note": "presun na psst.pro: server chat.psst.pro, ID @meno:psst.pro, web app.psst.pro; relácia starého servera sa po aktualizácii zmaže a ukáže sa prihlásenie (D85)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261116-b27-setup.exe",
-    "sha256": "a98b0fa18159fb7cf5fbe76f9d5b267bb1f6707b26b4f898889dced0cb54a589"
+    "name": "psst-windows-20261119-b30-setup.exe",
+    "sha256": "c9298bbfdc39bc7075f3edf12ee372c3de56b8b60fab14becdcb2601dbd062ea"
    },
    {
-    "name": "psst-windows-20261116-b27.msi",
-    "sha256": "9daed3092728c83654c1f45df7834ddf003a3e157badab525b0946d67ad7a1b5"
+    "name": "psst-windows-20261119-b30.msi",
+    "sha256": "43cda5c0dab938c95b367b58078d7a3cd763a7b477ce910cfcb48b42e8339880"
    }
   ]
  },
  "android": {
-  "build": 44,
-  "date": "20261118",
-  "note": "Hľadanie: karta Konverzácie už neukazuje hlášku o správach (tlačidlo Hľadať v správach), obrazovka hľadania po slovensky; kontrola hľadania pred vydaním.",
+  "build": 47,
+  "date": "20261119",
+  "note": "presun na psst.pro: prihlásenie na psst.pro (server chat.psst.pro), relácia starého servera sa po aktualizácii zmaže a appka otvorí prihlásenie (D85)",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261118-b44-arm64.apk",
-    "sha256": "206206ead1c146efcedd79b51191e0c67e6efb824dfcba790f411f2cdee119a6"
+    "name": "psst-android-20261119-b47-arm64.apk",
+    "sha256": "264017ace60f3b22bc7a91c9818ef8b25ef48af702569dcfb47174ba71ae00ad"
    },
    {
-    "name": "psst-android-20261118-b44-armv7.apk",
-    "sha256": "0a1ee2f8ce0c71f157ea34713b8ce8aade034001eb93e5d705fbb0e9d583578f"
+    "name": "psst-android-20261119-b47-armv7.apk",
+    "sha256": "f36dd1657c159f16b8ea72df47d4e2c2233da02500326759c1359c2ea65ee727"
    },
    {
-    "name": "psst-android-20261118-b44-x86_64.apk",
-    "sha256": "7277739d512f8987104d1a470416ce68616e01a4bf83d4a3b4e7766e28770c46"
+    "name": "psst-android-20261119-b47-x86_64.apk",
+    "sha256": "46fed5e61a582e1975f48e74494b017c1b8b502b985cfa765af407d6cdfcd69a"
    },
    {
-    "name": "psst-android-20261118-b44.aab",
-    "sha256": "0802641a77f8337f26d7431e1153174dd0ef690cd9028bde0029e085213a7f51"
+    "name": "psst-android-20261119-b47.aab",
+    "sha256": "1b4bf5b89a88968686c7467b557ff0112a263ff4e03aff3eb8636daae5b3f405"
    }
   ]
  }
