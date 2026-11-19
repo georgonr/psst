@@ -91,6 +91,8 @@ for _ in $(seq 100); do
     *"'Chats'"*"'Search'"*|*"'Konverzácie'"*) signed_in=1; break ;;
     *"isn't responding"*|*"nereaguje"*) ui tap Wait >/dev/null 2>&1 || ui tap Čakať >/dev/null 2>&1 ;;
     *"run in background"*|*"na pozadí"*) ui tap Allow >/dev/null 2>&1 || ui tap Povoliť >/dev/null 2>&1 ;;
+    # D87: the battery step explains itself in a dialog (no exemption permission any more) → "Not now"
+    *"No battery restriction"*"Not now"*|*"Bez obmedzenia batérie"*"Teraz nie"*) ui tap "Not now" >/dev/null 2>&1 || ui tap "Teraz nie" >/dev/null 2>&1 ;;
     *"Notifications &amp; calls"*|*"Upozornenia a hovory"*) adb shell input keyevent KEYCODE_BACK ;;
     *"New psst version"*|*"Nová verzia"*) ui tap LATER >/dev/null 2>&1 || ui tap NESKÔR >/dev/null 2>&1 ;;
     *"Sign in to psst.pro"*) ui tap "Sign in to psst.pro" >/dev/null ;;

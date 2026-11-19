@@ -45,6 +45,10 @@ dismiss_anr() { # slow CI emulators show "<system app> isn't responding" over ou
     if printf '%s' "$t" | grep -q "isn't responding"; then
       # "Wait" lets the overloaded launcher ANR again right away; "Close app" restarts it (our app is not affected)
       log "INFO: dismissing system ANR dialog"; xy="$($CHECK tap "$OUT/_anr.xml" "Close app" || $CHECK tap "$OUT/_anr.xml" "Wait")" || return 0
+    elif printf '%s' "$t" | grep -qE "^(No battery restriction|Bez obmedzenia batérie)$" && printf '%s' "$t" | grep -qE "^(Not now|Teraz nie)$"; then
+      # D87: the battery step is a dialog with instructions (no exemption permission any more) → "Not now"
+      log "INFO: psst battery instructions → Not now"
+      xy="$($CHECK tap "$OUT/_anr.xml" "Not now" || $CHECK tap "$OUT/_anr.xml" "Teraz nie")" || return 0
     elif printf '%s' "$t" | grep -qE "^(Notifications & calls|Upozornenia a hovory)$"; then
       # D74: the notifications & calls screen opens itself when something required is missing → Back (twice:
       # it may already have opened a system settings page)

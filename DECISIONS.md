@@ -862,3 +862,49 @@ automatická kontrola hľadania.** Dávka 16 hlásila, že b42 aj b43 nenájdu n
   chat.psst.pro/auth/account. Overené naostro: deaktivácia v MAS aj Synapse + `erased_users`.
 - **Play App Signing:** nahrať **existujúci** kľúč cez PEPK (postup v FACTS.md, nespustené), aby verzia z Play a
   z /download mali rovnaký podpis a fungovali App Links.
+
+**D87 — psst pripravený na Google Play a App Store: prevádzkovateľ, verejné právne stránky, povolenia, nahlásenia.**
+
+**Prevádzkovateľ a kontakt:** všade MACET, s.r.o., IČO 35953781, Slovenská republika; kontakt `psst@psst.pro`
+(bez ulice, telefónu a mena osoby). Úvodná stránka psst.pro ostáva bez mena prevádzkovateľa, pod „Powered by GT“
+má len dva malé odkazy Súkromie / Podmienky. Let's Encrypt účet má kontaktný e-mail `psst@psst.pro`
+(`certbot update_account`, `deploy.sh` ho nastaví aj pri existujúcom certifikáte).
+
+**Právne stránky na psst.pro** (`server/www/legal.py` → `build.py`; jedna URL = SK aj EN na jednej stránke, aby
+jeden odkaz stačil v obchodoch aj v appkách):
+- `/privacy` „Zásady ochrany súkromia / Privacy Policy“, `/terms`, `/delete-account`, `/support` (Support URL pre
+  App Store). Obsah podľa `play-listing/FACTS.md`: čo je E2EE a čo server vidí (aj reakcie, verejné kanály),
+  server v EÚ (Hetzner, Helsinki), push cez Google FCM / Apple APNs bez obsahu, IP 28 dní, zálohy 7/4/6 → zo záloh
+  zmizne najneskôr do 6 mesiacov, práva GDPR a ÚOOÚ SR, 18+, len na pozvánku, žiadna anonymita.
+- Staré `app.psst.pro/{privacy,terms}.html` → 301 na psst.pro. **OAuth metadáta klientov** (web `oidc_metadata`,
+  Android/iOS `BuildTimeConfig`/`AppSettings`) ostávajú na `app.psst.pro/*.html`: MAS politika registrácie
+  klienta vyžaduje tos/policy URI na hostiteľovi `client_uri` (app.psst.pro); presmerovanie ich dovedie na
+  psst.pro. Odkazy, ktoré vidí používateľ (O aplikácii, Help & About, pätička), idú priamo na psst.pro.
+- Šablóny `templates/app/legal/` a voľby `--contact/--hosting` sa už nepoužívajú (voľby sa prijmú a ignorujú).
+
+**Android povolenia (b51):**
+- `REQUEST_INSTALL_PACKAGES` odstránené (príloha .apk ide do systému ako iný súbor; aktualizácia psst cez
+  prehliadač).
+- Poloha odstránená úplne: povolenia, služba `LiveLocationSharingService`, čítanie polohy (`createLocationProvider`
+  vracia „povolenie zamietnuté“). Funkcia bola skrytá (bez mapového kľúča).
+- `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` **odstránené**: Android dokumentácia, na ktorú odkazuje Play politika
+  Device and Network Abuse, uvádza pre „Instant messaging, chat, or calling app“, ktorá FCM používa, „Not
+  Acceptable“ (developer.android.com/training/monitoring-device-state/doze-standby#exemption-cases). Krok
+  „Bez obmedzenia batérie“ zobrazí návod (Batéria → Bez obmedzení) a otvorí systémovú stránku appky; upstream
+  banner otvára systémový zoznam optimalizácie.
+- `app/src/main/AndroidManifest.xml` ich odstraňuje aj z knižníc (`tools:node="remove"`), `check-manifest.py`
+  zlyhá, ak sa vráti ktorékoľvek z nich alebo AD_ID (CI aj pred podpisom).
+- O aplikácii (Android aj iOS): Zmazanie účtu → psst.pro/delete-account, Kontakt → mailto:psst@psst.pro.
+
+**Nahlásenia na /admin:** sekcia Nahlásenia číta Synapse `event_reports`, `room_reports`, `user_reports` cez
+read-only rolu `psst_admin_ro` (stĺpcové práva len na metadáta: odosielateľ, miestnosť, čas, typ, názov
+miestnosti; k obsahu udalostí prístup nemá). Stav vybavené/nevybavené a posledná akcia sú v `notes.sqlite` admina.
+Akcie: Zablokovať (MAS lock + Synapse locked; nie chránené účty a admini), Zmazať správu (Synapse admin
+`user/<odosielateľ>/redact` s `before_ts = after_ts = čas správy`, `limit 1`; pri nejednoznačnom čase sa nič
+nezmaže), Zmazať miestnosť (purge), Zmazať správy člena (redakcia vo všetkých jeho miestnostiach). Dôvod redakcie
+„Odstránené správcom psst po nahlásení“. Všetko do `audit.log`. Klienti vedia nahlásiť správu a miestnosť
+(iOS miestnosť len pri skupinách, nie pri DM); nahlásenie používateľa majú len cez API → stránky to tak aj píšu.
+
+**Účty pre kontrolórov:** `review` a `review-partner` (silné heslá, nie admin, nedeaktivujú sa), šifrovaná DM
+a skupina „Weekend trip“ zo zálohovaných webových relácií; údaje + kľúče na obnovenie + anglický návod v
+`~/proj/psst-review.txt` (600). V repozitári len návod bez hesla (`appstore-listing/APP-REVIEW-NOTES.txt`).
