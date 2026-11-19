@@ -122,6 +122,16 @@ ROWS = [
         ("s84_gate_negative", "Kontrola zastaví build s pokazeným hľadaním"),
         ("s84_regressions", "Po zmene: QR Android↔web a Android↔Android, zvuk, rozsvietenie, hovor, kontrola manifestu"),
     ], ("android",)),
+    ("Presun na psst.pro (dávka 18, D85)", [
+        ("m85_signin", "Prihlásenie na psst.pro (server chat.psst.pro, ID @meno:psst.pro), jediný povolený server"),
+        ("m85_register", "Registrácia pozvánkou na novom serveri"),
+        ("m85_features", "Správy, súbory, skupiny, kanály, hovory 1:1 a skupinové na novom serveri (celý audit)"),
+        ("m85_turn", "Hovor bez UDP (ICE/TCP 7881, resp. len TURN/TLS na 443)"),
+        ("m85_alerts", "Upozornenia: zvuk, rozsvietenie, hovor na celú obrazovku, budíček pri žiadosti o overenie / Web Push"),
+        ("m85_qr", "QR prihlásenie a QR overenie zariadenia"),
+        ("m85_update", "Aktualizácia zo starej verzie prihlásenej na starý server → prihlasovacia obrazovka nového servera"),
+        ("m85_package", "Vydaný balík neobsahuje starú doménu"),
+    ]),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}

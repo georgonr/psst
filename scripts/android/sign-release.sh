@@ -41,7 +41,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 # ---------- arguments ----------
 TMP_DL=""
-cleanup() { [ -n "$TMP_DL" ] && rm -rf "$TMP_DL"; }
+cleanup() { [ -z "$TMP_DL" ] || rm -rf "$TMP_DL"; }   # must not turn a successful run into exit 1 (directory mode)
 trap cleanup EXIT
 if [ "${1:-}" = "--run" ]; then
   [ -n "${2:-}" ] || die "--run needs a run id"

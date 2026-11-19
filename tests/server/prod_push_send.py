@@ -11,7 +11,7 @@ async def main(rcpt, mode="invite", room=None):
     from nio import AsyncClient, AsyncClientConfig, RoomPreset
     pw = json.loads((ROOT / ".prod-test-accounts.json").read_text())[SENDER]
     store = ROOT / ".prod-nio-store"; store.mkdir(exist_ok=True)
-    c = AsyncClient(HS, "@" + SENDER + ":chat.psst.pro", store_path=str(store), config=AsyncClientConfig(encryption_enabled=True),
+    c = AsyncClient(HS, "@" + SENDER + ":psst.pro", store_path=str(store), config=AsyncClientConfig(encryption_enabled=True),
                     ssl=__import__("ssl").create_default_context(cafile=__import__("certifi").where()))
     sess = store / "session.json"
     if sess.exists():
@@ -28,6 +28,7 @@ async def main(rcpt, mode="invite", room=None):
     if c.should_upload_keys: await c.keys_upload()
     if mode == "invite":
         r = await c.room_create(is_direct=True, invite=[f"@{rcpt}:psst.pro"], preset=RoomPreset.trusted_private_chat, name="PSST test")
+        if not hasattr(r, "room_id"): sys.exit(f"room_create: {r}")
         print("ROOM", r.room_id)
     elif mode == "message":
         await c.sync(timeout=3000)
