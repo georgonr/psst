@@ -136,6 +136,13 @@ ROWS = [
         ("m86_signed", "Podpísaný a notarizovaný build, Gatekeeper / TestFlight bez varovania"),
         ("m86_delete", "Zmazanie účtu z appky (Manage account → Delete account)"),
     ]),
+    ("Príprava na Google Play a App Store (dávka 20, D87)", [
+        ("m87_legal", "V appke odkazy na Zásady ochrany súkromia, Podmienky, Zmazanie účtu (psst.pro) a kontakt psst@psst.pro"),
+        ("m87_report", "Nahlásenie správy a miestnosti → admin /admin Nahlásenia (bez obsahu šifrovaných správ)"),
+        ("m87_perms", "Bez povolení obmedzených v Google Play (inštalácia balíkov, poloha, výnimka z batérie)"),
+        ("m87_alerts", "Po odstránení povolení: upozornenie so zvukom, rozsvietenie, hovor na celú obrazovku, hovor na pozadí"),
+        ("m87_store", "Účet pre kontrolórov obchodov (review) s šifrovanou históriou cez kľúč na obnovenie"),
+    ]),
 ]
 PLATFORMS = [("web", "Web"), ("windows", "Windows"), ("macos", "macOS"), ("android", "Android"), ("ios", "iOS")]
 LABEL = {"ok": "✅ funguje", "fail": "❌ nefunguje", "upstream": "🟠 nefunguje — upstream", "na": "⚪ nedá sa tu overiť"}

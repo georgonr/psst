@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # PSST: publish one build on https://app.psst.pro/download (D59) and verify it over HTTPS.
 #
-#   scripts/release/upload-download.sh <android|windows|macos> <file> ["what changed"]
+#   scripts/release/upload-download.sh <android|android-armv7|android-aab|windows|macos> <file> ["what changed"]
 #
 # - file must follow the naming convention (BUILD.md): psst-<platform>-<YYYYMMDD>-b<N>[-arm64].<apk|msi|dmg>
 # - upload over SSH as psst-dl (key restricted to server/scripts/downloads.py; it checks SHA-256, refuses older
@@ -19,7 +19,9 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 [ -f "$FILE" ] || die "missing $FILE"
 [ -f "$KEY" ] || die "missing upload key $KEY"
 NAME="$(basename "$FILE")"
-[[ "$NAME" =~ ^psst-$PLATFORM-([0-9]{8})-b([0-9]+)(-arm64)?\.(apk|msi|dmg)$ ]] || die "$NAME does not follow the naming convention"
+# android-armv7 / android-aab (D87) are files of the Android build: psst-android-…-armv7.apk, psst-android-….aab
+FAMILY="${PLATFORM%%-*}"
+[[ "$NAME" =~ ^psst-$FAMILY-([0-9]{8})-b([0-9]+)(-arm64|-armv7)?\.(apk|aab|msi|dmg)$ ]] || die "$NAME does not follow the naming convention"
 DATE="${BASH_REMATCH[1]}"; BUILD="${BASH_REMATCH[2]}"
 sha() { if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi; }
 SHA="$(sha "$FILE")"

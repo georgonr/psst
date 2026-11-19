@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 PAGE = "https://app.psst.pro/download/latest.json"
 # dist/latest.json has several files per platform; the page carries one of them
 PAGE_FILE = {"android": "-arm64.apk", "windows": ".msi", "macos": ".dmg"}
+# D87: the page also carries the armv7 APK and the AAB of the Android build (keys of the page's latest.json)
+EXTRA = {"android-armv7": ("android", "-armv7.apk"), "android-aab": ("android", ".aab")}
 
 
 def main():
@@ -41,6 +43,17 @@ def main():
             bad += 1
         else:
             print(f"OK      {plat}: page b{p['build']} ({p['file']})" + ("" if p["build"] == e["build"] else f" — newer than {src.name} b{e['build']}"))
+    for key, (plat, suffix) in EXTRA.items():
+        e = local.get(plat)
+        f = next((x for x in e["files"] if x["name"].endswith(suffix)), None) if e else None
+        p = page.get(key)
+        if not f:
+            continue
+        if not p or p["build"] < e["build"] or (p["build"] == e["build"] and p["sha256"] != f["sha256"]):
+            print(f"BEHIND  {key}: page {p['build'] if p else '-'} / {p['sha256'][:16] if p else '-'}…, latest b{e['build']} ({f['name']})")
+            bad += 1
+        else:
+            print(f"OK      {key}: page b{p['build']} ({p['file']})")
     print(f"compared {src} with {PAGE}")
     sys.exit(1 if bad else 0)
 

@@ -107,8 +107,15 @@ for _ in $(seq 100); do
     *"Unable to register pusher"*|*"Firebase token"*) ui tap "Do not show this again" >/dev/null 2>&1; ui tap OK >/dev/null 2>&1 ;;
     # Chrome keeps the MAS session of the previous run's (deleted) test account; its page is not always in the
     # accessibility tree: tap its "Sign in" button where MAS puts it
+    # Chrome on some images (Android 15 AVD psst35) exposes no web content in the accessibility tree at all: after a few
+    # rounds fill the MAS form by position (1080×2400: Username ~y 1028, Password ~y 1276, Continue ~y 1322)
     *"matrix-authentication-service"*)
-      mas_idle=$((${mas_idle:-0} + 1)); [ "$mas_idle" -ge 3 ] && { ui tap "Sign in" >/dev/null 2>&1 || adb shell input tap 540 1030; mas_idle=0; } ;;
+      mas_idle=$((${mas_idle:-0} + 1))
+      if [ "$mas_idle" = 3 ]; then ui tap "Sign in" >/dev/null 2>&1 || adb shell input tap 540 1030
+      elif [ "$mas_idle" = 5 ]; then
+        adb shell input tap 540 1028; sleep 1; adb shell input text "$USER_A"; sleep 1
+        adb shell input tap 540 1276; sleep 1; adb shell input text "$PASS_A"; adb shell input keyevent KEYCODE_ENTER
+      elif [ "$mas_idle" -ge 8 ]; then adb shell input tap 540 1322; mas_idle=0; fi ;;
   esac
   sleep 3
 done

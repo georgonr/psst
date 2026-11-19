@@ -31,6 +31,9 @@ APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.psst.pro")
 WEB_DOMAIN = os.environ.get("WEB_DOMAIN") or os.environ.get("SERVER_NAME") or "psst.pro"   # /privacy, /terms (D87)
 PLATFORMS = {
     "android": {"name": "Android", "ext": "apk", "pattern": r"psst-android-(\d{8})-b(\d+)-arm64\.apk"},
+    # D87: the same Android build for older 32-bit phones and as App Bundle (the file uploaded to Google Play)
+    "android-armv7": {"name": "Android 32-bit (armv7)", "ext": "apk", "pattern": r"psst-android-(\d{8})-b(\d+)-armv7\.apk"},
+    "android-aab": {"name": "Android App Bundle (AAB)", "ext": "aab", "pattern": r"psst-android-(\d{8})-b(\d+)\.aab"},
     "windows": {"name": "Windows", "ext": "msi", "pattern": r"psst-windows-(\d{8})-b(\d+)\.msi"},
     "macos": {"name": "macOS", "ext": "dmg", "pattern": r"psst-macos-(\d{8})-b(\d+)\.dmg"},
 }
@@ -133,8 +136,21 @@ padding:12px 16px;border-radius:12px}.btn:hover{filter:brightness(1.07)}
 .how{font-size:14px;color:var(--fg)}.soon{color:var(--mut);font-weight:600}
 .warn{font-size:14px;background:var(--code);border-left:4px solid #d08a00;padding:10px 12px;border-radius:8px}
 .warn ol{margin:6px 0;padding-left:20px}.warn li{margin:3px 0}
+ul.more{margin:6px 0;padding-left:18px}ul.more li{margin:4px 0}
 footer{margin-top:28px;color:var(--mut);font-size:14px}a{color:var(--acc)}
 """
+
+
+def android_more(state, build):
+    """D87: armv7 APK and AAB of the same Android build, as small links under the main (arm64) download."""
+    rows = []
+    for key, what in (("android-armv7", "APK for older 32-bit phones (armv7)"), ("android-aab", "App Bundle (AAB, for Google Play)")):
+        e = state.get(key)
+        if not e or e["build"] != build:
+            continue
+        rows.append(f'<li><a href="files/{html.escape(e["file"])}" download>{what}</a> · {human(e["size"])}'
+                    f'<div class="sha" title="SHA-256">{html.escape(e["file"])} · SHA-256: {e["sha256"]}</div></li>')
+    return f'<div class="how"><b>Other files of b{build}:</b><ul class="more">{"".join(rows)}</ul></div>' if rows else ""
 
 
 def render(state):
@@ -153,11 +169,12 @@ def render(state):
             f'<div class="meta">{html.escape(e["file"])}</div>'
             f'<div class="sha" title="SHA-256">SHA-256: {e["sha256"]}</div>'
             f'<div class="how">{HOWTO[key]}</div>'
+            + (android_more(state, e["build"]) if key == "android" else "")
             + (ANDROID_STEPS if key == "android" else "")
             + (MACOS_UNSIGNED if key == "macos" and not e.get("signed") else "")
             + '</section>')
     cards.append('<section class="card" id="ios"><h2>iPhone &amp; iPad</h2><p class="soon">Coming soon</p>'
-                 '<div class="how">The iOS app is on its way to TestFlight.</div></section>')
+                 '<div class="how">The iOS app is in TestFlight testing and will come to the App Store.</div></section>')
     updated = dt.datetime.now(dt.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Download psst</title>
