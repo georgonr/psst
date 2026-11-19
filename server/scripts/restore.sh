@@ -52,7 +52,7 @@ compose exec -T postgres pg_restore -U synapse -d synapse --no-owner --clean --i
 # rola administrácie (D56) musí existovať pred obnovou MAS — inak sa jej GRANT-y zahodia; heslo nastaví deploy.sh
 compose exec -T postgres psql -U synapse -d synapse -qc "DO \$\$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'psst_admin_ro') THEN CREATE ROLE psst_admin_ro LOGIN; END IF; END \$\$" >/dev/null
 compose exec -T postgres pg_restore -U synapse -d mas --no-owner < "$B/mas.dump" || warn "pg_restore mas hlásil varovania"
-cmp -s "$B/signing.key" <(compose run --rm --no-deps -T --entrypoint cat synapse "/data/${MATRIX_DOMAIN}.signing.key") \
+cmp -s "$B/signing.key" <(compose run --rm --no-deps -T --entrypoint cat synapse "/data/${SERVER_NAME}.signing.key") \
   && log "podpisový kľúč obnovený (zhoda)" || die "podpisový kľúč sa nezhoduje so zálohou!"
 log "štartujem stack"
 admin_secrets   # administrácia (D56): kópie tajomstiev pre UID 10001

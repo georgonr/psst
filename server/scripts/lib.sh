@@ -20,6 +20,8 @@ load_env() {
   # shellcheck disable=SC1091
   . ./.env
   set +a
+  # Matrix server_name (D85: psst.pro) môže byť iný než homeserver (chat.psst.pro); staršie .env ho nemali
+  SERVER_NAME="${SERVER_NAME:-$MATRIX_DOMAIN}"; export SERVER_NAME
 }
 
 require_cmd() {

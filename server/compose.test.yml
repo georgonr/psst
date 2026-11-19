@@ -4,7 +4,7 @@
 #   - certbot sa nespúšťa (certifikát ostáva self-signed z deploy.sh),
 #   - lk-jwt-service neoveruje TLS (self-signed certifikát na nginx:443/8448),
 #   - LiveKit nezisťuje verejnú IP cez STUN (LIVEKIT_USE_EXTERNAL_IP=false v .env).
-# server_name ostáva chat.macet.eu; testy mapujú domény na 127.0.0.1 cez /etc/hosts.
+# server_name je psst.pro (homeserver chat.psst.pro, D85); testy mapujú domény na 127.0.0.1 cez /etc/hosts.
 services:
   certbot:
     profiles: ["production-only"]

@@ -27,7 +27,7 @@ ROOT = os.environ.get("PSST_DOWNLOADS", os.path.join(os.path.dirname(os.path.abs
 ROOT = os.path.abspath(ROOT)
 FILES = os.path.join(ROOT, "files")
 STATE = os.path.join(ROOT, "latest.json")
-APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.macet.eu")
+APP_DOMAIN = os.environ.get("APP_DOMAIN", "app.psst.pro")
 PLATFORMS = {
     "android": {"name": "Android", "ext": "apk", "pattern": r"psst-android-(\d{8})-b(\d+)-arm64\.apk"},
     "windows": {"name": "Windows", "ext": "msi", "pattern": r"psst-windows-(\d{8})-b(\d+)\.msi"},

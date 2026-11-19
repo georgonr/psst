@@ -9,6 +9,7 @@
 import re, subprocess, sys, time
 def adb(*a, **k): return subprocess.run(["adb", *a], capture_output=True, **k)
 def dump():
+    adb("shell", "rm", "-f", "/sdcard/u.xml")   # a failed dump must not return the previous screen
     adb("shell", "uiautomator", "dump", "/sdcard/u.xml")
     return adb("shell", "cat", "/sdcard/u.xml", text=True).stdout
 def nodes(xml):

@@ -20,7 +20,7 @@ __LIVEKIT_NODE_IP_LINE__
 keys:
   __LIVEKIT_API_KEY__: __LIVEKIT_API_SECRET__
 room:
-  # miestnosti vytvára len lk-jwt-service (pre používateľov z __MATRIX_DOMAIN__)
+  # miestnosti vytvára len lk-jwt-service (pre používateľov z __SERVER_NAME__)
   auto_create: false
 webhook:
   api_key: __LIVEKIT_API_KEY__

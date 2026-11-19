@@ -24,7 +24,7 @@ fi
 
 # --- HTTPS cez nginx (domény → 127.0.0.1, ako keby prišli zvonka)
 K=""; [ -f data/certbot/conf/live/psst/.psst-dummy ] && K="-k"
-RES=""; for d in "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" ${WEB_DOMAIN:-}; do RES+=" --resolve $d:443:127.0.0.1"; done
+RES=""; for d in "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" ${NTFY_DOMAIN:-} ${WEB_DOMAIN:-} ${WWW_DOMAIN:-} ${SERVER_NAME}; do RES+=" --resolve $d:443:127.0.0.1"; done
 get() { curl -sS $K $RES --max-time 10 "$@"; }
 check() { # check <popis> <url> <grep-vzor>
   local body; body="$(get "$2" 2>&1)" || { bad "$1 ($2: $body)"; return; }
@@ -44,18 +44,29 @@ check "stránka na stiahnutie /download" "https://$APP_DOMAIN/download/" "Downlo
 get -o /dev/null -w '%{http_code} %{redirect_url}' "https://$APP_DOMAIN/admin/login" | grep -q "^303 .*/authorize" \
   && ok "administrácia /admin (prihlásenie cez MAS)" || bad "administrácia /admin"
 check "Element Call"                                "https://$CALL_DOMAIN/" "<html"
-# prezentačná stránka (D82): obe jazykové verzie + vlastný certifikát psst-web (curl bez -k overí reťazec)
+# prezentačná stránka (D82): obe jazykové verzie (rovnaký certifikát "psst" ako ostatné domény, D85)
 if [ -n "${WEB_DOMAIN:-}" ]; then
   check "prezentačná stránka SK ($WEB_DOMAIN)" "https://$WEB_DOMAIN/sk/" "Stiahnuť aplikáciu"
   check "prezentačná stránka EN ($WEB_DOMAIN)" "https://$WEB_DOMAIN/en/" "Download the app"
-  wend="$(openssl x509 -enddate -noout -in data/certbot/conf/live/psst-web/fullchain.pem 2>/dev/null | cut -d= -f2)"
-  if [ -n "$wend" ]; then
-    wleft=$(( ( $(date -d "$wend" +%s 2>/dev/null || date -j -f '%b %d %T %Y %Z' "$wend" +%s) - $(date +%s) ) / 86400 ))
-    [ "$wleft" -ge 14 ] && ok "certifikát $WEB_DOMAIN platí ešte $wleft dní" || bad "certifikát $WEB_DOMAIN vyprší o $wleft dní"
-  else bad "certifikát $WEB_DOMAIN chýba (data/certbot/conf/live/psst-web)"; fi
 fi
-code="$(get -o /dev/null -w '%{http_code}' "https://$NTFY_DOMAIN/")"
-[ "$code" = 301 ] && ok "push doména len presmeruje (ntfy zrušený)" || bad "https://$NTFY_DOMAIN/ vrátil $code (očakávané 301)"
+if [ -n "${WWW_DOMAIN:-}" ]; then
+  get -o /dev/null -w '%{http_code} %{redirect_url}' "https://$WWW_DOMAIN/sk/" | grep -q "^301 https://${WEB_DOMAIN}/sk/" \
+    && ok "$WWW_DOMAIN presmeruje na $WEB_DOMAIN" || bad "$WWW_DOMAIN nepresmeruje na $WEB_DOMAIN"
+fi
+# server_name ≠ homeserver (D85): klienti a lk-jwt-service hľadajú homeserver cez .well-known na server_name
+if [ "$SERVER_NAME" != "$MATRIX_DOMAIN" ]; then
+  check ".well-known/matrix/client na $SERVER_NAME" "https://$SERVER_NAME/.well-known/matrix/client" "\"https://$MATRIX_DOMAIN\""
+  check ".well-known/matrix/server na $SERVER_NAME" "https://$SERVER_NAME/.well-known/matrix/server" "\"$MATRIX_DOMAIN:8448\""
+fi
+# neznámy názov (napr. bývalá doména, ktorej DNS ešte ukazuje sem) nedostane žiadny obsah psst
+code="$(curl -sS -k --resolve psst-unknown.invalid:443:127.0.0.1 --max-time 5 -o /dev/null -w '%{http_code}' https://psst-unknown.invalid/ 2>/dev/null || true)"
+[ "$code" = 000 ] && ok "neznámy Host: spojenie zatvorené (444)" || bad "neznámy Host dostal HTTP $code"
+code="$(curl -sS --resolve psst-unknown.invalid:80:127.0.0.1 --max-time 5 -o /dev/null -w '%{http_code}' http://psst-unknown.invalid/ 2>/dev/null || true)"
+[ "$code" = 000 ] && ok "neznámy Host na :80: bez presmerovania (444)" || bad "neznámy Host na :80 dostal HTTP $code"
+if [ -n "${NTFY_DOMAIN:-}" ]; then
+  code="$(get -o /dev/null -w '%{http_code}' "https://$NTFY_DOMAIN/")"
+  [ "$code" = 301 ] && ok "push doména len presmeruje (ntfy zrušený)" || bad "https://$NTFY_DOMAIN/ vrátil $code (očakávané 301)"
+fi
 get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/livekit/jwt/healthz" | grep -q 200 && ok "lk-jwt-service" || bad "lk-jwt-service (/livekit/jwt/healthz)"
 check "LiveKit SFU"                                 "https://$MATRIX_DOMAIN/livekit/sfu/" "OK"
 code="$(get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/_matrix/federation/v1/version")"

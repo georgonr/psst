@@ -90,12 +90,12 @@ services:
       LIVEKIT_KEY: ${LIVEKIT_API_KEY}
       LIVEKIT_SECRET: ${LIVEKIT_API_SECRET}
       LIVEKIT_JWT_BIND: ":8080"
-      LIVEKIT_FULL_ACCESS_HOMESERVERS: ${MATRIX_DOMAIN}
+      LIVEKIT_FULL_ACCESS_HOMESERVERS: ${SERVER_NAME}
       # federácia je vypnutá → nikto zvonka nesmie publikovať na našom SFU
       LIVEKIT_REMOTE_CAN_PUBLISH_HOMESERVERS: ""
       LIVEKIT_AS_REGISTRATION_FILE: /config/lk-jwt-appservice.yaml
-      LIVEKIT_HS_SERVER_NAME: ${MATRIX_DOMAIN}
-      LIVEKIT_CS_API_URL_OVERRIDES: ${MATRIX_DOMAIN}=http://synapse:8008
+      LIVEKIT_HS_SERVER_NAME: ${SERVER_NAME}
+      LIVEKIT_CS_API_URL_OVERRIDES: ${SERVER_NAME}=http://synapse:8008
       LIVEKIT_SANITY_CHECK_INTERVAL_SECONDS: "60"
     volumes:
       - ./data/config/synapse/lk-jwt-appservice.yaml:/config/lk-jwt-appservice.yaml:ro
@@ -175,7 +175,7 @@ services:
     restart: unless-stopped
     logging: *logging
     environment:
-      MATRIX_DOMAIN: ${MATRIX_DOMAIN}
+      SERVER_NAME: ${SERVER_NAME}
       WAKE_APP_IDS: ${ANDROID_PUSH_APP_IDS:-eu.macet.psst} ${WEB_PUSH_APP_ID:-eu.macet.psst.web}
     volumes:
       - ./secrets/admin-run:/secrets:ro   # admin_token (UID 10001, viď admin_secrets v scripts/lib.sh)
@@ -191,7 +191,7 @@ services:
     logging: *logging
     environment:
       APP_DOMAIN: ${APP_DOMAIN}
-      MATRIX_DOMAIN: ${MATRIX_DOMAIN}
+      SERVER_NAME: ${SERVER_NAME}
       MAS_PUBLIC_BASE: https://${AUTH_DOMAIN}${AUTH_PREFIX}
       AUTH_PREFIX: ${AUTH_PREFIX}
       ADMIN_CLIENT_ID: ${ADMIN_CLIENT_ID}
@@ -235,10 +235,12 @@ services:
         # pevná IP: Synapse ju má v ip_range_whitelist (push brána Sygnal za nginx),
         # LiveKit jej verí PROXY protocol hlavičku (TURN/TLS)
         ipv4_address: 172.30.0.250   # = NGINX_IP v deploy.sh; vysoko, aby ju dynamické IP iných kontajnerov nikdy nezabrali
-        # interní klienti volajú verejné domény priamo na tento nginx: lk-jwt-service (OpenID cez :8448,
-        # LiveKit API), Synapse (push na Sygnal)
+        # interní klienti volajú verejné domény priamo na tento nginx: lk-jwt-service (OpenID cez :8448 —
+        # server_name → https://<SERVER_NAME>/.well-known/matrix/server → <MATRIX_DOMAIN>:8448; LiveKit API),
+        # Synapse (push na Sygnal)
         aliases:
           - ${MATRIX_DOMAIN}
+          - ${SERVER_NAME}
 
   certbot:
     image: docker.io/certbot/certbot:v5.10.0

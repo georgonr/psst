@@ -13,9 +13,9 @@ import html
 import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SITE = "https://psst.macet.eu"
-DOWNLOAD = "https://app.macet.eu/download/"
-LOGIN = "https://app.macet.eu/"
+SITE = os.environ.get("SITE", "https://psst.pro")
+DOWNLOAD = os.environ.get("DOWNLOAD", "https://app.psst.pro/download/")
+LOGIN = os.environ.get("LOGIN", "https://app.psst.pro/")
 
 T = {
     "sk": {
@@ -103,9 +103,9 @@ ROOT = '''<!doctype html>
 <title>psst</title>
 <meta name="description" content="psst — súkromné správy a hovory / private messages and calls.">
 <meta name="color-scheme" content="dark">
-<link rel="alternate" hreflang="sk" href="https://psst.macet.eu/sk/">
-<link rel="alternate" hreflang="en" href="https://psst.macet.eu/en/">
-<link rel="alternate" hreflang="x-default" href="https://psst.macet.eu/">
+<link rel="alternate" hreflang="sk" href="{SITE}/sk/">
+<link rel="alternate" hreflang="en" href="{SITE}/en/">
+<link rel="alternate" hreflang="x-default" href="{SITE}/">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/lang.js"></script>

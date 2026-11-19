@@ -26,8 +26,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
 APP_DOMAIN = os.environ["APP_DOMAIN"]
-MATRIX_DOMAIN = os.environ["MATRIX_DOMAIN"]
-MAS_PUBLIC = os.environ["MAS_PUBLIC_BASE"].rstrip("/")          # https://chat.macet.eu/auth
+SERVER_NAME = os.environ["SERVER_NAME"]   # Matrix server_name: user IDs are @name:<SERVER_NAME>
+MAS_PUBLIC = os.environ["MAS_PUBLIC_BASE"].rstrip("/")          # https://chat.psst.pro/auth
 MAS_INTERNAL = os.environ.get("MAS_INTERNAL", "http://mas:8080").rstrip("/") + os.environ.get("AUTH_PREFIX", "")
 MAS_ADMIN = os.environ.get("MAS_ADMIN_API", "http://mas:8081/api/admin/v1")
 SYNAPSE = os.environ.get("SYNAPSE_INTERNAL", "http://synapse:8008")
@@ -433,7 +433,7 @@ async def index(req: Request, created: str = ""):
         name = a["username"]
         if name in SERVICE_USERS:
             continue
-        sy = syn.get(f"@{name}:{MATRIX_DOMAIN}", {})
+        sy = syn.get(f"@{name}:{SERVER_NAME}", {})
         if a.get("deactivated_at"):
             st, cls = "deaktivovaný", "revoked"
         elif a.get("locked_at"):
@@ -518,7 +518,7 @@ async def set_lock(req: Request, uid: str, lock: bool):
         return PlainTextResponse(f"Účet {name} sa nedá zablokovať.", status_code=403)
     await mas("POST", f"/users/{uid}/{'lock' if lock else 'unlock'}")
     try:  # rovnako ako scripts/members.sh: príznak locked aj v Synapse
-        await synapse_admin("PUT", f"/_synapse/admin/v2/users/@{name}:{MATRIX_DOMAIN}", json={"locked": lock})
+        await synapse_admin("PUT", f"/_synapse/admin/v2/users/@{name}:{SERVER_NAME}", json={"locked": lock})
     except Exception as e:  # noqa: BLE001
         audit(s["user"], client_ip(req), "synapse_lock_failed", target=name, error=str(e)[:200])
     audit(s["user"], client_ip(req), "user_lock" if lock else "user_unlock", target=name)

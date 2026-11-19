@@ -28,7 +28,7 @@ compose exec -T postgres pg_dump -U synapse -Fc synapse > "$B/synapse.dump"
 compose exec -T postgres pg_dump -U synapse -Fc mas > "$B/mas.dump"
 log "Synapse dáta (médiá, podpisový kľúč)"
 compose exec -T synapse tar -C /data -czf - . > "$B/synapse-data.tar.gz"
-compose exec -T synapse cat "/data/${MATRIX_DOMAIN}.signing.key" > "$B/signing.key"
+compose exec -T synapse cat "/data/${SERVER_NAME}.signing.key" > "$B/signing.key"
 log "konfigurácie, certifikáty, tajomstvá (vrátane FCM/APNs kľúčov)"
 tar -C data -czf "$B/config.tar.gz" config
 [ -d data/admin ] && tar -C data -czf "$B/admin.tar.gz" admin   # administrácia: poznámky k pozvánkam + audit log (D56)
@@ -36,7 +36,7 @@ tar -C data/certbot -czf "$B/letsencrypt.tar.gz" conf 2>/dev/null || warn "certi
 cp .env "$B/env"
 mkdir -p "$B/secrets"; (cd secrets && tar --exclude=./backup.pass -cf - .) | tar -C "$B/secrets" -xf -
 cat > "$B/README.txt" <<TXT
-PSST záloha $TS (server_name ${MATRIX_DOMAIN})
+PSST záloha $TS (server_name ${SERVER_NAME})
 Obnova: server/scripts/restore.sh <archív.tar.gz.enc>   (heslová fráza: secrets/backup.pass)
 TXT
 for f in synapse.dump mas.dump signing.key; do [ -s "$B/$f" ] || die "záloha je neúplná ($f)"; done

@@ -17,20 +17,21 @@ certifikáty Let's Encrypt, štart všetkých služieb, denné šifrované zálo
 
 Príklady: Hetzner CPX31/CX32, OVH VPS, Contabo, Scaleway — čokoľvek s verejnou IPv4 bez NAT obmedzení na UDP.
 
-## 2. DNS záznamy (u registrátora domény macet.eu)
+## 2. DNS záznamy (u registrátora domény psst.pro)
 
 Všetky ako **A** záznam na IP servera (TTL napr. 300). **AAAA (IPv6) nepridávajte** — stack beží len na IPv4;
 existujúci AAAA záznam pre tieto mená by rozbil Let's Encrypt aj klientov.
 
 | Názov | Typ | Hodnota | Na čo |
 |---|---|---|---|
-| `chat.macet.eu` | A | `<IP>` | Matrix homeserver (Synapse), prihlásenie/registrácia (MAS na `/auth/`), LiveKit signalizácia, iOS push |
-| `app.macet.eu` | A | `<IP>` | PSST web, Podmienky, Ochrana súkromia, App Links |
-| `call.macet.eu` | A | `<IP>` | Element Call + TURN/TLS na 443 (pre siete bez UDP) |
-| `push.macet.eu` | A | `<IP>` | (bývalý ntfy) len presmerovanie na web |
-| `macet.eu` | CAA | `0 issue "letsencrypt.org"` | (voliteľné) len Let's Encrypt smie vydať certifikát |
+| `chat.psst.pro` | A | `<IP>` | Matrix homeserver (Synapse), prihlásenie/registrácia (MAS na `/auth/`), LiveKit signalizácia, iOS push |
+| `app.psst.pro` | A | `<IP>` | PSST web, Podmienky, Ochrana súkromia, App Links |
+| `call.psst.pro` | A | `<IP>` | Element Call + TURN/TLS na 443 (pre siete bez UDP) |
+| `psst.pro` | A | `<IP>` | Matrix server_name: úvodná stránka + `.well-known/matrix/{client,server}` → chat.psst.pro |
+| `www.psst.pro` | A | `<IP>` | len presmeruje na psst.pro |
+| `psst.pro` | CAA | `0 issue "letsencrypt.org"` | (voliteľné) len Let's Encrypt smie vydať certifikát |
 
-Kontrola: `dig +short chat.macet.eu` (a ďalšie) musí vrátiť `<IP>` — deploy.sh to overí sám a bez toho nepokračuje.
+Kontrola: `dig +short chat.psst.pro` (a ďalšie) musí vrátiť `<IP>` — deploy.sh to overí sám a bez toho nepokračuje.
 
 ## 3. Cloud firewall poskytovateľa (ak ho má) — prichádzajúce
 
@@ -79,7 +80,7 @@ sudo scripts/healthcheck.sh                   # všetko OK?
 
 ## 6. Po nasadení
 
-- [ ] `https://app.macet.eu` sa načíta, „Create account" s pozvánkou funguje, prihlásenie funguje
+- [ ] `https://app.psst.pro` sa načíta, „Create account" s pozvánkou funguje, prihlásenie funguje
 - [ ] Android: nainštalovať `psst-26.11.0-arm64-v8a.apk` — notifikácie fungujú hneď (Google FCM cez náš Sygnal),
       žiadna ďalšia appka; kľúč Firebase service accountu musí byť v `secrets/fcm/service-account.json`
 - [ ] iOS: TestFlight cez `ios-release.yml` (vyžaduje Apple Developer účet a secrets)

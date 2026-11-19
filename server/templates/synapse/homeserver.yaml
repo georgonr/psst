@@ -2,7 +2,7 @@
 # Zástupné symboly (meno v dvojitých podčiarkovníkoch) sa nahradia hodnotami zo server/.env.
 # Dokumentácia: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
 
-server_name: "__MATRIX_DOMAIN__"
+server_name: "__SERVER_NAME__"
 public_baseurl: "https://__MATRIX_DOMAIN__/"
 pid_file: /data/homeserver.pid
 report_stats: false
@@ -43,7 +43,7 @@ database:
 
 log_config: "/config/log.config"
 media_store_path: /data/media_store
-signing_key_path: "/data/__MATRIX_DOMAIN__.signing.key"
+signing_key_path: "/data/__SERVER_NAME__.signing.key"
 max_upload_size: 100M
 
 # --- Federácia vypnutá ---

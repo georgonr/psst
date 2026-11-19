@@ -1,7 +1,8 @@
 # PSST server
 
-> Produkcia (od 2026-11-13): DNS len pre `chat`, `app`, `call`, `push`.macet.eu — MAS na `https://chat.macet.eu/auth/`,
-> `push.macet.eu` len presmeruje na web (ntfy zrušený, D47), TURN/TLS zdieľa :443 s `call.macet.eu` (DECISIONS D42–D45).
+> Produkcia (od 2026-11-19, D85): Matrix server_name `psst.pro` (ID `@meno:psst.pro`), DNS pre `psst.pro`, `www`, `chat`,
+> `app`, `call`.psst.pro — homeserver a MAS na `https://chat.psst.pro` (MAS na `/auth/`), úvodná stránka a
+> `.well-known/matrix` na `psst.pro`, `www` len presmeruje, TURN/TLS zdieľa :443 s `call.psst.pro` (DECISIONS D42–D45, D85).
 
 Súkromný Matrix server pre PSST — jeden `docker compose` projekt, nasadenie jedným príkazom.
 **Deň nasadenia krok za krokom: [DEPLOY-CHECKLIST.md](DEPLOY-CHECKLIST.md).**
@@ -14,19 +15,19 @@ sudo ./deploy.sh <IP_SERVERA> <EMAIL> [--contact "…"] [--hosting "…"] [--app
 
 | Služba | Image | Doména / port | Úloha |
 |---|---|---|---|
-| Synapse | `ghcr.io/element-hq/synapse:v1.165.0` + vrstva `server/synapse/Dockerfile` (QR relácia 5 min, D66) | chat.macet.eu (len cez nginx; admin API 127.0.0.1:8008) | Matrix homeserver, federácia vypnutá |
-| MAS | `ghcr.io/element-hq/matrix-authentication-service:1.29.0` | chat.macet.eu**/auth/** | účty, prihlásenie, **registrácia len s pozývacím tokenom** (aj z Element X) |
+| Synapse | `ghcr.io/element-hq/synapse:v1.165.0` + vrstva `server/synapse/Dockerfile` (QR relácia 5 min, D66) | chat.psst.pro (len cez nginx; admin API 127.0.0.1:8008) | Matrix homeserver, federácia vypnutá |
+| MAS | `ghcr.io/element-hq/matrix-authentication-service:1.29.0` | chat.psst.pro**/auth/** | účty, prihlásenie, **registrácia len s pozývacím tokenom** (aj z Element X) |
 | PostgreSQL | `postgres:18.7-alpine` | interne | databázy `synapse` a `mas` |
-| LiveKit | `livekit/livekit-server:v1.13.11` | chat.macet.eu/livekit/sfu, 7881/tcp, 7882/udp | SFU pre hovory |
-| lk-jwt-service | `ghcr.io/element-hq/lk-jwt-service:0.10.0` | chat.macet.eu/livekit/jwt | MatrixRTC autorizácia |
-| coturn | `coturn/coturn:4.18.0` (host sieť) | call.macet.eu:443 (TLS cez nginx, rozlíšené podľa ALPN) | TURN pre siete bez UDP; relay len na vlastnú SFU; 3478/udp sa nepublikuje |
-| Element Call | `ghcr.io/element-hq/element-call:v0.28.2` | call.macet.eu | samostatná web appka hovorov |
-| Sygnal | `matrixdotorg/sygnal:v0.15.1` (profil `sygnal`) | chat.macet.eu/_matrix/push/v1/notify (len cez nginx) | vlastná push brána: Android → FCM HTTP v1, iOS → APNs |
-| psst-admin | lokálny build `server/admin` (Python 3.13) | app.macet.eu**/admin** (len cez nginx) | správa pozvánok a členov (D56) |
+| LiveKit | `livekit/livekit-server:v1.13.11` | chat.psst.pro/livekit/sfu, 7881/tcp, 7882/udp | SFU pre hovory |
+| lk-jwt-service | `ghcr.io/element-hq/lk-jwt-service:0.10.0` | chat.psst.pro/livekit/jwt | MatrixRTC autorizácia |
+| coturn | `coturn/coturn:4.18.0` (host sieť) | call.psst.pro:443 (TLS cez nginx, rozlíšené podľa ALPN) | TURN pre siete bez UDP; relay len na vlastnú SFU; 3478/udp sa nepublikuje |
+| Element Call | `ghcr.io/element-hq/element-call:v0.28.2` | call.psst.pro | samostatná web appka hovorov |
+| Sygnal | `matrixdotorg/sygnal:v0.15.1` (profil `sygnal`) | chat.psst.pro/_matrix/push/v1/notify (len cez nginx) | vlastná push brána: Android → FCM HTTP v1, iOS → APNs |
+| psst-admin | lokálny build `server/admin` (Python 3.13) | app.psst.pro**/admin** (len cez nginx) | správa pozvánok a členov (D56) |
 | nginx | `nginx:1.30.6-alpine` | 80, 443 | TLS, SNI smerovanie (stream), reverzná proxy, PSST web, právne stránky |
 | certbot | `certbot/certbot:v5.10.0` | — | Let's Encrypt (obnova 2× denne) |
 
-Port 443 obsluhuje nginx `stream`: SNI `call.macet.eu` **bez HTTP ALPN** (TURN klient WebRTC ALPN neposiela) → ukončí TLS → TURN-over-TCP na coturn; všetko
+Port 443 obsluhuje nginx `stream`: SNI `call.psst.pro` **bez HTTP ALPN** (TURN klient WebRTC ALPN neposiela) → ukončí TLS → TURN-over-TCP na coturn; všetko
 ostatné → interný HTTPS server (127.0.0.1:8443, PROXY protocol zachová IP klienta).
 Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets/` (mimo gitu).
 
@@ -42,7 +43,7 @@ Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets
 | `scripts/restore.sh <archív.enc> [--force]` | obnova (aj na nový server); overí zhodu podpisového kľúča |
 | `scripts/fetch-web.sh` | stiahne PSST web (posledný GitHub release) do `app/` za chodu |
 
-## Administrácia — https://app.macet.eu/admin
+## Administrácia — https://app.psst.pro/admin
 
 Pozvánky a členovia v prehliadači (aj mobil), prihlásenie bežným účtom cez MAS; prístup len pre adminov
 (`can_request_admin` v MAS — teraz `geo`, nastaviť: `sudo scripts/members.sh admin <meno>`), ostatní 403.

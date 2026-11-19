@@ -62,7 +62,7 @@ synapse_lock() {
   ensure_admin_token
   synapse_curl -o /dev/null -X PUT -H "Authorization: Bearer $(cat secrets/admin_token)" \
     -H 'Content-Type: application/json' -d "{\"locked\": $2}" \
-    "http://localhost:8008/_synapse/admin/v2/users/@$1:${MATRIX_DOMAIN}" || warn "Synapse lock=$2 zlyhal"
+    "http://localhost:8008/_synapse/admin/v2/users/@$1:${SERVER_NAME}" || warn "Synapse lock=$2 zlyhal"
 }
 
 cmd="${1:-}"; shift || true
@@ -103,7 +103,7 @@ case "$cmd" in
   admin)
     need_user "${1:-}"; pw="$(gen_password)"
     mas register-user --yes "$1" --password "$pw" --admin --ignore-password-complexity >/dev/null
-    log "admin účet @$1:${MATRIX_DOMAIN} vytvorený. Heslo (zmeňte si ho po prihlásení na https://${AUTH_DOMAIN}${AUTH_PREFIX:-}/account):"
+    log "admin účet @$1:${SERVER_NAME} vytvorený. Heslo (zmeňte si ho po prihlásení na https://${AUTH_DOMAIN}${AUTH_PREFIX:-}/account):"
     echo "$pw"
     ;;
   password)

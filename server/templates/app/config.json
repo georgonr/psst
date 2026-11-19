@@ -2,7 +2,7 @@
     "default_server_config": {
         "m.homeserver": {
             "base_url": "https://__MATRIX_DOMAIN__",
-            "server_name": "__MATRIX_DOMAIN__"
+            "server_name": "__SERVER_NAME__"
         }
     },
     "brand": "PSST",
@@ -13,7 +13,7 @@
     "show_labs_settings": false,
     "room_directory": {
         "servers": [
-            "__MATRIX_DOMAIN__"
+            "__SERVER_NAME__"
         ]
     },
     "setting_defaults": {

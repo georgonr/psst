@@ -1,5 +1,5 @@
 # Matrix Authentication Service (MAS) — šablóna (./deploy.sh → data/config/mas/config.yaml)
-# MAS spravuje účty, prihlásenie a registráciu (OIDC) pre __MATRIX_DOMAIN__.
+# MAS spravuje účty, prihlásenie a registráciu (OIDC) pre __SERVER_NAME__ (homeserver __MATRIX_DOMAIN__).
 # Registrácia: heslom, VÝHRADNE s pozývacím tokenom (scripts/members.sh invite), bez e-mailu.
 http:
   # bez vlastnej subdomény: MAS na ceste __AUTH_PREFIX__ domény __AUTH_DOMAIN__ (DECISIONS D42)
@@ -31,7 +31,7 @@ database:
 
 matrix:
   kind: synapse
-  homeserver: __MATRIX_DOMAIN__
+  homeserver: __SERVER_NAME__
   secret_file: /secrets/mas_shared_secret
   endpoint: http://synapse:8008/
 
@@ -85,7 +85,7 @@ policy:
       - __ADMIN_CLIENT_ID__
     client_registration:
       # Element X / Web / Desktop sa registrujú dynamicky; metadáta (client_uri, tos, policy) sú
-      # na app doméne, redirect schémy eu.macet.* → povoliť rozdielny host
+      # na app doméne, redirect schémy appiek (eu.macet.psst, pro.psst.app) → povoliť rozdielny host
       allow_host_mismatch: true
       allow_insecure_uris: false
       allow_missing_client_uri: false

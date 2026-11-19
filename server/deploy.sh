@@ -62,22 +62,30 @@ else
 fi
 
 # ----------------------------------------------------------------- domény
-MATRIX_DOMAIN="${MATRIX_DOMAIN:-chat.macet.eu}"
-DOMAIN_BASE="${MATRIX_DOMAIN#*.}"
-APP_DOMAIN="${APP_DOMAIN:-app.${DOMAIN_BASE}}"
-CALL_DOMAIN="${CALL_DOMAIN:-call.${DOMAIN_BASE}}"
-# Produkcia má DNS len pre chat/app/call/push (viď DECISIONS D42):
+# Hodnoty z existujúceho .env majú prednosť (server_name sa po prvom spustení NESMIE meniť).
+if [ -f .env ]; then for k in SERVER_NAME MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX TURN_DOMAIN WEB_DOMAIN WWW_DOMAIN NTFY_DOMAIN; do
+  v="$(sed -n "s/^${k}=//p" .env | tail -1)"; [ -n "${!k+x}" ] || { grep -q "^${k}=" .env && printf -v "$k" '%s' "$v"; } || true
+done; fi
+# D85: Matrix server_name = psst.pro (ID @meno:psst.pro), homeserver + MAS na chat.psst.pro, web na app.psst.pro,
+# hovory + TURN/TLS na call.psst.pro, úvodná stránka + .well-known na psst.pro (www. len presmeruje).
+SERVER_NAME="${SERVER_NAME:-psst.pro}"
+MATRIX_DOMAIN="${MATRIX_DOMAIN:-chat.${SERVER_NAME}}"
+APP_DOMAIN="${APP_DOMAIN:-app.${SERVER_NAME}}"
+CALL_DOMAIN="${CALL_DOMAIN:-call.${SERVER_NAME}}"
+# úvodná stránka: na server_name, ak sa líši od homeservera (inak vypnutá, ak ju .env nezapne)
+if [ -z "${WEB_DOMAIN+x}" ]; then if [ "$SERVER_NAME" != "$MATRIX_DOMAIN" ]; then WEB_DOMAIN="$SERVER_NAME"; else WEB_DOMAIN=""; fi; fi
+if [ -z "${WWW_DOMAIN+x}" ]; then if [ -n "$WEB_DOMAIN" ]; then WWW_DOMAIN="www.${WEB_DOMAIN}"; else WWW_DOMAIN=""; fi; fi
+# Produkcia má DNS len pre psst.pro, www, chat, app, call (DECISIONS D42, D85):
 #  - MAS beží na ceste https://<MATRIX_DOMAIN>/auth/ (AUTH_PREFIX), nie na vlastnej subdoméne
-#  - push.<doména>: bývalý ntfy, len presmerovanie na web (notifikácie idú cez FCM/APNs a Sygnal)
 #  - TURN/TLS zdieľa :443 s <CALL_DOMAIN> — nginx ho rozlíši podľa ALPN (TURN klient neposiela h2/http/1.1)
 # Samostatné subdomény sa dajú zapnúť cez .env (AUTH_DOMAIN=auth.… AUTH_PREFIX= TURN_DOMAIN=turn.…).
 AUTH_DOMAIN="${AUTH_DOMAIN:-${MATRIX_DOMAIN}}"
 if [ -z "${AUTH_PREFIX+x}" ]; then
   if [ "$AUTH_DOMAIN" = "$MATRIX_DOMAIN" ]; then AUTH_PREFIX=/auth; else AUTH_PREFIX=""; fi
 fi
-NTFY_DOMAIN="${NTFY_DOMAIN:-push.${DOMAIN_BASE}}"
 TURN_DOMAIN="${TURN_DOMAIN:-${CALL_DOMAIN}}"
-ALL_DOMAINS="$(printf '%s\n' "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" "$TURN_DOMAIN" | awk '!s[$0]++' | tr '\n' ' ')"
+all_domains() { printf '%s\n' "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$TURN_DOMAIN" "${WEB_DOMAIN:-}" "${WWW_DOMAIN:-}" | awk 'NF && !s[$0]++' | tr '\n' ' '; }
+ALL_DOMAINS="$(all_domains)"
 ALL_DOMAINS="${ALL_DOMAINS% }"
 NGINX_IP=172.30.0.250   # pevná IP mimo dynamicky prideľovaných nízkych adries (kolízia pri prvom štarte)
 DOCKER_GW=172.30.0.1   # brána Docker siete "psst" (coturn v host sieti počúva aj tu pre nginx)
@@ -135,10 +143,10 @@ if [ "$HARDEN" = 1 ]; then
 fi
 
 # ----------------------------------------------------------------- 2. .env + secrets
-ENV_KEYS="MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX NTFY_DOMAIN TURN_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID ADMIN_CLIENT_ID"
+ENV_KEYS="SERVER_NAME MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX TURN_DOMAIN WEB_DOMAIN WWW_DOMAIN SERVER_IP LETSENCRYPT_EMAIL LIVEKIT_USE_EXTERNAL_IP LIVEKIT_NODE_IP LIVEKIT_API_KEY LIVEKIT_API_SECRET POSTGRES_PASSWORD SYNAPSE_MACAROON_SECRET_KEY SYNAPSE_FORM_SECRET LK_JWT_AS_TOKEN LK_JWT_HS_TOKEN TURN_SECRET ANDROID_CERT_SHA256 APPLE_TEAM_ID ADMIN_CLIENT_ID"
 default_for() {
   case "$1" in
-    MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|AUTH_PREFIX|NTFY_DOMAIN|TURN_DOMAIN) eval "echo \$$1" ;;
+    SERVER_NAME|MATRIX_DOMAIN|APP_DOMAIN|CALL_DOMAIN|AUTH_DOMAIN|AUTH_PREFIX|TURN_DOMAIN|WEB_DOMAIN|WWW_DOMAIN) eval "echo \$$1" ;;
     SERVER_IP|LIVEKIT_NODE_IP) echo "$SERVER_IP" ;;
     LETSENCRYPT_EMAIL) echo "$LE_EMAIL" ;;
     LIVEKIT_USE_EXTERNAL_IP) echo false ;;   # node_ip = IP servera (zadaná pri nasadení)
@@ -171,8 +179,8 @@ chmod 600 .env
 load_env
 # odvodené hodnoty (po načítaní .env)
 MAS_PUBLIC_BASE="https://${AUTH_DOMAIN}${AUTH_PREFIX}/"
-TURN_DOMAIN_RE_SED="$(printf "%s" "$TURN_DOMAIN" | sed "s/\\./\\\\\\\\./g")"   # call\\.macet\\.eu pre sed → call\.macet\.eu v nginx
-ALL_DOMAINS="$(printf "%s\n" "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" "$NTFY_DOMAIN" "$TURN_DOMAIN" | awk "!s[\$0]++" | tr "\n" " ")"; ALL_DOMAINS="${ALL_DOMAINS% }"
+TURN_DOMAIN_RE_SED="$(printf "%s" "$TURN_DOMAIN" | sed "s/\\./\\\\\\\\./g")"   # call\\.psst\\.pro pre sed → call\.psst\.pro v nginx
+ALL_DOMAINS="$(all_domains)"; ALL_DOMAINS="${ALL_DOMAINS% }"
 
 # MAS: šifrovací kľúč, podpisové kľúče (RSA + EC), zdieľané tajomstvo so Synapse
 [ -s secrets/mas/encryption ] || openssl rand -hex 32 | tr -d "\n" > secrets/mas/encryption
@@ -206,7 +214,8 @@ chmod 700 data
 render() { # render <template> <output>
   sed -e "s|__MATRIX_DOMAIN__|${MATRIX_DOMAIN}|g" -e "s|__APP_DOMAIN__|${APP_DOMAIN}|g" \
       -e "s|__CALL_DOMAIN__|${CALL_DOMAIN}|g" -e "s|__AUTH_DOMAIN__|${AUTH_DOMAIN}|g" \
-      -e "s|__NTFY_DOMAIN__|${NTFY_DOMAIN}|g" -e "s|__TURN_DOMAIN__|${TURN_DOMAIN}|g" \
+      -e "s|__SERVER_NAME__|${SERVER_NAME}|g" -e "s|__TURN_DOMAIN__|${TURN_DOMAIN}|g" \
+      -e "s|__WWW_DOMAIN__|${WWW_DOMAIN:-}|g" \
       -e "s|__AUTH_PREFIX__|${AUTH_PREFIX}|g" -e "s|__MAS_PUBLIC_BASE__|${MAS_PUBLIC_BASE}|g" \
       -e "s|__TURN_DOMAIN_RE__|${TURN_DOMAIN_RE_SED}|g" \
       -e "s|__NGINX_IP__|${NGINX_IP}|g" -e "s|__SERVER_IP__|${SERVER_IP}|g" \
@@ -298,14 +307,13 @@ grep -q 'DOPLNIT_KONTAKT' data/config/app-default/legal/terms.html && warn "Podm
 mkdir -p data/config/app-default/.well-known
 render templates/app/well-known/assetlinks.json data/config/app-default/.well-known/assetlinks.json
 render templates/app/well-known/apple-app-site-association data/config/app-default/.well-known/apple-app-site-association
-# prezentačná stránka WEB_DOMAIN (D82): statické súbory z www/ do už pripojeného /srv/app-default/www
+# úvodná stránka WEB_DOMAIN (D82, D85): statické súbory z www/ do už pripojeného /srv/app-default/www
 # (na APP_DOMAIN nie je dosiahnuteľná — tam sa z app-default servíruje len config.json, .well-known a legal).
-# Vhost sa zapne až s vlastným certifikátom "psst-web" (krok 6) — bez neho by nginx nenaštartoval.
-WEB_CERT=data/certbot/conf/live/psst-web/fullchain.pem
+# Je v spoločnom certifikáte "psst"; vhost nesie aj .well-known/matrix pre server_name.
 if [ -n "${WEB_DOMAIN:-}" ]; then
-  python3 www/build.py >/dev/null
-  rsync -a --delete --chmod=D755,F644 --exclude build.py www/ data/config/app-default/www/
-  if [ -s "$WEB_CERT" ]; then render templates/nginx/www.conf data/config/nginx/www.conf; else rm -f data/config/nginx/www.conf; fi
+  SITE="https://${WEB_DOMAIN}" DOWNLOAD="https://${APP_DOMAIN}/download/" LOGIN="https://${APP_DOMAIN}/" python3 www/build.py >/dev/null
+  rsync -a --delete --chmod=D755,F644 --exclude build.py --exclude __pycache__ www/ data/config/app-default/www/
+  render templates/nginx/www.conf data/config/nginx/www.conf
 else
   rm -rf data/config/app-default/www data/config/nginx/www.conf
 fi
@@ -342,7 +350,7 @@ fi
 # secrets/webpush. allowed_endpoints: Sygnal posiela len známym push službám prehliadačov (nie na ľubovoľné URL).
 WEB_PUSH_APP_ID="${WEB_PUSH_APP_ID:-eu.macet.psst.web}"
 SYG_APPS+="$(printf '  %s:\n    type: webpush\n    vapid_private_key: /webpush/vapid_private.pem\n    vapid_contact_email: %s\n    ttl: 3600\n    allowed_endpoints:\n      - "fcm.googleapis.com"\n      - "*.push.services.mozilla.com"\n      - "*.notify.windows.com"\n      - "web.push.apple.com"\n ' \
-  "$WEB_PUSH_APP_ID" "${LETSENCRYPT_EMAIL:-admin@${MATRIX_DOMAIN}}")"$'\n'
+  "$WEB_PUSH_APP_ID" "${LETSENCRYPT_EMAIL:-admin@${SERVER_NAME}}")"$'\n'
 printf '{\n    "app_id": "%s",\n    "vapid_public_key": "%s",\n    "gateway_url": "https://%s/_matrix/push/v1/notify"\n}\n' \
   "$WEB_PUSH_APP_ID" "$VAPID_PUBLIC_KEY" "$MATRIX_DOMAIN" > data/config/app-default/psst-push.json.tmp
 if [ -f data/config/app-default/psst-push.json ]; then cat data/config/app-default/psst-push.json.tmp > data/config/app-default/psst-push.json; rm -f data/config/app-default/psst-push.json.tmp
@@ -385,8 +393,14 @@ make_selfsigned() {
   chmod 644 "$CERT_DIR/fullchain.pem"
   touch "$CERT_DIR/.psst-dummy"
 }
-# dočasný certifikát aj keď pribudla subdoména (aktualizácia zo staršej verzie bez auth/ntfy/turn)
-if [ ! -f "$CERT_DIR/fullchain.pem" ] || { [ -f "$CERT_DIR/.psst-dummy" ] && ! openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -text | grep -q "DNS:${TURN_DOMAIN}"; }; then
+# dočasný certifikát aj keď sa zmenili domény (certifikát nepokrýva všetky z ALL_DOMAINS) → potom nový LE (krok 6)
+cert_covers_all() { local t; t="$(openssl x509 -in "$CERT_DIR/fullchain.pem" -noout -ext subjectAltName 2>/dev/null)" || return 1
+  for d in $ALL_DOMAINS; do printf '%s' "$t" | grep -q "DNS:${d}\(,\|\$\)" || return 1; done; }
+if [ -f "$CERT_DIR/fullchain.pem" ] && [ ! -f "$CERT_DIR/.psst-dummy" ] && ! cert_covers_all; then
+  log "certifikát nepokrýva všetky domény ($ALL_DOMAINS) → nový"
+  rm -f "$CERT_DIR/fullchain.pem"
+fi
+if [ ! -f "$CERT_DIR/fullchain.pem" ] || { [ -f "$CERT_DIR/.psst-dummy" ] && ! cert_covers_all; }; then
   log "vytváram dočasný self-signed certifikát pre: $ALL_DOMAINS"
   make_selfsigned
 fi
@@ -495,21 +509,6 @@ if [ "$LETSENCRYPT" = 1 ] && [ -f "$CERT_DIR/.psst-dummy" ]; then
   fi
 fi
 
-# prezentačná stránka (D82): samostatný certifikát "psst-web", aby sa zdieľaný "psst" nemenil; obnovu robí
-# kontajner certbot (certbot renew obnoví všetky certifikáty), nginx ich načíta pri periodickom reloade
-if [ "$LETSENCRYPT" = 1 ] && [ -n "${WEB_DOMAIN:-}" ] && [ ! -s "$WEB_CERT" ]; then
-  log "žiadam certifikát Let's Encrypt pre: $WEB_DOMAIN (psst-web)"
-  STAGING_ARG=""; [ "$STAGING" = 1 ] && STAGING_ARG="--staging"
-  if compose run --rm --no-deps -T --entrypoint certbot certbot certonly --webroot -w /var/www/certbot --cert-name psst-web \
-       -d "$WEB_DOMAIN" --email "$LETSENCRYPT_EMAIL" --agree-tos --no-eff-email --non-interactive --key-type ecdsa $STAGING_ARG; then
-    render templates/nginx/www.conf data/config/nginx/www.conf
-    if compose exec -T nginx nginx -t >/dev/null 2>&1; then compose exec -T nginx nginx -s reload >/dev/null; log "https://$WEB_DOMAIN zapnutá"
-    else rm -f data/config/nginx/www.conf; warn "nginx -t zlyhal s vhostom $WEB_DOMAIN — vhost vypnutý"; fi
-  else
-    warn "certifikát pre $WEB_DOMAIN sa nepodarilo vydať (DNS?) — prezentačná stránka zostáva vypnutá, ostatné služby bežia"
-  fi
-fi
-
 # ----------------------------------------------------------------- 7. zálohy + healthcheck
 # cron aj pri --skip-harden (systém zabezpečený inak) — len nie pri lokálnom teste
 if [ "$LOCAL_TEST" = 0 ] && [ "$(id -u)" = 0 ]; then
@@ -537,7 +536,7 @@ log "spúšťam healthcheck"
 bash scripts/healthcheck.sh || warn "healthcheck hlási problém (viď vyššie)"
 echo
 log "HOTOVO. Ďalší krok: prvý admin a pozvánka"
-echo "    sudo scripts/members.sh admin <meno>          # admin účet (vypíše heslo)"
+echo "    sudo scripts/members.sh admin <meno>          # admin účet @<meno>:${SERVER_NAME} (vypíše heslo)"
 echo "    sudo scripts/members.sh invite [počet] [dni]  # pozývací token → appka: Create account"
 if [ "$NEW_BACKUP_PASS" = 1 ]; then
   echo

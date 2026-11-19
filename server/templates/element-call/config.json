@@ -2,7 +2,7 @@
   "default_server_config": {
     "m.homeserver": {
       "base_url": "https://__MATRIX_DOMAIN__",
-      "server_name": "__MATRIX_DOMAIN__"
+      "server_name": "__SERVER_NAME__"
     }
   },
   "matrix_rtc_mode": "compatibility"

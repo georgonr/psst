@@ -26,7 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 SYNAPSE = os.environ.get("SYNAPSE_URL", "http://synapse:8008")
 SYGNAL = os.environ.get("SYGNAL_URL", "http://sygnal:5000")
-DOMAIN = os.environ["MATRIX_DOMAIN"]
+DOMAIN = os.environ["SERVER_NAME"]   # Matrix server_name (psst.pro), not the homeserver host
 APP_IDS = set(os.environ.get("WAKE_APP_IDS", "eu.macet.psst").split())
 TOKEN_FILE = os.environ.get("ADMIN_TOKEN_FILE", "/secrets/admin_token")
 WAKE_INTERVAL = int(os.environ.get("WAKE_INTERVAL", "20"))
