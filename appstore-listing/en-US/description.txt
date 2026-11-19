@@ -19,7 +19,7 @@ Safety
 
 Your account, your choice
 • One account on iPhone, iPad, Android, the web and desktop (Windows, macOS).
-• Delete your account at any time in the app (Settings → Manage account → Delete account) or as described at psst.pro/delete-account.
+• Delete your account at any time in the app (Settings → Manage account & devices → Delete account) or as described at psst.pro/delete-account.
 
 What psst is not
 psst does not make you anonymous. The server knows your username, your devices and who is in which conversation. Notifications are delivered through Apple Push Notification service and carry only an event ID, never message content. Public channels are not end-to-end encrypted.

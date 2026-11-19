@@ -79,13 +79,13 @@ Dôkaz: `play-listing/FACTS.md` bod 1 a 3 (žiadne analytické ani reklamné kni
 - Notes (skopírovať zo súboru `~/proj/psst-review.txt`, časť „Text to paste…“, doplniť heslo a kľúč na
   obnovenie). Obsah: služba je len na pozvánku → hotový účet; prihlásenie; „Use recovery key“; kde je chat a
   skupina; nahlásenie (podržať správu → Report; Report room); blokovanie; zmazanie účtu (Settings → Manage
-  account → Delete account) a `https://psst.pro/delete-account`.
+  account & devices → Delete account) a `https://psst.pro/delete-account`.
 
 Guideline 1.2 (user-generated content) — čo appka má: podmienky s nulovou toleranciou
 (`https://psst.pro/terms` bod 3), nahlásenie správy a miestnosti, blokovanie používateľa, správca vidí
 nahlásenia na `https://app.psst.pro/admin` (sekcia Nahlásenia: zablokovať člena, zmazať obsah), záväzok do 24 h
-v podmienkach. Guideline 5.1.1(v) (zmazanie účtu v appke): Settings → Manage account → Delete account (overené
-v iOS builde, REPORT.md).
+v podmienkach. Guideline 5.1.1(v) (zmazanie účtu v appke): Settings → Manage account & devices → Delete account
+(overené v iOS builde, REPORT.md).
 
 ## 5. Age Rating (dotazník, v poradí formulára)
 

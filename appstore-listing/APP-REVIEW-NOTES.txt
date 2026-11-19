@@ -18,8 +18,7 @@ Reporting content: long-press (iPhone: touch and hold) a message → Report → 
 A whole room: open the chat → tap its name → Report room. Blocking a user: tap their name or
 avatar → Block. Reports go to the operator's admin page and are reviewed within 24 hours.
 
-Deleting the account: Settings (tap your avatar) → Manage account (Android: "Manage account &
-devices") → the account page opens → Delete account → confirm. The same steps and an e-mail option
+Deleting the account: Settings (tap your avatar) → Manage account & devices → the account page opens → Delete account → confirm. The same steps and an e-mail option
 are described at https://psst.pro/delete-account. If you delete the review account, e-mail
 psst@psst.pro and we will provide a new one.
 

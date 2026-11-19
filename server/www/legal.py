@@ -282,7 +282,7 @@ PAGES = {
 <h2>V aplikácii (Android, iPhone)</h2>
 <ol>
 <li>Ťuknite na svoj profilový obrázok vľavo hore a otvorte <strong>Nastavenia</strong>.</li>
-<li>Zvoľte <strong>Manage account &amp; devices</strong> (Android) alebo <strong>Manage account</strong> (iPhone). Tieto položky sú v aplikácii po anglicky.</li>
+<li>Zvoľte <strong>Manage account &amp; devices</strong> (táto položka je v aplikácii po anglicky).</li>
 <li>Otvorí sa stránka účtu. Zvoľte <strong>Zmazať účet</strong> (Delete account) a potvrďte.</li>
 </ol>
 
@@ -326,7 +326,7 @@ PAGES = {
 <h2>In the app (Android, iPhone)</h2>
 <ol>
 <li>Tap your avatar in the top left corner and open <strong>Settings</strong>.</li>
-<li>Choose <strong>Manage account &amp; devices</strong> (Android) or <strong>Manage account</strong> (iPhone).</li>
+<li>Choose <strong>Manage account &amp; devices</strong>.</li>
 <li>Your account page opens. Choose <strong>Delete account</strong> and confirm.</li>
 </ol>
 

@@ -308,5 +308,30 @@
   "id": "m86_delete",
   "status": "ok",
   "note": "Settings → Account → Manage account → MAS → Delete account (rovnaký web ako pri webovej appke)"
+ },
+ {
+  "id": "m87_legal",
+  "status": "na",
+  "note": "desktop b32/b33 nesie rovnaký config.json ako web (overený na webe); v desktop appke som to neotváral"
+ },
+ {
+  "id": "m87_report",
+  "status": "na",
+  "note": "rovnaký kód ako web, overené na webe"
+ },
+ {
+  "id": "m87_perms",
+  "status": "na",
+  "note": "týka sa len Androidu"
+ },
+ {
+  "id": "m87_alerts",
+  "status": "na",
+  "note": "týka sa len Androidu"
+ },
+ {
+  "id": "m87_store",
+  "status": "na",
+  "note": "—"
  }
 ]

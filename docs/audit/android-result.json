@@ -543,5 +543,30 @@
   "id": "m86_delete",
   "status": "ok",
   "note": "Nastavenia → Manage account & devices → MAS v prehliadači → Delete account (overené na emulátore b47 a naostro na MAS)"
+ },
+ {
+  "id": "m87_legal",
+  "status": "ok",
+  "note": "b51 O aplikácii: Podmienky/Zásady na psst.pro, Delete account → psst.pro/delete-account, Kontakt: psst@psst.pro (emulátor)"
+ },
+ {
+  "id": "m87_report",
+  "status": "ok",
+  "note": "b51: podržať správu → Report content → Send; skupina → Report room → Report; obe v /admin Nahlásenia"
+ },
+ {
+  "id": "m87_perms",
+  "status": "ok",
+  "note": "manifest b51 bez REQUEST_INSTALL_PACKAGES, polohy, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (check-manifest.py v CI aj pred podpisom); batéria: návod → App info → Allow background usage → Unrestricted overené"
+ },
+ {
+  "id": "m87_alerts",
+  "status": "ok",
+  "note": "b51 emulátor: správa pri zhasnutom displeji → displej sa rozsvietil, notification_alert buzz+beep; hovor na celú obrazovku cez zamknutý displej; hovor na pozadí (FGS microphone, médiá tečú); QR prihlásenie, QR overenie, vyhľadávanie (search-gate PASS), inštalácia b51 cez b47"
+ },
+ {
+  "id": "m87_store",
+  "status": "na",
+  "note": "účet review: prihlásenie s kľúčom na obnovenie overené na webe; v Androide sa netestovalo"
  }
 ]

@@ -127,7 +127,7 @@ vlastných správ) — na žiadosť e-mailom; médiá zmazaného účtu odstrán
 
 ## 5. Technické požiadavky Play
 
-- **targetSdk 37**, minSdk 24, versionCode 210000470, versionName `26.11.0-b47+2026-11-19`. Play dnes vyžaduje
+- **targetSdk 37**, minSdk 24, versionName `26.11.0-b51+2026-11-19` (b51; versionCode = (21 000 000 + 51) × 10 + ABI). Play dnes vyžaduje
   cieľové API ≥ 35 pre nové appky; 37 to spĺňa.
 - **16 KB stránky:**
   - všetkých 14 natívnych knižníc pre **arm64-v8a** a **x86_64** má LOAD segmenty zarovnané na **16384**, takže
@@ -138,12 +138,18 @@ vlastných správ) — na žiadosť e-mailom; médiá zmazaného účtu odstrán
   - armv7 ≈ 62 MB;
   - x86_64 ≈ 69 MB.
   - AAB má 162 MB, lebo obsahuje všetky ABI.
-- **Podpis:** AAB b47 je podpísaný kľúčom `psst` z `~/psst-keys/psst-release.jks`. SHA-256 certifikátu
+- **Podpis:** AAB b51 (rovnako ako b47) je podpísaný kľúčom `psst` z `~/psst-keys/psst-release.jks`. SHA-256 certifikátu
   `3A:64:28:CF:51:EE:8F:5E:10:E8:4F:AC:5C:A8:A6:B3:C3:B8:C3:4D:26:74:DB:0F:22:24:D1:D0:09:7D:38:99` = keystore
   (overené `keytool -printcert -jarfile` vs. `keytool -list`). Ten istý odtlačok je v `assetlinks.json` na
   app.psst.pro.
 
-## Play App Signing: nahratie existujúceho kľúča (PEPK) — postup, nespustené
+## Play App Signing: nahratie existujúceho kľúča (PEPK)
+
+**Stav D87 (2026-11-19):** PEPK spustený. Verejný kľúč Google `~/Downloads/encryption_public_key.pem` bol k dispozícii
+(skopírovaný do `~/psst-keys/play/`), `pepk.jar` stiahnutý z gstatic.com (SHA-256 `aaccc077…858e24e`). Výsledok:
+**`~/psst-keys/play/psst-signing-key.zip`** (chmod 600; `encryptedPrivateKey` + `certificate.pem`, certifikát
+SHA-256 `3A:64:…:38:99` = vydané APK/AAB). Heslá sa brali zo `~/psst-keys/keystore.properties`, nikde sa
+nevypísali. Do Play Console sa nič nenahralo: zip nahrá majiteľ v kroku 4 nižšie. Pôvodný postup:
 
 Prečo existujúci kľúč: psst sa už inštaluje z app.psst.pro/download. Keby Play podpisoval novým kľúčom, verzia z
 Play by sa nedala nainštalovať cez verziu z webu, a naopak. Navyše by prestali fungovať App Links

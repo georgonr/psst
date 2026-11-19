@@ -163,5 +163,7 @@ Konečný zoznam povolení b51 je vo FACTS.md §2.
 
 ## 15. Play App Signing
 
-Na konci behu sa pripravil zašifrovaný kľúč pre Play cez PEPK, ak bol k dispozícii verejný kľúč Google
-(`~/Downloads/encryption_public_key.pem`) — výsledok a cesta sú v REPORT.md. Postup: FACTS.md, sekcia PEPK.
+App integrity → App signing → „Use a different key“ → „Export and upload a key from Java KeyStore“ → nahrať
+**`~/psst-keys/play/psst-signing-key.zip`** (pripravené PEPK v D87, certifikát `3A:64:…:38:99`). Po nahratí musí
+„App signing key certificate“ v Play ukazovať ten istý odtlačok. Upload key: odporúčaný samostatný (FACTS.md, PEPK
+krok 4).

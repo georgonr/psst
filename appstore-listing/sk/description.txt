@@ -19,7 +19,7 @@ Bezpečnosť
 
 Váš účet, vaša voľba
 • Jeden účet na iPhone, iPade, v Androide, na webe aj v počítači (Windows, macOS).
-• Účet môžete kedykoľvek zmazať v aplikácii (Nastavenia → Manage account → Delete account) alebo podľa psst.pro/delete-account.
+• Účet môžete kedykoľvek zmazať v aplikácii (Nastavenia → Manage account & devices → Delete account) alebo podľa psst.pro/delete-account.
 
 Čo psst nie je
 psst vás nerobí anonymnými. Server pozná vaše používateľské meno, zariadenia a to, kto je v ktorom rozhovore. Upozornenia doručuje Apple Push Notification service a nesú len identifikátor udalosti, nikdy obsah správy. Verejné kanály nie sú šifrované end-to-end.

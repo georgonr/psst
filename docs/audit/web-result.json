@@ -333,5 +333,30 @@
   "id": "m86_delete",
   "status": "ok",
   "note": "Settings → Account → Manage account → chat.psst.pro/auth/account → Delete account; overené: MAS aj Synapse deaktivované, erased_users"
+ },
+ {
+  "id": "m87_legal",
+  "status": "ok",
+  "note": "web b32/b33: Help & About → Legal: Podmienky, Zásady, Zmazanie účtu, Kontakt psst@psst.pro; pätička prihlásenia na psst.pro"
+ },
+ {
+  "id": "m87_report",
+  "status": "ok",
+  "note": "správa (Options → Report) a miestnosť (Room info → Report room) z webu → /admin Nahlásenia; akcie Zmazať správu/miestnosť, Zablokovať, Vybavené overené"
+ },
+ {
+  "id": "m87_perms",
+  "status": "na",
+  "note": "týka sa len Androidu"
+ },
+ {
+  "id": "m87_alerts",
+  "status": "na",
+  "note": "týka sa len Androidu"
+ },
+ {
+  "id": "m87_store",
+  "status": "ok",
+  "note": "review a review-partner: šifrovaná DM + skupina, záloha kľúčov s kľúčom na obnovenie (vytvorené na webe)"
  }
 ]
