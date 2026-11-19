@@ -166,6 +166,12 @@ def render(state):
 <p class="lead">Private, end-to-end encrypted messenger. Pick your platform — always the latest version.
 Prefer the browser? <a href="https://{APP_DOMAIN}/">Open psst on the web</a>.</p>
 <div class="grid">{''.join(cards)}</div>
+<p class="lead" lang="sk"><b>Mali ste psst už predtým?</b> Novú verziu nainštalujte cez tú starú (dáta sa nemažú) — po
+spustení sa ukáže prihlásenie. psst sa presunul na nový server, staré účty a správy sa nepreniesli: požiadajte
+správcu o novú pozvánku a vytvorte si účet (Create account). Stará verzia o novej sama nevie.</p>
+<p class="lead"><b>Used psst before?</b> Install the new version over the old one — it opens on the sign-in screen.
+psst moved to a new server and old accounts and messages were not carried over: ask the admin for a new invite and
+create an account. The old version does not learn about this update by itself.</p>
 <footer>Updated {updated} · <a href="latest.json">latest.json</a> ·
 <a href="https://{APP_DOMAIN}/privacy.html">Privacy</a> · <a href="https://{APP_DOMAIN}/terms.html">Terms</a> ·
 <a href="https://github.com/georgonr/psst">Source code (AGPL-3.0)</a></footer>
