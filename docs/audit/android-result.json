@@ -533,5 +533,15 @@
   "id": "m85_package",
   "status": "fail",
   "note": "výnimka: v APK/AAB je stará doména len v podpisovom certifikáte (O = pôvodná doména). Certifikát sa meniť nesmie — inak by sa nová verzia nedala nainštalovať cez starú. Kód, zdroje a manifest: 0 výskytov"
+ },
+ {
+  "id": "m86_signed",
+  "status": "na",
+  "note": "APK/AAB podpísané vlastným kľúčom; Play zatiaľ nie (podklady v play-listing/)"
+ },
+ {
+  "id": "m86_delete",
+  "status": "ok",
+  "note": "Nastavenia → Manage account & devices → MAS v prehliadači → Delete account (overené na emulátore b47 a naostro na MAS)"
  }
 ]

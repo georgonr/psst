@@ -1,3 +1,39 @@
+# PSST — report (2026-11-19, dávka 19: macOS Developer ID, iOS TestFlight, podklady pre Google Play)
+
+**Všetky tri časti sú hotové, nič sa nezaseklo.** Podrobnosti sú v DECISIONS.md D86.
+
+**A) macOS:**
+- Certifikát patrí ku kľúču `devid.key`. Je to Developer ID Application, tím MHV67VMY8T, platný do 2027-12-19.
+- Prvý podpísaný build je **b31**, notarizovaný a stapled.
+- Gatekeeper:
+  - čistý runner v CI: 7/7 PASS (spctl install/open/exec, codesign --deep --strict, stapler DMG aj appka);
+  - lokálne na stiahnutom DMG s karanténou: „accepted, source=Notarized Developer ID“;
+  - appka sa spustí a prihlási 6/6.
+- Na /download je b31 a návod „Napriek tomu otvoriť“ zmizol.
+- Pri aktualizácii z nepodpísanej verzie macOS raz vypýta prístup ku kľúčenke „psst Safe Storage“ → **Vždy
+  povoliť**. Pri zamietnutí appka reláciu neobnoví, dáta však nezmaže. Overené z kódu, nie naostro (D86).
+
+**B) iOS:**
+- TestFlight build **b1**: spracovanie VALID, interná skupina „psst“ s testerom Geo M, export compliance
+  výnimka.
+- Na ploche „psst“, APNs production, applinks na app.psst.pro.
+- Sygnal má `eu.macet.psst.ios.prod` v produkcii a Apple kľúč prijal (skúšobný push vrátil `BadDeviceToken`).
+
+**C) Google Play:**
+- `play-listing/`: texty EN/SK, ikona 512, feature 1024×500 a 5 snímok. Do konzoly som nič nenahral.
+- `FACTS.md`:
+  - AD_ID v manifeste nie je, reklamné ID sa nepoužíva;
+  - targetSdk 37, 16 KB OK (arm64/x86_64), stiahnutie ~66 MB;
+  - AAB je podpísaný kľúčom z ~/psst-keys; postup PEPK je pripravený.
+- Zmazanie účtu funguje v appke aj na webe (MAS → Delete account, overené naostro, erased_users).
+- **Chýba:**
+  - verejná stránka s postupom zmazania;
+  - odstránenie alebo zdôvodnenie povolení REQUEST_INSTALL_PACKAGES, polohy a výnimky z batérie;
+  - zobrazenie nahlásení na admin stránke.
+
+**Upratanie:** testovacie účty sú deaktivované (aj qa-ps-* zo snímok). Aktívni sú len geo a psstadmin, miestnosti
+0. Matica funkcií: ✅ 261 · ❌ 2 · 🟠 2 · ⚪ 84.
+
 # PSST — report (2026-11-19, dávka 18: presun na psst.pro, založené načisto)
 
 **Výsledok:** psst beží na **psst.pro** (D85). Server_name je `psst.pro`, ID majú tvar `@meno:psst.pro`.

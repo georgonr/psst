@@ -298,5 +298,15 @@
   "id": "m85_package",
   "status": "ok",
   "note": "psst-macos-…-b30.dmg aj .zip (app.asar): 0 výskytov starej domény"
+ },
+ {
+  "id": "m86_signed",
+  "status": "ok",
+  "note": "b31: Developer ID Application GexPay, SE (MHV67VMY8T), notarizovaný a stapled; čistý runner 7/7 (spctl install/open/exec, codesign --deep --strict, stapler DMG aj app), lokálne stiahnutý DMG s karanténou accepted; spustenie + prihlásenie 6/6"
+ },
+ {
+  "id": "m86_delete",
+  "status": "ok",
+  "note": "Settings → Account → Manage account → MAS → Delete account (rovnaký web ako pri webovej appke)"
  }
 ]

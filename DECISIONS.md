@@ -806,3 +806,59 @@ automatická kontrola hľadania.** Dávka 16 hlásila, že b42 aj b43 nenájdu n
     konfigurácii (vlastné servery sú vypnuté), a ukáže prihlásenie.
   - Staré buildy (Android b44, desktop b27) o novej verzii samy nevedia, lebo kontrolujú adresu na starej doméne,
     ktorá už neodpovedá. Členov treba upozorniť priamo; odkaz je https://app.psst.pro/download/.
+
+## macOS Developer ID, iOS TestFlight, podklady pre Google Play (2026-11-19, devätnásta dávka)
+
+**D86 — macOS je podpísaný a notarizovaný, iOS b1 je v TestFlighte, podklady pre Play sú v `play-listing/`.**
+
+**macOS:**
+- Certifikát `developerID_application.cer` patrí ku kľúču `devid.key` (zhodný verejný kľúč). Je to Developer ID
+  Application (OID 1.2.840.113635.100.6.1.13), subjekt „GexPay, SE (MHV67VMY8T)“, platný do 2027-12-19.
+- `macos-devid-secrets.sh` vytvoril p12 a nastavil šifrované tajomstvá `PSST_MAC_CERT_*`. Oprava v skripte:
+  kontrola tajomstiev cez `gh secret list | grep -q` padala pod `pipefail` na SIGPIPE, teraz sa zoznam načíta
+  najprv do premennej.
+- Prvý podpísaný build je **b31**.
+  - Gatekeeper na čistom runneri v CI (7/7) aj lokálne na stiahnutom DMG s karanténou: `accepted, source=Notarized
+    Developer ID`, `stapler validate` OK pre DMG aj appku, hardened runtime.
+  - Stránka /download sama zahodila návod „Napriek tomu otvoriť“ (`signed: true` v latest.json).
+- macOS joby na GitHube dvakrát nedostali runner do 15 minút (runnery práve vyťažoval iOS archív). Pomohol
+  `gh run rerun --failed`, build číslo ostalo b31.
+- **Kľúčenka pri aktualizácii z nepodpísanej verzie** (z kódu a zo správania macOS, naostro neoverené, aby sa
+  nemenila skutočná položka „psst Safe Storage“ v kľúčenke na tomto Macu):
+  - položku „psst Safe Storage“ vytvorila ad-hoc podpísaná verzia a jej ACL dôveruje len tomuto podpisu;
+  - podpísaná verzia má iný podpis, preto macOS **raz** ukáže dialóg „psst chce použiť vaše dôverné údaje
+    uložené v ‚psst Safe Storage‘ v kľúčenke“. Po zadaní hesla a **Vždy povoliť** všetko funguje a ďalšie
+    podpísané verzie sa už nepýtajú (požiadavka na podpis = Team ID);
+  - pri **Zamietnuť** upstream kód tajomstvo nezahodí (`SafeStorageDecryptionError`), reláciu však nevie
+    obnoviť a ukáže chybu obnovenia relácie. Po novom spustení a povolení v kľúčenke sa obnoví bez straty
+    správ.
+
+**iOS:**
+- `release-testflight.sh` nájde appku podľa bundle ID (`eu.macet.psst`), názov v App Store Connect („psst secure
+  chat“) mu nevadí. Názov na ploche ostáva `psst` (`CFBundleDisplayName`).
+- **Build b1:**
+  - spracovanie Apple: VALID za ~4 min;
+  - interná skupina „psst“ s testerom Geo M;
+  - export compliance: `ITSAppUsesNonExemptEncryption = false` (výnimka, štandardné algoritmy);
+  - entitlement `aps-environment: production`, applinks `app.psst.pro`, NSE v App Group `group.eu.macet.psst`.
+- **APNs:** Release build registruje pusher `eu.macet.psst.ios.prod`. Sygnal ho má ako APNs `production`, topic
+  `eu.macet.psst`; NSE dostáva ten istý push (mutable-content), samostatný topic nemá. Skúšobný push s vymysleným
+  tokenom: Apple odpovedalo `BadDeviceToken` (nie `InvalidProviderToken`), takže kľúč, tím a produkčné prostredie
+  sú prijaté.
+
+**Google Play** (len podklady, do konzoly nič):
+- `play-listing/` obsahuje:
+  - texty EN/SK; tvrdenia sú overené, bez sľubu anonymity a s výslovným „psst vás nerobí anonymnými“;
+  - ikonu 512 (RGBA) a feature grafiku 1024×500;
+  - 5 snímok z emulátora (vymyslené osoby, správy z overených webových relácií, aby pri nich nebol varovný
+    otáznik).
+- `FACTS.md` obsahuje overené fakty s dôkazmi z AAB b47.
+- **Zistené, neimplementované:**
+  - pre Play treba odstrániť alebo zdôvodniť `REQUEST_INSTALL_PACKAGES`, polohu (funkcia je bez mapového kľúča
+    skrytá) a `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS`; vyhlásiť full-screen intent a typy služieb v popredí;
+  - chýba verejná stránka s postupom zmazania účtu (pre pole „Delete account URL“);
+  - nahlásenia obsahu sa nezobrazujú na admin stránke.
+- **Zmazanie účtu:** v appke cez Nastavenia → Manage account & devices → MAS → Delete account, na webe
+  chat.psst.pro/auth/account. Overené naostro: deaktivácia v MAS aj Synapse + `erased_users`.
+- **Play App Signing:** nahrať **existujúci** kľúč cez PEPK (postup v FACTS.md, nespustené), aby verzia z Play a
+  z /download mali rovnaký podpis a fungovali App Links.

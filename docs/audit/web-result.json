@@ -323,5 +323,15 @@
   "id": "m85_package",
   "status": "ok",
   "note": "psst-web-…-b30.tar.gz: 0 výskytov starej domény; nasadený web (server/app) tiež 0"
+ },
+ {
+  "id": "m86_signed",
+  "status": "na",
+  "note": "web sa nepodpisuje"
+ },
+ {
+  "id": "m86_delete",
+  "status": "ok",
+  "note": "Settings → Account → Manage account → chat.psst.pro/auth/account → Delete account; overené: MAS aj Synapse deaktivované, erased_users"
  }
 ]

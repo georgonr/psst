@@ -298,5 +298,15 @@
   "id": "m85_package",
   "status": "ok",
   "note": "psst-windows-…-b30.msi (OLE + CAB, app.asar): 0 výskytov starej domény"
+ },
+ {
+  "id": "m86_signed",
+  "status": "na",
+  "note": "Windows MSI zatiaľ bez podpisu (nebolo v zadaní)"
+ },
+ {
+  "id": "m86_delete",
+  "status": "ok",
+  "note": "Settings → Account → Manage account → MAS → Delete account (rovnaký web)"
  }
 ]

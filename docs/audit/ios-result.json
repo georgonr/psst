@@ -263,5 +263,15 @@
   "id": "m85_package",
   "status": "na",
   "note": "iOS balík sa v tejto dávke nevydával; zdroje forku: 0 výskytov"
+ },
+ {
+  "id": "m86_signed",
+  "status": "ok",
+  "note": "TestFlight b1: VALID, interná skupina psst + Geo M, export compliance výnimka, aps-environment production"
+ },
+ {
+  "id": "m86_delete",
+  "status": "na",
+  "note": "„Manage account & devices“ v Nastaveniach (iOS audit sessions) vedie na MAS; zmazanie na iPhone neoverené"
  }
 ]
