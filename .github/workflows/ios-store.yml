@@ -3,6 +3,9 @@
 #             (scripts/audit/ios-partner.mjs): Report content, Report room, About links, Delete account.
 #   shots   — PsstStoreTests.testStoreScreenshots on iPhone 6.9" (Pro Max), iPhone 6.3" (Pro) and iPad Pro 13":
 #             full-screen PNGs in native resolution with an overridden status bar (9:41, full battery).
+#   d88     — PsstStoreTests.testRegistrationScreen (signed out: MAS registration without invite code, hCaptcha,
+#             18+ checkbox) and testExactNameSearch (partial name → nobody, short + full account name → the person,
+#             DM invite sent). Secret part "d88": {"user", "password", "target", "target_name"}.
 #
 # Test accounts only: secret PSST_STORE_IOS = {"review": {"a": {...}, "b": {...}},
 #                                               "shots": {"user", "password", "recovery"}} (qa-* accounts, deactivated
@@ -17,7 +20,7 @@ on:
         default: psst
         required: true
       parts:
-        description: "review,shots"
+        description: "review,shots,d88"
         default: "review,shots"
         required: true
       devices:
@@ -120,7 +123,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/partner" "$RUNNER_TEMP/out"
           umask 077
           printf '%s' "$STORE" > "$RUNNER_TEMP/store.json"
-          python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'));json.dump(d['review'],open('$RUNNER_TEMP/partner/accounts.json','w'))"
+          python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'));json.dump(d.get('review',{}),open('$RUNNER_TEMP/partner/accounts.json','w'))"
       - name: Review checks (report message, report room, about, delete account)
         if: contains(inputs.parts, 'review')
         working-directory: ios
@@ -136,6 +139,21 @@ jobs:
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/testStoreReview \
             -resultBundlePath "$RUNNER_TEMP/out/review.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/review.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
           pkill -f ios-partner.mjs || true
+      - name: D88 — registration screen and exact-name search
+        if: contains(inputs.parts, 'd88')
+        working-directory: ios
+        run: |
+          eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['d88'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_EXACT_TARGET=%s TEST_RUNNER_PSST_EXACT_TARGET_NAME=\"%s\"' % (d['user'], d['password'], d['target'], d['target_name']))")"
+          export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/d88"
+          for t in testRegistrationScreen testExactNameSearch; do
+            xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests \
+              -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
+              -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/$t \
+              -resultBundlePath "$RUNNER_TEMP/out/d88-$t.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/d88-$t.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
+            mkdir -p "$RUNNER_TEMP/out/d88-x/$t"
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/out/d88-$t.xcresult" --output-path "$RUNNER_TEMP/out/d88-x/$t" >/dev/null 2>&1 || true
+          done
+
       - name: Screenshots on three simulators
         if: contains(inputs.parts, 'shots')
         working-directory: ios
