@@ -1,7 +1,7 @@
-"""PSST admin — správa pozvánok, členov a nahlásení na https://<APP_DOMAIN>/admin (DECISIONS D56, D87).
+"""PSST admin — správa členov a nahlásení na https://<APP_DOMAIN>/admin (DECISIONS D56, D87, D88).
 
 - prihlásenie výhradne cez MAS (OIDC authorization code + PKCE), prístup len pre účty s admin právom v MAS
-- pozvánky = registračné tokeny MAS (tie isté, ktoré vyžaduje registrácia v appkách), cez MAS admin API
+- registrácia je otvorená (MAS + hCaptcha, D88) — pozvánky ani registračné tokeny už nie sú
 - blokovanie = MAS lock/unlock (+ príznak locked v Synapse, ako scripts/members.sh)
 - nové heslo = MAS admin API set-password, náhodné dočasné heslo sa ukáže raz (D70); relácie člena ostávajú
 - admin tokeny/tajomstvá len v kontajneri (súbory zo server/secrets), nikdy v prehliadači
@@ -36,9 +36,8 @@ SYNAPSE = os.environ.get("SYNAPSE_INTERNAL", "http://synapse:8008")
 CLIENT_ID = os.environ["ADMIN_CLIENT_ID"]
 CLIENT_SECRET = open("/secrets/admin_client_secret").read().strip()
 SYNAPSE_ADMIN_TOKEN_FILE = "/secrets/admin_token"
-DB_DSN = "postgresql://psst_admin_ro:{}@postgres/mas".format(open("/secrets/admin_db_password").read().strip())
 # Nahlásenia (D87): read-only rola vidí v DB synapse len tabuľky nahlásení a stĺpce metadát (deploy.sh), nie obsah
-SYN_DSN = DB_DSN.rsplit("/", 1)[0] + "/synapse"
+SYN_DSN = "postgresql://psst_admin_ro:{}@postgres/synapse".format(open("/secrets/admin_db_password").read().strip())
 DATA = os.environ.get("ADMIN_DATA", "/data")
 PROTECTED = {u.strip() for u in os.environ.get("ADMIN_PROTECTED_USERS", "geo,psstadmin").split(",") if u.strip()}
 SERVICE_USERS = {"psstadmin"}
@@ -53,7 +52,6 @@ SESSIONS: dict[str, dict] = {}
 PENDING: dict[str, dict] = {}   # OIDC state -> {verifier, nonce, ts}
 HITS: dict[str, deque] = defaultdict(deque)
 _admin_token = {"value": None, "exp": 0}
-_pool = None
 _syn_pool = None
 
 
@@ -91,13 +89,6 @@ def rate_limited(key: str, limit: int, window: int = 60) -> bool:
         return True
     q.append(t)
     return False
-
-
-async def pool():
-    global _pool
-    if _pool is None:
-        _pool = await asyncpg.create_pool(DB_DSN, min_size=1, max_size=3)
-    return _pool
 
 
 async def syn_pool():
@@ -301,42 +292,6 @@ def fmt(ts, with_time=True):
     return loc.strftime("%-d. %-m. %Y %H:%M" if with_time else "%-d. %-m. %Y")
 
 
-def token_state(a):
-    t = dt.datetime.now(dt.timezone.utc)
-    if a.get("revoked_at"):
-        return "zrušená", "revoked"
-    limit = a.get("usage_limit")
-    if limit is not None and a.get("times_used", 0) >= limit:
-        return "použitá", "used"
-    exp = parse_ts(a.get("expires_at"))
-    if exp and exp < t:
-        return "prepadnutá", "expired"
-    return "voľná", "free"
-
-
-async def registrations():
-    """token_id -> [(username, completed_at)] a username -> token"""
-    rows = await (await pool()).fetch(
-        "select r.username, r.completed_at, t.user_registration_token_id::text as tid, t.token "
-        "from user_registrations r join user_registration_tokens t using (user_registration_token_id) "
-        "where r.completed_at is not null order by r.completed_at")
-    by_token, by_user = defaultdict(list), {}
-    for r in rows:
-        by_token[r["tid"]].append((r["username"], r["completed_at"]))
-        by_user[r["username"]] = r["token"]
-    return by_token, by_user
-
-
-def ulid_to_uuid(ulid: str) -> str:
-    alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
-    n = 0
-    for ch in ulid.upper():
-        n = n * 32 + alphabet.index(ch)
-    h = f"{n:032x}"
-    return f"{h[:8]}-{h[8:12]}-{h[12:16]}-{h[16:20]}-{h[20:]}"
-
-
-# ------------------------------------------------------------------ pages
 def esc(v) -> str:
     return html.escape(str(v), quote=True)
 
@@ -377,23 +332,13 @@ def page(title, body, user=None, csrf=None):
             f'<header><b>psst · správa</b>{top}</header><main>{body}</main></body></html>')
 
 
-def invite_text(code, expires):
-    until = expires.astimezone(dt.timezone(dt.timedelta(hours=1))).strftime("%-d. %-m.") if expires else "odvolania"
-    return (f"Pozvánka do psst: stiahni appku, klikni Create an account a zadaj kód {code}. Platí do {until}\n"
-            f"Web: https://{APP_DOMAIN}")
-
-
 @app.get("/admin", response_class=HTMLResponse)
 @app.get("/admin/", response_class=HTMLResponse)
-async def index(req: Request, created: str = ""):
+async def index(req: Request):
     s, r = await require_admin(req)
     if r:
         return r
-    tokens = await mas_all("/user-registration-tokens")
     users = await mas_all("/users")
-    by_token, by_user = await registrations()
-    with notes_db() as db:
-        notes = dict(db.execute("select token_id, note from notes").fetchall())
     try:
         syn = {u["name"]: u for u in (await synapse_admin("GET", "/_synapse/admin/v2/users?limit=1000&guests=false&deactivated=true&locked=true"))["users"]}
     except Exception:
@@ -409,44 +354,11 @@ async def index(req: Request, created: str = ""):
                    f'(osobne alebo telefonicky, nie do verejnej miestnosti). Po prihlásení si ho má hneď zmeniť v Nastaveniach účtu '
                    f'(<a href="{esc(MAS_PUBLIC)}/account">{esc(MAS_PUBLIC.split("://", 1)[-1])}/account</a>).</p>'
                    f'<p class="mut">Doterajšie heslo už neplatí. Zariadenia, na ktorých je člen prihlásený, ostávajú prihlásené.</p></section>')
-    if created:
-        t = next((x for x in tokens if x["id"] == created), None)
-        if t:
-            a = t["attributes"]
-            msg = invite_text(a["token"], parse_ts(a.get("expires_at")))
-            out.append(f'<section class="ok"><h2>Pozvánka vytvorená</h2><p>Kód: <code id="code">{esc(a["token"])}</code> '
-                       f'<button class="sec" onclick="cp(\'code\',this)">Kopírovať kód</button></p>'
-                       f'<div class="msg" id="msg">{esc(msg)}</div><p><button onclick="cp(\'msg\',this)">Kopírovať text na poslanie</button></p></section>')
     try:
         out.append(reports_section(await load_reports(), s["csrf"]))
     except Exception as e:  # noqa: BLE001
         audit(s["user"], client_ip(req), "reports_load_failed", error=str(e)[:300])
         out.append('<section id="reports"><h2>Nahlásenia</h2><p class="mut">Nahlásenia sa nepodarilo načítať.</p></section>')
-    out.append(f'''<section><h2>Nová pozvánka</h2><form method="post" action="/admin/invites"><input type="hidden" name="csrf" value="{esc(s["csrf"])}">
-<div class="row"><div><label>Počet použití</label><input name="uses" type="number" min="1" max="100" value="1" required></div>
-<div><label>Platnosť (dni)</label><input name="days" type="number" min="1" max="365" value="7" required></div>
-<div style="flex:2 1 220px"><label>Pre koho (poznámka)</label><input name="note" maxlength="120" placeholder="napr. Jana"></div>
-<div style="flex:0 0 auto"><button>Nová pozvánka</button></div></div></form></section>''')
-
-    rows = []
-    for t in sorted(tokens, key=lambda x: x["attributes"].get("created_at") or "", reverse=True):
-        a = t["attributes"]
-        label, cls = token_state(a)
-        regs = by_token.get(ulid_to_uuid(t["id"]), [])
-        who = ", ".join(f"{esc(u)}" for u, _ in regs) or "—"
-        limit = a.get("usage_limit")
-        btn = ""
-        if cls == "free":
-            btn = (f'<form class="inline" method="post" action="/admin/invites/{esc(t["id"])}/revoke" onsubmit="return confirm(\'Zrušiť pozvánku?\')">'
-                   f'<input type="hidden" name="csrf" value="{esc(s["csrf"])}"><button class="danger">Zrušiť</button></form>')
-        rows.append(f'<tr><td data-l="Kód"><code>{esc(a["token"])}</code></td><td data-l="Pre koho">{esc(notes.get(t["id"], ""))}</td>'
-                    f'<td data-l="Vytvorená">{fmt(parse_ts(a.get("created_at")))}</td><td data-l="Platí do">{fmt(parse_ts(a.get("expires_at")), False)}</td>'
-                    f'<td data-l="Použitá">{a.get("times_used", 0)}/{limit if limit is not None else "∞"}</td><td data-l="Stav"><span class="badge {cls}">{label}</span></td>'
-                    f'<td data-l="Zaregistrovaný">{who}</td><td>{btn}</td></tr>')
-    out.append('<section><h2>Pozvánky</h2><div class="tbl"><table><tr><th>Kód</th><th>Pre koho</th><th>Vytvorená</th>'
-               '<th>Platí do</th><th>Použitá</th><th>Stav</th><th>Zaregistrovaný</th><th></th></tr>'
-               + "".join(rows) + "</table></div></section>")
-
     rows, gone = [], []
     for u in sorted(users, key=lambda x: x["attributes"].get("created_at") or ""):
         a = u["attributes"]
@@ -473,9 +385,9 @@ async def index(req: Request, created: str = ""):
                        f'<input type="hidden" name="csrf" value="{esc(s["csrf"])}"><button class="danger">Zablokovať</button></form>')
         (gone if a.get("deactivated_at") else rows).append(
             f'<tr><td data-l="Meno"><b>{esc(name)}</b>{" <span class=mut>(admin)</span>" if a.get("admin") else ""}</td>'
-            f'<td data-l="Registrácia">{fmt(parse_ts(a.get("created_at")))}</td><td data-l="Pozvánka">{esc(by_user.get(name, "—"))}</td>'
+            f'<td data-l="Registrácia">{fmt(parse_ts(a.get("created_at")))}</td>'
             f'<td data-l="Posledná aktivita">{fmt(sy.get("last_seen_ts"))}</td><td data-l="Stav"><span class="badge {cls}">{st}</span></td><td>{btn}</td></tr>')
-    head = '<tr><th>Meno</th><th>Registrácia</th><th>Pozvánka</th><th>Posledná aktivita</th><th>Stav</th><th></th></tr>'
+    head = '<tr><th>Meno</th><th>Registrácia</th><th>Posledná aktivita</th><th>Stav</th><th></th></tr>'
     folded = (f'<details><summary>Deaktivované účty ({len(gone)})</summary><div class="tbl"><table>{head}{"".join(gone)}</table></div></details>'
               if gone else "")
     out.append(f'<section><h2>Členovia</h2><div class="tbl"><table>{head}{"".join(rows)}</table></div>{folded}'
@@ -714,46 +626,6 @@ async def report_post(req: Request, kind: str, rid: int, what: str):
     if what not in ("resolve", "reopen", "block", "delete"):
         return PlainTextResponse("Neznáma akcia.", status_code=404)
     return await report_action(req, kind, rid, what)
-
-
-ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-
-
-@app.post("/admin/invites")
-async def create_invite(req: Request):
-    s, r = await require_admin(req)
-    if r:
-        return r
-    form = await check_csrf(req, s)
-    if form is None:
-        return PlainTextResponse("Neplatný CSRF token.", status_code=403)
-    try:
-        uses = max(1, min(100, int(form.get("uses", 1))))
-        days = max(1, min(365, int(form.get("days", 7))))
-    except ValueError:
-        return PlainTextResponse("Neplatné hodnoty.", status_code=400)
-    note = str(form.get("note", ""))[:120].strip()
-    code = "".join(secrets.choice(ALPHABET) for _ in range(4)) + "-" + "".join(secrets.choice(ALPHABET) for _ in range(4))
-    expires = (dt.datetime.now(dt.timezone.utc) + dt.timedelta(days=days)).replace(microsecond=0)
-    j = await mas("POST", "/user-registration-tokens",
-                  json={"token": code, "usage_limit": uses, "expires_at": expires.isoformat().replace("+00:00", "Z")})
-    tid = j["data"]["id"]
-    with notes_db() as db:
-        db.execute("insert or replace into notes values (?,?,?,?)", (tid, note, s["user"], dt.datetime.now(dt.timezone.utc).isoformat()))
-    audit(s["user"], client_ip(req), "invite_create", token_id=tid, code=code, uses=uses, days=days, note=note)
-    return RedirectResponse(f"/admin?created={tid}", status_code=303)
-
-
-@app.post("/admin/invites/{tid}/revoke")
-async def revoke_invite(req: Request, tid: str):
-    s, r = await require_admin(req)
-    if r:
-        return r
-    if await check_csrf(req, s) is None:
-        return PlainTextResponse("Neplatný CSRF token.", status_code=403)
-    await mas("POST", f"/user-registration-tokens/{tid}/revoke")
-    audit(s["user"], client_ip(req), "invite_revoke", token_id=tid)
-    return RedirectResponse("/admin", status_code=303)
 
 
 async def set_lock(req: Request, uid: str, lock: bool):

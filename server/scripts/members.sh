@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Správa členov PSST (účty spravuje Matrix Authentication Service).
 #
-#   scripts/members.sh invite [počet_použití=1] [platnosť_dní=7]   nový pozývací token
 #   scripts/members.sh list                                         zoznam členov
 #   scripts/members.sh block <meno> [--deactivate]                  zablokovať (odhlási všetky relácie)
 #   scripts/members.sh unblock <meno>                               odblokovať
 #   scripts/members.sh admin <meno>                                 vytvoriť admin účet (vypíše heslo)
 #   scripts/members.sh password <meno>                              nastaviť nové náhodné heslo
 #
-# Nový člen: v appke psst (Android/iOS/web/desktop) → „Create account" → zadá pozývací token.
+# Nový člen sa zaregistruje sám: appka psst (Android/iOS/web/desktop) → „Create account" → stránka MAS s hCaptcha
+# a súhlasom s Podmienkami (D88). Pozvánky ani registračné tokeny už nie sú.
 . "$(dirname "$0")/lib.sh"
 load_env
 
@@ -67,19 +67,6 @@ synapse_lock() {
 
 cmd="${1:-}"; shift || true
 case "$cmd" in
-  invite)
-    uses="${1:-1}"; days="${2:-7}"
-    [[ "$uses" =~ ^[0-9]+$ && "$days" =~ ^[0-9]+$ ]] || die "použitie: members.sh invite [počet_použití] [platnosť_dní]"
-    args=(issue-user-registration-token)
-    if [ "$uses" = 0 ]; then args+=(--unlimited); else args+=(--usage-limit "$uses"); fi
-    [ "$days" != 0 ] && args+=(--expires-in "$((days * 86400))")
-    out="$(mas "${args[@]}" 2>&1)" || die "$out"
-    token="$(printf '%s\n' "$out" | sed -n 's/.*registration token: \([^ ]*\).*/\1/p' | tail -1)"
-    [ -n "$token" ] || die "token sa nepodarilo vytvoriť: $out"
-    log "pozývací token (použití: ${uses/#0/neobmedzene}, platnosť: ${days/#0/bez expirácie} dní):"
-    echo "$token"
-    log "pošlite novému členovi: nainštaluj psst → Create account → zadaj tento token (web: https://${APP_DOMAIN})"
-    ;;
   list)
     ensure_admin_token
     synapse_curl -H "Authorization: Bearer $(cat secrets/admin_token)" \

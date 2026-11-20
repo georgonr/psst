@@ -491,15 +491,15 @@ else
   (umask 022; PSST_DOWNLOADS="$PWD/downloads" APP_DOMAIN="$APP_DOMAIN" WEB_DOMAIN="${WEB_DOMAIN:-$SERVER_NAME}" python3 scripts/downloads.py render >/dev/null) || true
   chmod -R a+rX downloads
 fi
-# administrácia: read-only prístup k 2 tabuľkám MAS (kto sa ktorou pozvánkou zaregistroval) + Synapse admin token
+# administrácia: rola psst_admin_ro (nahlásenia v DB synapse) + Synapse admin token. Pozvánky zrušené (D88) →
+# prístup k tabuľkám MAS sa odoberá.
 compose exec -T postgres psql -U synapse -d mas -v ON_ERROR_STOP=1 -q >/dev/null <<SQL || warn "DB rola psst_admin_ro: zlyhalo"
 DO \$\$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'psst_admin_ro') THEN CREATE ROLE psst_admin_ro LOGIN; END IF;
 END \$\$;
 ALTER ROLE psst_admin_ro WITH LOGIN PASSWORD '$(cat secrets/admin/db_password)' NOSUPERUSER NOCREATEDB NOCREATEROLE;
-GRANT CONNECT ON DATABASE mas TO psst_admin_ro;
-GRANT USAGE ON SCHEMA public TO psst_admin_ro;
-GRANT SELECT ON user_registrations, user_registration_tokens TO psst_admin_ro;
+REVOKE ALL ON user_registrations, user_registration_tokens FROM psst_admin_ro;
+REVOKE USAGE ON SCHEMA public FROM psst_admin_ro;
 SQL
 # Nahlásenia (D87): len tabuľky nahlásení a stĺpce metadát (kto, kde, kedy, typ) — nikdy obsah udalostí
 compose exec -T postgres psql -U synapse -d synapse -v ON_ERROR_STOP=1 -q >/dev/null <<SQL || warn "DB rola psst_admin_ro (synapse): zlyhalo"
@@ -574,9 +574,8 @@ compose ps
 log "spúšťam healthcheck"
 bash scripts/healthcheck.sh || warn "healthcheck hlási problém (viď vyššie)"
 echo
-log "HOTOVO. Ďalší krok: prvý admin a pozvánka"
+log "HOTOVO. Ďalší krok: prvý admin (registrácia je otvorená: appka → Create account, hCaptcha, D88)"
 echo "    sudo scripts/members.sh admin <meno>          # admin účet @<meno>:${SERVER_NAME} (vypíše heslo)"
-echo "    sudo scripts/members.sh invite [počet] [dni]  # pozývací token → appka: Create account"
 if [ "$NEW_BACKUP_PASS" = 1 ]; then
   echo
   warn "Heslo k zálohám je v server/secrets/backup.pass — SKOPÍRUJTE SI HO mimo servera (bez neho sa záloha nedá obnoviť):"
