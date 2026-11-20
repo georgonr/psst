@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { spawn } from "node:child_process";
 import fs from "node:fs"; import path from "node:path";
 // Použitie: node prod-login-test.mjs <psst.app> <out-dir> <user> <password>   (skripty spúšťať z adresára s playwright)
+// Voliteľne PSST_EXACT_TARGET + PSST_EXACT_TARGET_NAME: po prihlásení kontroly presného mena (D88, ../audit/exact-name-web.mjs)
 const [app, out, user, pw] = process.argv.slice(2);
 fs.mkdirSync(out, { recursive: true });
 const res = []; const check = (n, ok, d = "") => { res.push({ n, ok, d }); console.log(`${ok ? "PASS" : "FAIL"}  ${n}${d ? "  -- " + d : ""}`); };
@@ -56,6 +57,13 @@ await sleep(3000); for (let i = 0; i < 3; i++) await page.keyboard.press("Escape
 await page.screenshot({ path: path.join(out, "3-logged-in.png") });
 const uid = await page.evaluate(() => { try { return window.mxMatrixClientPeg?.get()?.getUserId(); } catch { return null; } });
 check("desktop prihlásený", inApp && uid === `@${user}:psst.pro`, uid ?? "n/a");
+// D88: hľadanie len podľa presného mena (PSST_EXACT_TARGET=<localpart>, PSST_EXACT_TARGET_NAME=<zobrazované meno>)
+if (process.env.PSST_EXACT_TARGET) {
+    let mod;
+    for (const m of ["./exact-name-web.mjs", "../audit/exact-name-web.mjs"]) { try { mod = await import(new URL(m, import.meta.url)); break; } catch { /* next */ } }
+    await mod.runExactName(page, { target: process.env.PSST_EXACT_TARGET, targetName: process.env.PSST_EXACT_TARGET_NAME,
+        check, shot: (pg, n) => pg.screenshot({ path: path.join(out, "x-" + n + ".png") }), label: "desktopu" });
+}
 fs.writeFileSync(path.join(out, "app.log"), log);
 await browser?.close().catch(() => {}); proc.kill();
 const fails = res.filter((r) => !r.ok).length; console.log(`\n${res.length - fails}/${res.length} checks passed`); process.exit(fails ? 1 : 0);

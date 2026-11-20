@@ -2,8 +2,9 @@
 //   node register-test.mjs <out-dir> [--complete]
 // Vždy (aj na produkcii): registračná obrazovka MAS sa otvorí z appky, NEMÁ pole na pozývací kód, zobrazí hCaptcha
 // a povinné políčko súhlasu s Podmienkami s potvrdením veku 18+.
-// --complete: celá registrácia nového účtu — LEN na lokálnom stacku s testovacími kľúčmi hCaptcha (deploy.sh
-// --local-test, PSST_HOST_IP=127.0.0.1); na produkcii sú ostré kľúče a automat hCaptcha neprejde.
+// --complete: celá registrácia nového účtu — LEN na lokálnom stacku (deploy.sh --local-test, PSST_HOST_IP=127.0.0.1)
+// s dočasne vypnutou captcha v data/config/mas/config.yaml: MAS 1.29 odmietne aj testovacie kľúče hCaptcha (overuje
+// hostname, D88). Kontrolu hCaptcha vtedy preskočí. Na produkcii sú ostré kľúče a automat hCaptcha neprejde.
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -24,7 +25,7 @@ for (const [lang, re18] of [["en-US", /18 years old/], ["sk-SK", /18 rokov/]]) {
     check(`[${lang}] bez poľa na pozývací kód`, (await page.locator('input[name="token"]').count()) === 0 && !/registration token|pozývac/i.test(await page.locator("body").innerText()));
     const frame = page.locator('iframe[src*="hcaptcha.com"]').first();
     await frame.waitFor({ state: "attached", timeout: 30000 }).catch(() => {});
-    check(`[${lang}] hCaptcha zobrazená`, (await page.locator('iframe[src*="hcaptcha.com"]').count()) > 0);
+    if (!local) check(`[${lang}] hCaptcha zobrazená`, (await page.locator('iframe[src*="hcaptcha.com"]').count()) > 0);
     const terms = page.locator('input[name="accept_terms"]');
     const body = (await page.locator("body").innerText()).replace(/\s+/g, " ");
     const label = (body.match(/(I am at least 18[^.]*?Conditions|Mám aspoň 18[^.]*?používania)/) || [""])[0];

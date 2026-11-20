@@ -53,17 +53,20 @@ export async function openMasRegistration(page, base = "https://app.psst.pro") {
 }
 
 // Otvorená registrácia cez MAS (D88): meno, heslo, potvrdenie, súhlas s Podmienkami a 18+, hCaptcha → (zobrazované
-// meno) → súhlas → appka. hCaptcha sa dá prejsť automaticky LEN s testovacími kľúčmi (lokálny stack, deploy.sh
-// --local-test); na produkcii s ostrými kľúčmi registráciu robí človek. Vráti { ok, error }.
+// meno) → súhlas → appka. Automaticky len na lokálnom stacku s DOČASNE vypnutou captcha: MAS 1.29 odmietne aj
+// testovacie kľúče hCaptcha (hostname "dummy-key-pass" ≠ doména MAS, D88); na produkcii registruje človek.
+// Ak je na stránke hCaptcha, skript klikne jej políčko (prejde len pri ľudskom overení). Vráti { ok, error }.
 export async function registerViaMas(page, user, password) {
     await openMasRegistration(page);
     await page.fill('input[name="username"]', user);
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="password_confirm"]', password);
     await page.check('input[name="accept_terms"]');
-    const box = page.frameLocator('iframe[src*="hcaptcha.com"][title*="checkbox" i]').locator("#checkbox");
-    await box.click({ timeout: 60000 });
-    await page.waitForTimeout(3000);
+    if (await page.locator('iframe[src*="hcaptcha.com"]').count()) {
+        const box = page.frameLocator('iframe[src*="hcaptcha.com"][title*="checkbox" i]').locator("#checkbox");
+        await box.click({ timeout: 60000 }).catch(() => {});
+        await page.waitForTimeout(3000);
+    }
     for (let i = 0; i < 5 && /\/register\/?(\?|$)/.test(new URL(page.url()).pathname + "?"); i++) {
         await page.locator('button[type=submit]').first().click().catch(() => {});
         await page.waitForTimeout(3000);
