@@ -182,11 +182,6 @@ def c_open_registration():
         kinds = [e.get("kind") for e in json.loads(errs.group(1)).get("errors", [])] if errs else []
         return r, kinds
 
-    def mas_logs(since="2m"):
-        p = subprocess.run(["docker", "compose", "logs", "--since", since, "mas"], cwd=SERVER, capture_output=True,
-                           text=True, timeout=60)
-        return p.stdout + p.stderr
-
     def restart_mas():
         subprocess.run(["docker", "compose", "restart", "mas"], cwd=SERVER, check=True, capture_output=True, timeout=180)
         for _ in range(60):
@@ -211,10 +206,13 @@ def c_open_registration():
     r, kinds = submit(user, pw, "neplatny-token")
     expect(r.status_code == 200 and "captcha" in kinds, f"neplatný token hCaptcha: {r.status_code} {kinds}")
     r, kinds = submit(user, pw, "10000000-aaaa-bbbb-cccc-000000000001")
-    logs = mas_logs()
-    cap_log = [ln[-220:] for ln in logs.splitlines() if "captcha" in ln.lower() or "hostname" in ln.lower()][-4:]
-    expect(r.status_code == 200 and "captcha" in kinds and ("dummy-key-pass" in logs or "does not match the site hostname" in logs),
-           f"testovací token: {r.status_code} {kinds}; MAS log: {cap_log}")
+    expect(r.status_code == 200 and "captcha" in kinds, f"testovací token: {r.status_code} {kinds}")
+    # ten istý testovací token hCaptcha sama potvrdí (success), ale s hostname "dummy-key-pass" → MAS ho odmietol
+    # pri porovnaní hostname, t. j. token naozaj overuje na serveri (MAS túto chybu do logu nepíše)
+    sv = requests.post("https://api.hcaptcha.com/siteverify", timeout=20, data={
+        "secret": "0x0000000000000000000000000000000000000000", "response": "10000000-aaaa-bbbb-cccc-000000000001",
+        "sitekey": "10000000-ffff-ffff-ffff-000000000001"}).json()
+    expect(sv.get("success") is True and sv.get("hostname") == "dummy-key-pass", f"hCaptcha siteverify (test): {sv}")
 
     # (d) dočasne bez captcha — len tento lokálny stack
     cfg = SERVER / "data" / "config" / "mas" / "config.yaml"
@@ -249,8 +247,8 @@ def c_open_registration():
         restart_mas()
     page, _ = form_page()
     expect("hcaptcha" in page, "po teste sa captcha do MAS nevrátila")
-    return (f"bez tokenu aj s neplatným odmietnuté; testovací token: hCaptcha success, MAS odmietol hostname "
-            f"dummy-key-pass; bez captcha (dočasne) kroky {steps or ['—']} → {login['user_id']} prihlásený; captcha späť")
+    return (f"bez tokenu aj s neplatným odmietnuté; testovací token: hCaptcha success (hostname dummy-key-pass), "
+            f"MAS odmietol; bez captcha (dočasne) kroky {steps or ['—']} → {login['user_id']} prihlásený; captcha späť")
 
 
 @check("1.4", "admin API je z internetu blokované, z loopbacku dostupné")
