@@ -1,1 +1,1 @@
-messenger,encrypted,private,e2ee,matrix,calls,groups,invite,messages,end-to-end
+messenger,encrypted,private,e2ee,matrix,calls,groups,chat,messages,end-to-end

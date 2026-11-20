@@ -16,8 +16,8 @@ Dĺžky textov (znaky / bajty):
 
 | | name | subtitle | promotional | description | keywords |
 |---|---|---|---|---|---|
-| en-US | 16 | 25 | 113 | 1660 | 79 B |
-| sk | 16 | 25 (28 B) | 108 | 1707 | 76 B |
+| en-US | 16 | 25 | 154 | 1731 | 77 B |
+| sk | 16 | 25 (28 B) | 155 | 1755 | 71 B |
 
 Snímky vznikli v iOS simulátore (CI `ios-store.yml`, iOS 27.2, stavový riadok 9:41) zo zdrojového kódu buildu psst iOS b2 na produkčnom serveri psst.pro s vymyslenými osobami
 (testovacie účty `qa-*`, po nafotení deaktivované, miestnosti zmazané). Bez alfa kanála (App Store ho odmieta).

@@ -24,9 +24,9 @@ Dôkazy: `play-listing/FACTS.md` (rovnaký kód a server ako iOS), IPA b2 (`dist
 ## 2. Pricing and Availability
 
 - Price: **Free** (0). In-app purchases: none.
-- Availability: podľa rozhodnutia majiteľa (služba je len na pozvánku; odporúčam EÚ alebo všetky krajiny).
-- Distribution: Public on the App Store (appka je len na pozvánku, ale kontrolór má hotový účet; „Unlisted app“
-  je alternatíva, ak ju nechcete mať vo vyhľadávaní — žiadosť cez Apple formulár).
+- Availability: podľa rozhodnutia majiteľa (odporúčam EÚ alebo všetky krajiny).
+- Distribution: Public on the App Store (registrácia je od D88 otvorená pre každého od 18 rokov; kontrolór dostane
+  hotový účet s pripravenými šifrovanými konverzáciami).
 
 ## 3. App Privacy (Data Collection)
 
@@ -45,10 +45,22 @@ nepoužívajú na sledovanie (tracking), reklamu ani analytiku. Všetky sú **Li
 | User Content → **Other User Content** | Yes | App Functionality | Yes | No | súbory, reakcie, názvy a témy miestností, profilový obrázok, nahlásenia |
 | Identifiers → **User ID** | Yes | App Functionality | Yes | No | `@meno:psst.pro` |
 | Identifiers → **Device ID** | Yes | App Functionality | Yes | No | Matrix device ID a APNs push token (server ho odovzdá Apple na doručenie upozornenia) |
+| Usage Data → **Product Interaction** | Yes | App Functionality | Yes | No | **nové v D88:** hCaptcha pri registrácii (práca s overením: pohyby, dotyky, klávesy) — ochrana pred robotmi |
 
 **Not collected:** Health & Fitness, Financial Info, Location, Sensitive Info, Contacts, Browsing History, Search
-History (vyhľadávanie v správach beží len v zariadení), Purchases, Usage Data, Diagnostics (žiadne crash reporty,
-žiadna analytika), Surroundings, Body, Other Data.
+History (vyhľadávanie v správach beží len v zariadení), Purchases, Usage Data okrem Product Interaction (žiadna
+analytika), Diagnostics (žiadne crash reporty), Surroundings, Body, Other Data.
+
+**Mení hCaptcha (D88) odpovede v App Privacy? Áno, jednu.** hCaptcha (Intuition Machines, Inc.) beží len na
+registračnej stránke MAS (appka ju otvorí cez ASWebAuthenticationSession) a spracúva IP adresu, údaje o prehliadači
+a zariadení (typ prehliadača, OS) a signály práce s overením (pohyby, dotyky, klávesy) — hcaptcha.com/privacy.
+Apple: „Data collected via web traffic must be declared, unless you are enabling the user to navigate the open
+web“; hCaptcha údaje uchováva dlhšie než na vybavenie požiadavky → „collect“. Preto:
+- **pridať** Usage Data → **Product Interaction**: Collected, Purpose **App Functionality** (Apple ju definuje aj
+  ako „prevent fraud, implement security measures“), **Linked to the user: Yes** (opatrne — IP adresa je osobný
+  údaj podľa GDPR a Apple osobné údaje považuje za prepojené), **Tracking: No**;
+- **bez zmeny:** IP adresa nie je v Apple samostatný typ; polohu z nej nikto neurčuje → Location ostáva „Not
+  collected“; typ prehliadača a OS nie sú Device ID → Identifiers bez zmeny; Tracking ostáva **No**.
 
 **Tracking:** „Do you or your third-party partners use data for tracking?“ → **No.** Appka nemá IDFA ani
 App Tracking Transparency prompt.
@@ -62,7 +74,7 @@ Dôkaz: `play-listing/FACTS.md` bod 1 a 3 (žiadne analytické ani reklamné kni
 |---|---|
 | Promotional Text | `en-US/promotional-text.txt` |
 | Description | `en-US/description.txt` (SK: `sk/description.txt`) |
-| Keywords | `en-US/keywords.txt` (79 bajtov) |
+| Keywords | `en-US/keywords.txt` (77 bajtov) |
 | Support URL | `https://psst.pro/support` (kontakt psst@psst.pro, nahlásenie, zmazanie účtu) |
 | Marketing URL | `https://psst.pro` |
 | Screenshots | `screenshots/iphone-6.9/` (1320×2868), `screenshots/iphone-6.3/` (1206×2622), `screenshots/ipad-13/` (2064×2752) |
@@ -77,7 +89,8 @@ Dôkaz: `play-listing/FACTS.md` bod 1 a 3 (žiadne analytické ani reklamné kni
 - Contact: first/last name *(majiteľ)*, phone *(majiteľ — Apple ho vyžaduje, verejne sa nezobrazuje)*,
   e-mail `psst@psst.pro`.
 - Notes (skopírovať zo súboru `~/proj/psst-review.txt`, časť „Text to paste…“, doplniť heslo a kľúč na
-  obnovenie). Obsah: služba je len na pozvánku → hotový účet; prihlásenie; „Use recovery key“; kde je chat a
+  obnovenie). Obsah: pripravený účet so šifrovanými konverzáciami (registrácia je otvorená, ale nový účet by bol
+  prázdny); prihlásenie; „Use recovery key“; kde je chat a
   skupina; nahlásenie (podržať správu → Report; Report room); blokovanie; zmazanie účtu (Settings → Manage
   account & devices → Delete account) a `https://psst.pro/delete-account`.
 
@@ -92,7 +105,7 @@ v podmienkach. Guideline 5.1.1(v) (zmazanie účtu v appke): Settings → Manage
 | Sekcia | Otázka | Odpoveď | Prečo |
 |---|---|---|---|
 | In-App Controls | Parental Controls | No | |
-| | Age Assurance | No | vek sa neoveruje technicky; podmienky: 18+ a len na pozvánku |
+| | Age Assurance | No | vek sa neoveruje technicky; pri registrácii povinné potvrdenie „mám aspoň 18 rokov“ + súhlas s Podmienkami (D88) |
 | Capabilities | Unrestricted Web Access | No | appka nemá prehliadač; odkazy otvára v Safari |
 | | User-Generated Content | **Yes** | správy, súbory, kanály |
 | | Social Media | No | nie je verejný profil ani feed |

@@ -108,14 +108,15 @@ vlastných správ) — na žiadosť e-mailom; médiá zmazaného účtu odstrán
 ## 4. Dotazník hodnotenia obsahu
 
 - **Komunikácia medzi používateľmi:** áno. Text, hlas, video, súbory, obrázky v 1:1, skupinách a kanáloch.
-  Registrácia len na pozvánku.
+  Registrácia otvorená pre každého od 18 rokov (MAS s hCaptcha a povinným súhlasom s Podmienkami, D88); adresár
+  používateľov je vypnutý, ľudia sa nájdu len podľa presného mena účtu.
 - **Zdieľanie obsahu používateľov:** áno, v rámci konverzácií. Verejný web ani profil, ktorý by videl ktokoľvek,
   nie je; adresár kanálov vidia len prihlásení členovia servera.
 - **Zdieľanie polohy:** nie (odstránené v b51, bod 2).
 - **Nákupy v appke / reklamy:** nie / nie.
 - **Nástroje proti zneužitiu:**
   - zablokovanie používateľa (detail používateľa → Block, jeho správy sa skryjú);
-  - „Decline and block“ pri pozvánke;
+  - „Decline and block“ pri pozvaní do miestnosti;
   - nahlásenie správy (všetky appky) a miestnosti (Android, iOS pri skupinách, web) správcovi servera
     (Synapse `event_reports`, `room_reports`; nahlásenie používateľa cez API → `user_reports`);
   - správcovia miestností môžu vyhodiť alebo zakázať člena a meniť práva;

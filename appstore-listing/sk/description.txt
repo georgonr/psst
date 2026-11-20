@@ -1,4 +1,4 @@
-psst je súkromný messenger pre ľudí, ktorých do služby psst niekto pozval. Účet sa dá vytvoriť len s pozývacím kódom od prevádzkovateľa, verejná registrácia neexistuje.
+psst je súkromný messenger pre každého od 18 rokov. Účet si vytvoríte priamo v aplikácii menom a heslom, bez telefónneho čísla a e-mailu. Verejný zoznam členov neexistuje: ľudia sa nájdu len podľa presného mena účtu.
 
 Súkromie ako samozrejmosť
 • Rozhovory medzi dvoma ľuďmi a súkromné skupiny sú šifrované medzi zariadeniami (end-to-end): server ukladá len zašifrované správy a súbory.

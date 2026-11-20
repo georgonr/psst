@@ -2,8 +2,9 @@ App Review Information → Notes (paste into App Store Connect; Play Console →
 Sign-in: username "review"; the password and the recovery key are NOT in this file — the owner adds them from
 ~/proj/psst-review.txt (chmod 600) when filling in the form.
 
-psst is an invitation-only messenger: new accounts can only be created with an invitation code from
-the operator, so please use this ready-made test account. No sign-up is needed.
+Anyone aged 18 or over can create a psst account right in the app ("Create account": username, password,
+an hCaptcha check and accepting the Terms of Use). A new account starts empty, so please use this
+ready-made test account, which already has end-to-end encrypted chats. No sign-up is needed.
 
 1. Open psst and tap "Continue" / "Sign in". The sign-in page of our server (chat.psst.pro) opens.
 2. Username: review   Password: <PASSWORD — filled in by the owner, see ~/proj/psst-review.txt>
@@ -13,6 +14,9 @@ the operator, so please use this ready-made test account. No sign-up is needed.
    become unreadable.)
 4. You will see a direct chat with "Review Partner" and a group "Weekend trip". You can send
    messages, photos and voice messages there.
+
+Starting a new chat: there is no public member list or name search; people are found only by their
+exact account name. Tap "Start chat" (+) and type review-partner (or @review-partner:psst.pro).
 
 Reporting content: long-press (iPhone: touch and hold) a message → Report → enter a reason → Send.
 A whole room: open the chat → tap its name → Report room. Blocking a user: tap their name or

@@ -1,4 +1,4 @@
-psst is a private messenger for people who were invited to the psst service. Accounts are created only with an invitation code from the operator; there is no public sign-up.
+psst is a private messenger for anyone aged 18 and over. Create an account right in the app with a username and password, no phone number or e-mail needed. There is no public member list: people find each other only by their exact account name.
 
 Private by default
 • Direct chats and private groups are end-to-end encrypted: the server stores only encrypted messages and files.
