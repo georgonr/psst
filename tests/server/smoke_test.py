@@ -149,13 +149,19 @@ def c_admin():
     return "servisný admin token (MAS compat, admin scope) funguje"
 
 
-@check("1.3", "otvorená registrácia v MAS s hCaptcha (D88): bez tokenu odmietnutá, s testovacím tokenom účet vznikne")
+@check("1.3", "otvorená registrácia v MAS (D88): hCaptcha overená na serveri, bez pozývacieho kódu, účet vznikne")
 def c_open_registration():
-    """Lokálny test (deploy.sh --local-test) beží s verejnými TESTOVACÍMI kľúčmi hCaptcha; MAS overuje token naozaj
-    na api.hcaptcha.com. Na produkcii sú ostré kľúče (deploy.sh bez nich skončí)."""
+    """Lokálny stack (deploy.sh --local-test) beží s verejnými TESTOVACÍMI kľúčmi hCaptcha. MAS 1.29 overuje token
+    na api.hcaptcha.com a navyše porovná hostname z odpovede so svojou doménou (crates/handlers/src/captcha.rs);
+    testovacie kľúče vracajú hostname "dummy-key-pass", preto ich MAS vždy odmietne — celá registrácia s nimi
+    prejsť nemôže. Overujeme preto: (a) formulár má hCaptcha a nemá pole na kód, (b) bez tokenu aj s neplatným
+    tokenom odmietnuté, (c) testovací token hCaptcha potvrdí (success) a MAS ho odmietne len pre hostname — MAS
+    teda token naozaj overuje na serveri, (d) DOČASNE (len tento lokálny stack) bez captcha: registrácia nemá krok
+    s kódom, účet vznikne a prihlási sa; potom sa pôvodná konfigurácia vráti. Na produkcii sú ostré kľúče."""
     import re
     meta = S.get(f"{BASE}/_matrix/client/v1/auth_metadata", timeout=10).json()
     mas = meta["issuer"].rstrip("/")
+    origin = "/".join(mas.split("/", 3)[:3])
     sess = requests.Session()
     sess.verify = False
 
@@ -166,43 +172,85 @@ def c_open_registration():
         expect(csrf, "MAS /register: chýba CSRF token")
         return r.text, csrf.group(1)
 
-    page, csrf = form_page()
+    def submit(user, pw, captcha=None):
+        page, csrf = form_page()
+        body = {"csrf": csrf, "username": user, "password": pw, "password_confirm": pw, "accept_terms": "on"}
+        if captcha is not None:
+            body["h-captcha-response"] = captcha
+        r = sess.post(f"{mas}/register", data=body, timeout=30, allow_redirects=False)
+        errs = re.search(r"data-form='([^']*)'", r.text)
+        kinds = [e.get("kind") for e in json.loads(errs.group(1)).get("errors", [])] if errs else []
+        return r, kinds
+
+    def mas_logs(since="2m"):
+        p = subprocess.run(["docker", "compose", "logs", "--since", since, "mas"], cwd=SERVER, capture_output=True,
+                           text=True, timeout=60)
+        return p.stdout + p.stderr
+
+    def restart_mas():
+        subprocess.run(["docker", "compose", "restart", "mas"], cwd=SERVER, check=True, capture_output=True, timeout=180)
+        for _ in range(60):
+            try:
+                if sess.get(f"{mas}/register", timeout=5).status_code == 200:
+                    return
+            except requests.RequestException:
+                pass
+            time.sleep(2)
+        raise AssertionError("MAS po reštarte neodpovedá")
+
+    page, _ = form_page()
     cap = re.search(r"data-captcha-config='([^']*)'", page)
     expect(cap and json.loads(cap.group(1)).get("service") == "hcaptcha", f"captcha config: {cap.group(1) if cap else None}")
     feats = json.loads(re.search(r"data-features='([^']*)'", page).group(1))
     expect(feats.get("password_registration") is True, f"password_registration: {feats}")
-    expect("registration_token" not in page, "registračný formulár stále pýta pozývací kód")
 
     user = "smoke-" + secrets.token_hex(3)
     pw = "Passw0rd-" + secrets.token_hex(8)
-    body = {"csrf": csrf, "username": user, "password": pw, "password_confirm": pw, "accept_terms": "on"}
-    r = sess.post(f"{mas}/register", data=body, timeout=30, allow_redirects=False)
-    errs = re.search(r"data-form='([^']*)'", r.text)
-    kinds = [e.get("kind") for e in json.loads(errs.group(1)).get("errors", [])] if errs else []
+    r, kinds = submit(user, pw)
     expect(r.status_code == 200 and "captcha" in kinds, f"bez tokenu hCaptcha: {r.status_code} {kinds}")
+    r, kinds = submit(user, pw, "neplatny-token")
+    expect(r.status_code == 200 and "captcha" in kinds, f"neplatný token hCaptcha: {r.status_code} {kinds}")
+    r, kinds = submit(user, pw, "10000000-aaaa-bbbb-cccc-000000000001")
+    logs = mas_logs()
+    cap_log = [ln[-220:] for ln in logs.splitlines() if "captcha" in ln.lower() or "hostname" in ln.lower()][-4:]
+    expect(r.status_code == 200 and "captcha" in kinds and ("dummy-key-pass" in logs or "does not match the site hostname" in logs),
+           f"testovací token: {r.status_code} {kinds}; MAS log: {cap_log}")
 
-    page, csrf = form_page()
-    body = {**body, "csrf": csrf, "h-captcha-response": "10000000-aaaa-bbbb-cccc-000000000001"}
-    r = sess.post(f"{mas}/register", data=body, timeout=30, allow_redirects=False)
-    expect(r.status_code in (302, 303), f"s testovacím tokenom hCaptcha: {r.status_code} {r.text[:300]}")
-    # ďalšie kroky registrácie (zobrazované meno a pod.) dokončiť, kým MAS nepresmeruje mimo /register
-    loc = r.headers.get("location", "")
-    for _ in range(6):
-        if "/register" not in loc:
-            break
-        url = loc if loc.startswith("http") else mas.split("/", 3)[0] + "//" + mas.split("/", 3)[2] + loc
-        r = sess.get(url, timeout=15, allow_redirects=False)
-        if r.status_code in (302, 303):
+    # (d) dočasne bez captcha — len tento lokálny stack
+    cfg = SERVER / "data" / "config" / "mas" / "config.yaml"
+    orig = cfg.read_text()
+    patched = re.sub(r"(?m)^captcha:\n(?:  .*\n)+", "captcha:\n  service: ~\n", orig)
+    expect(patched != orig, "captcha blok v config.yaml sa nenašiel")
+    cfg.write_text(patched)
+    try:
+        restart_mas()
+        r, kinds = submit(user, pw)
+        expect(r.status_code in (302, 303), f"registrácia bez captcha (dočasne): {r.status_code} {kinds}")
+        loc, steps = r.headers.get("location", ""), []
+        for _ in range(6):
+            if "/register" not in loc:
+                break
+            url = loc if loc.startswith("http") else origin + loc
+            steps.append(url.split("/register", 1)[1].split("?")[0])
+            r = sess.get(url, timeout=15, allow_redirects=False)
+            if r.status_code in (302, 303):
+                loc = r.headers.get("location", "")
+                continue
+            expect("registration_token" not in url and 'name="token"' not in r.text, f"krok s pozývacím kódom: {url}")
+            csrf = re.search(r'name="csrf" value="([^"]+)"', r.text)
+            expect(csrf and 'name="display_name"' in r.text, f"neznámy krok registrácie {url}: {r.text[:200]}")
+            r = sess.post(url, data={"csrf": csrf.group(1), "action": "set", "display_name": "Smoke"}, timeout=15,
+                          allow_redirects=False)
             loc = r.headers.get("location", "")
-            continue
-        csrf = re.search(r'name="csrf" value="([^"]+)"', r.text)
-        expect(csrf and 'name="display_name"' in r.text, f"neznámy krok registrácie {url}: {r.text[:200]}")
-        r = sess.post(url, data={"csrf": csrf.group(1), "action": "set", "display_name": "Smoke"}, timeout=15,
-                      allow_redirects=False)
-        loc = r.headers.get("location", "")
-    login = compat_login(user, pw)
-    CTX["open_reg_user"] = login["user_id"]
-    return f"bez tokenu hCaptcha odmietnuté ({kinds}); s testovacím tokenom vznikol {login['user_id']} a prihlási sa"
+        expect(not any("token" in x for x in steps), f"kroky registrácie: {steps}")
+        login = compat_login(user, pw)
+    finally:
+        cfg.write_text(orig)
+        restart_mas()
+    page, _ = form_page()
+    expect("hcaptcha" in page, "po teste sa captcha do MAS nevrátila")
+    return (f"bez tokenu aj s neplatným odmietnuté; testovací token: hCaptcha success, MAS odmietol hostname "
+            f"dummy-key-pass; bez captcha (dočasne) kroky {steps or ['—']} → {login['user_id']} prihlásený; captcha späť")
 
 
 @check("1.4", "admin API je z internetu blokované, z loopbacku dostupné")
