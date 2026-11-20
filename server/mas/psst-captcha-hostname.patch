@@ -1,0 +1,70 @@
+diff --git a/crates/handlers/src/captcha.rs b/crates/handlers/src/captcha.rs
+index 3af0c5d..7f1e4fb 100644
+--- a/crates/handlers/src/captcha.rs
++++ b/crates/handlers/src/captcha.rs
+@@ -151,6 +151,17 @@ pub enum ErrorCode {
+     InternalError,
+ }
+ 
++/// PSST: hCaptcha's public test sitekey (its siteverify answers with hostname "dummy-key-pass")
++const HCAPTCHA_TEST_SITE_KEY: &str = "10000000-ffff-ffff-ffff-000000000001";
++
++/// PSST: the CAPTCHA hostname matches the site if it is the site hostname or one of its parent domains
++/// (case-insensitive, trailing dot ignored, at least one dot — a bare TLD never matches).
++fn hostname_matches_site(got: &str, site: &str) -> bool {
++    let got = got.trim_end_matches('.').to_ascii_lowercase();
++    let site = site.trim_end_matches('.').to_ascii_lowercase();
++    got == site || (got.contains('.') && site.ends_with(&format!(".{got}")))
++}
++
+ impl Form {
+     #[tracing::instrument(
+         skip_all,
+@@ -245,7 +256,12 @@ impl Form {
+         span.record("captcha.hostname", &hostname);
+         span.record("captcha.challenge_ts", &challenge_ts);
+ 
+-        if hostname != site_hostname {
++        // PSST: hCaptcha returns the registrable (parent) domain of the page, e.g. "psst.pro" for
++        // "chat.psst.pro" (element-hq/matrix-authentication-service#3549), and hCaptcha documents the hostname as
++        // browser-reported, "should not be used for authentication". Accept the site hostname or a parent domain
++        // of it; accept the test passcode hostname only with hCaptcha's official test sitekey.
++        let test_key = config.site_key == HCAPTCHA_TEST_SITE_KEY && hostname == "dummy-key-pass";
++        if !test_key && !hostname_matches_site(&hostname, site_hostname) {
+             return Err(Error::HostnameMismatch {
+                 expected: site_hostname.to_owned(),
+                 got: hostname,
+@@ -255,3 +271,20 @@ impl Form {
+         Ok(())
+     }
+ }
++
++#[cfg(test)]
++mod psst_tests {
++    use super::hostname_matches_site;
++
++    #[test]
++    fn hostname_matching() {
++        assert!(hostname_matches_site("chat.psst.pro", "chat.psst.pro"));
++        assert!(hostname_matches_site("psst.pro", "chat.psst.pro"));
++        assert!(hostname_matches_site("PSST.pro.", "chat.psst.pro"));
++        assert!(!hostname_matches_site("pro", "chat.psst.pro"));
++        assert!(!hostname_matches_site("evil.pro", "chat.psst.pro"));
++        assert!(!hostname_matches_site("xpsst.pro", "chat.psst.pro"));
++        assert!(!hostname_matches_site("chat.psst.pro", "psst.pro"));
++        assert!(!hostname_matches_site("not-provided", "chat.psst.pro"));
++    }
++}
+diff --git a/crates/handlers/src/views/register/password.rs b/crates/handlers/src/views/register/password.rs
+index 1475906..cc208b8 100644
+--- a/crates/handlers/src/views/register/password.rs
++++ b/crates/handlers/src/views/register/password.rs
+@@ -77,6 +77,8 @@ pub(super) async fn register(
+             site_config.captcha.as_ref(),
+         )
+         .await
++        // PSST: log why a CAPTCHA was rejected (upstream drops the error silently)
++        .inspect_err(|e| tracing::warn!(error = %e, "CAPTCHA verification failed"))
+         .is_ok();
+ 
+     let state = form.to_form_state();

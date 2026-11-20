@@ -1,0 +1,58 @@
+# PSST (D91): MAS 1.29.0 with the psst CAPTCHA patch (server/mas/psst-captcha-hostname.patch):
+#   hCaptcha answers with the registrable parent domain ("psst.pro" for "chat.psst.pro", upstream issue #3549) and
+#   MAS 1.29 compares it strictly → every registration failed. Built with the upstream Dockerfile (same toolchain,
+#   features "docker", debian 13), only the mas-cli binary is exported and published as release "mas-<tag>"
+#   (mas-cli + SHA256); server/mas/Dockerfile puts it into the official image.
+name: MAS build (psst patch)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "release tag suffix, e.g. 1.29.0-psst1"
+        default: "1.29.0-psst1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: psst
+          persist-credentials: false
+      - name: MAS v1.29.0 + psst patch
+        run: |
+          git clone --depth 1 --branch v1.29.0 https://github.com/element-hq/matrix-authentication-service mas
+          cd mas
+          git apply --check ../psst/server/mas/psst-captcha-hostname.patch
+          git apply ../psst/server/mas/psst-captcha-hostname.patch
+          printf '\nFROM scratch AS psst-binary\nCOPY --from=builder /usr/local/bin/mas-cli /mas-cli\n' >> Dockerfile
+      - name: Unit test of the hostname check (standalone rustc)
+        run: |
+          python3 - <<'PY'
+          import re
+          s = open("mas/crates/handlers/src/captcha.rs").read()
+          fn = re.search(r"fn hostname_matches_site.*?\n}\n", s, re.S).group(0)
+          tests = re.search(r"#\[cfg\(test\)\]\nmod psst_tests \{.*", s, re.S).group(0).replace("use super::hostname_matches_site;", "use super::*;")
+          open("hm.rs", "w").write(fn + "\n" + tests)
+          PY
+          docker run --rm -v "$PWD:/w" -w /w rust:1-slim sh -c "rustc --test hm.rs -o hm && ./hm"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build mas-cli (upstream Dockerfile, linux/amd64)
+        working-directory: mas
+        run: |
+          docker buildx build --platform linux/amd64 --target psst-binary \
+            --build-arg VERGEN_GIT_DESCRIBE=v${{ inputs.tag }} --output type=local,dest=../out .
+          cd ../out && sha256sum mas-cli | tee mas-cli.sha256 && ls -l
+      - name: Publish release mas-${{ inputs.tag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "mas-${{ inputs.tag }}" out/mas-cli out/mas-cli.sha256 -R "$GITHUB_REPOSITORY" \
+            --title "MAS ${{ inputs.tag }} (psst CAPTCHA hostname patch)" --latest=false \
+            --notes "MAS v1.29.0 + server/mas/psst-captcha-hostname.patch (D91). mas-cli for linux/amd64 (debian 13 / distroless). SHA-256 in mas-cli.sha256."
