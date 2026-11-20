@@ -46,9 +46,8 @@ jobs:
           persist-credentials: false
       - name: Select Xcode
         run: |
-          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1)
-          [ -n "$XCODE" ] || XCODE=$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)
-          sudo xcode-select -s "$XCODE"; xcodebuild -version
+          # D90: explicit public (GM) Xcode by build — never a beta (Xcode_27.3.app on this runner is one)
+          psst/scripts/ios/select-xcode.sh psst/ci/ios-public-xcode.json; xcodebuild -version
       - name: Tools + project
         working-directory: ios
         run: |

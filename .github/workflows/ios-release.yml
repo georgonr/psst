@@ -74,6 +74,12 @@ jobs:
           [[ "$APPLE_TEAM_ID" =~ ^[A-Z0-9]{10}$ ]] || { echo "::error::APPLE_TEAM_ID must be 10 upper-case alphanumerics"; exit 1; }
           echo "All required secrets are present."
 
+      - name: Checkout psst (Xcode allowlist + gate, D90)
+        uses: actions/checkout@v5
+        with:
+          path: psst
+          persist-credentials: false
+
       - name: Checkout psst-ios
         uses: actions/checkout@v5
         with:
@@ -85,11 +91,11 @@ jobs:
           submodules: false
           persist-credentials: false
 
-      - name: Select Xcode
+      - name: Select public (GM) Xcode — explicit build from ci/ios-public-xcode.json (D90)
         run: |
-          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | grep -v -i beta | sort -V | tail -1)
-          [ -n "$XCODE" ] || { echo "::error::Xcode 27 not installed"; exit 1; }
-          sudo xcode-select -s "$XCODE"
+          # never "latest": on this runner /Applications/Xcode_27.3.app is a BETA (27C5020n) and App Store Connect
+          # refuses builds made with beta Xcode / beta SDK
+          psst/scripts/ios/select-xcode.sh psst/ci/ios-public-xcode.json
           xcodebuild -version
 
       - name: Install signing certificate
@@ -251,6 +257,10 @@ jobs:
           mv "$IPA" "$RUNNER_TEMP/export/psst.ipa"
           cp "$RUNNER_TEMP/export/psst.ipa" "$RUNNER_TEMP/export/psst-ios-$PSST_BUILD_DATE-b$PSST_BUILD_NUMBER.ipa"
           echo "psst iOS build b$PSST_BUILD_NUMBER, $PSST_BUILD_DATE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Gate — IPA must be built with a public Xcode and iOS SDK (D90)
+        run: |
+          python3 psst/scripts/ios/check-ipa-xcode.py "$RUNNER_TEMP/export/psst.ipa" psst/ci/ios-public-xcode.json | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload to TestFlight
         if: ${{ inputs.upload_to_testflight }}
