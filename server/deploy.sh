@@ -424,15 +424,18 @@ if ! compose exec -T postgres psql -U synapse -d synapse -tAc "SELECT 1 FROM pg_
 fi
 compose run --rm --no-deps -T --entrypoint sh synapse -c '[ "$(stat -c %u /data)" = 991 ] || chown -R 991:991 /data' >/dev/null
 
-# MAS: text povinného políčka pri registrácii „mám aspoň 18 rokov a súhlasím s Podmienkami“ (D88) — upravené
-# preklady formulára z práve stiahnutého image (scripts/mas-assets.py) → data/config/mas-ui (read-only mount)
+# MAS: text povinného políčka pri registrácii „mám aspoň 18 rokov a súhlasím s Podmienkami“ (D88) a značka psst
+# (titulok, tmavá téma, favicon, logo — D89): assets, šablóny a preklady z práve stiahnutého image upraví
+# scripts/mas-assets.py → data/config/mas-ui (read-only mount)
 MAS_IMAGE="$(sed -n 's|^ *image: \(ghcr.io/element-hq/matrix-authentication-service:[^ ]*\)$|\1|p' compose.yml | head -1)"
 MAS_TMP="$(mktemp -d)"
 if docker create --name psst-mas-assets "$MAS_IMAGE" >/dev/null 2>&1 \
    && docker cp psst-mas-assets:/usr/local/share/mas-cli/assets "$MAS_TMP/assets" >/dev/null \
    && docker cp psst-mas-assets:/usr/local/share/mas-cli/manifest.json "$MAS_TMP/manifest.json" >/dev/null \
+   && docker cp psst-mas-assets:/usr/local/share/mas-cli/templates "$MAS_TMP/templates" >/dev/null \
+   && docker cp psst-mas-assets:/usr/local/share/mas-cli/translations "$MAS_TMP/translations" >/dev/null \
    && python3 scripts/mas-assets.py "$MAS_TMP" data/config/mas-ui >/dev/null; then :
-else die "MAS: úprava textu súhlasu s Podmienkami zlyhala (scripts/mas-assets.py, image $MAS_IMAGE)"; fi
+else die "MAS: úprava textov a značky zlyhala (scripts/mas-assets.py, image $MAS_IMAGE)"; fi
 docker rm -f psst-mas-assets >/dev/null 2>&1 || true; rm -rf "$MAS_TMP"
 
 admin_secrets

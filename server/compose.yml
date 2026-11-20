@@ -144,9 +144,11 @@ services:
     volumes:
       - ./data/config/mas/config.yaml:/config/config.yaml:ro
       - ./secrets/mas:/secrets:ro
-      # D88: preklady registračného formulára s potvrdením veku 18+ (deploy.sh → scripts/mas-assets.py)
+      # D88/D89: súhlas 18+ a značka psst — upravené assets, šablóny a preklady (deploy.sh → scripts/mas-assets.py)
       - ./data/config/mas-ui/assets:/usr/local/share/mas-cli/assets:ro
       - ./data/config/mas-ui/manifest.json:/usr/local/share/mas-cli/manifest.json:ro
+      - ./data/config/mas-ui/templates:/usr/local/share/mas-cli/templates:ro
+      - ./data/config/mas-ui/translations:/usr/local/share/mas-cli/translations:ro
     ports:
       # admin API + health len na loopback hostiteľa (scripts/members.sh, healthcheck.sh)
       - "127.0.0.1:8081:8081"
