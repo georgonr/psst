@@ -194,6 +194,16 @@ VAPID_PUBLIC_KEY="$(openssl ec -in secrets/webpush/vapid_private.pem -pubout -ou
 [ -s secrets/admin/client_secret ] || openssl rand -hex 32 | tr -d "\n" > secrets/admin/client_secret
 [ -s secrets/admin/db_password ] || openssl rand -hex 24 | tr -d "\n" > secrets/admin/db_password
 ADMIN_CLIENT_SECRET="$(cat secrets/admin/client_secret)"
+# hCaptcha pri registrácii (D88): kľúče z účtu hCaptcha uloží správca do secrets/mas/hcaptcha_site_key a
+# secrets/mas/hcaptcha_secret (nie do gitu). Bez nich by bola registrácia otvorená bez ochrany → deploy skončí.
+# Lokálny test (--local-test) používa verejné testovacie kľúče hCaptcha (token 10000000-aaaa-bbbb-cccc-000000000001).
+if [ -s secrets/mas/hcaptcha_site_key ] && [ -s secrets/mas/hcaptcha_secret ]; then
+  HCAPTCHA_SITE_KEY="$(tr -d ' \n' < secrets/mas/hcaptcha_site_key)"; HCAPTCHA_SECRET="$(tr -d ' \n' < secrets/mas/hcaptcha_secret)"
+elif [ "$LOCAL_TEST" = 1 ]; then
+  HCAPTCHA_SITE_KEY="10000000-ffff-ffff-ffff-000000000001"; HCAPTCHA_SECRET="0x0000000000000000000000000000000000000000"
+else
+  die "chýbajú kľúče hCaptcha: secrets/mas/hcaptcha_site_key a secrets/mas/hcaptcha_secret (registrácia je otvorená, D88)"
+fi
 # heslo pre šifrované zálohy (BEZ NEHO SA ZÁLOHA NEDÁ OBNOVIŤ — uložte ho aj mimo servera)
 NEW_BACKUP_PASS=0
 [ -s secrets/backup.pass ] || { openssl rand -base64 48 | tr -d '\n' > secrets/backup.pass; NEW_BACKUP_PASS=1; }
@@ -229,6 +239,7 @@ render() { # render <template> <output>
       -e "s|__ANDROID_CERT_SHA256__|${ANDROID_CERT_SHA256:-}|g" -e "s|__APPLE_TEAM_ID__|${APPLE_TEAM_ID:-TEAMID}|g" \
       -e "s|__WEB_DOMAIN__|${WEB_DOMAIN:-}|g" \
       -e "s|__ADMIN_CLIENT_ID__|${ADMIN_CLIENT_ID}|g" -e "s|__ADMIN_CLIENT_SECRET__|${ADMIN_CLIENT_SECRET}|g" \
+      -e "s|__HCAPTCHA_SITE_KEY__|${HCAPTCHA_SITE_KEY:-}|g" -e "s|__HCAPTCHA_SECRET__|${HCAPTCHA_SECRET:-}|g" \
       "$1" > "$2.tmp"
   if grep -q '__[A-Z_]*__' "$2.tmp"; then die "nevyplnený placeholder v $2: $(grep -o '__[A-Z_]*__' "$2.tmp" | sort -u | tr '\n' ' ')"; fi
   # zapisovať NA MIESTE (nie mv): jednotlivé súbory sú v kontajneroch bind-mountované a mv by vytvoril nový
@@ -247,7 +258,9 @@ render templates/mas/config.yaml                data/config/mas/config.yaml
 # MAS na vlastnej subdoméne → bez prefixu (MAS nepovoľuje prázdny prefix)
 [ -n "$AUTH_PREFIX" ] || sed -i.bak '/^      prefix: ""/d' data/config/mas/config.yaml && rm -f data/config/mas/config.yaml.bak
 if [ "$LOCAL_TEST" = 1 ]; then
-  # lokálne prichádzajú všetci testovací klienti z jednej IP → voľnejšie limity MAS
+  # lokálne prichádzajú všetci testovací klienti z jednej IP → voľnejšie limity MAS (blok zo šablóny nahradiť)
+  awk '/^rate_limiting:/{skip=1;next} skip && /^[^ ]/{skip=0} !skip' data/config/mas/config.yaml > data/config/mas/config.yaml.rl
+  cat data/config/mas/config.yaml.rl > data/config/mas/config.yaml; rm -f data/config/mas/config.yaml.rl
   cat >> data/config/mas/config.yaml <<'YAML'
 
 # LEN lokálny test (--local-test)
@@ -411,6 +424,17 @@ if ! compose exec -T postgres psql -U synapse -d synapse -tAc "SELECT 1 FROM pg_
 fi
 compose run --rm --no-deps -T --entrypoint sh synapse -c '[ "$(stat -c %u /data)" = 991 ] || chown -R 991:991 /data' >/dev/null
 
+# MAS: text povinného políčka pri registrácii „mám aspoň 18 rokov a súhlasím s Podmienkami“ (D88) — upravené
+# preklady formulára z práve stiahnutého image (scripts/mas-assets.py) → data/config/mas-ui (read-only mount)
+MAS_IMAGE="$(sed -n 's|^ *image: \(ghcr.io/element-hq/matrix-authentication-service:[^ ]*\)$|\1|p' compose.yml | head -1)"
+MAS_TMP="$(mktemp -d)"
+if docker create --name psst-mas-assets "$MAS_IMAGE" >/dev/null 2>&1 \
+   && docker cp psst-mas-assets:/usr/local/share/mas-cli/assets "$MAS_TMP/assets" >/dev/null \
+   && docker cp psst-mas-assets:/usr/local/share/mas-cli/manifest.json "$MAS_TMP/manifest.json" >/dev/null \
+   && python3 scripts/mas-assets.py "$MAS_TMP" data/config/mas-ui >/dev/null; then :
+else die "MAS: úprava textu súhlasu s Podmienkami zlyhala (scripts/mas-assets.py, image $MAS_IMAGE)"; fi
+docker rm -f psst-mas-assets >/dev/null 2>&1 || true; rm -rf "$MAS_TMP"
+
 admin_secrets
 log "zostavujem psst-admin"
 compose build -q admin
@@ -425,6 +449,7 @@ if [ -n "$CFG_BEFORE" ]; then
     case "$d" in
       nginx|nginx-main|app-default) RESTART+=" nginx" ;;
       synapse) RESTART+=" synapse lk-jwt-service" ;;
+      mas-ui) RESTART+=" mas" ;;
       livekit|mas|coturn|element-call|sygnal) RESTART+=" $d" ;;
     esac
   done

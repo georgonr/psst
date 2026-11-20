@@ -1,6 +1,7 @@
 # Matrix Authentication Service (MAS) — šablóna (./deploy.sh → data/config/mas/config.yaml)
 # MAS spravuje účty, prihlásenie a registráciu (OIDC) pre __SERVER_NAME__ (homeserver __MATRIX_DOMAIN__).
-# Registrácia: heslom, VÝHRADNE s pozývacím tokenom (scripts/members.sh invite), bez e-mailu.
+# Registrácia (D88): otvorená, heslom, bez e-mailu a bez pozývacieho kódu; chráni ju hCaptcha, prísny limit na IP
+# a povinný súhlas s Podmienkami (branding.tos_uri) vrátane potvrdenia veku 18+ (text políčka: scripts/mas-assets.py).
 http:
   # bez vlastnej subdomény: MAS na ceste __AUTH_PREFIX__ domény __AUTH_DOMAIN__ (DECISIONS D42)
   public_base: __MAS_PUBLIC_BASE__
@@ -53,7 +54,7 @@ passwords:
 account:
   password_registration_enabled: true
   password_registration_email_required: false
-  password_registration_token_required: true
+  password_registration_token_required: false
   password_recovery_enabled: false
   email_change_allowed: true
   displayname_change_allowed: true
@@ -67,8 +68,28 @@ email:
   reply_to: '"psst" <noreply@__AUTH_DOMAIN__>'
   transport: blackhole
 
+# hCaptcha (D88): site_key je verejný, secret_key len zo server/secrets/mas/hcaptcha_secret (deploy.sh), nie z gitu.
+# MAS overí token na serveri (api.hcaptcha.com/siteverify) — registrácia bez platného tokenu sa odmietne.
 captcha:
-  service: ~
+  service: hcaptcha
+  site_key: "__HCAPTCHA_SITE_KEY__"
+  secret_key: "__HCAPTCHA_SECRET__"
+
+# Limity (D88; názvy podľa dokumentácie MAS 1.29). Registrácia: 3 naraz z jednej IP, potom 1 za ~21 min.
+rate_limiting:
+  registration:
+    burst: 3
+    per_second: 0.0008
+  login:
+    per_ip:
+      burst: 3
+      per_second: 0.05
+    per_account:
+      burst: 1800
+      per_second: 0.5
+  username_availability:
+    burst: 5
+    per_second: 1.0
 
 # Administračná stránka https://__APP_DOMAIN__/admin (server/admin, DECISIONS D56):
 # prihlásenie admina (authorization code + PKCE) a prístup k admin API (client_credentials, urn:mas:admin)
