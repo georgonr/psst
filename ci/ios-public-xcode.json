@@ -1,0 +1,9 @@
+{
+  "_comment": "PSST (D90): PUBLIC (GM) Xcode releases allowed for iOS builds, with the iOS SDK build each ships. Source: developer.apple.com/news/releases (checked 2026-11-20) + `xcrun --sdk iphoneos --show-sdk-build-version` on the runner (workflow ios-xcode-inventory.yml). Betas (e.g. Xcode 27.3 beta 27C5020n, SDK 24C5037e) must NEVER be added. When Apple ships a new GM Xcode: add it here and move `store`.",
+  "store": "27B52",
+  "public": {
+    "27B52":   {"version": "27.2", "iphoneos_sdk": "27.2", "iphoneos_sdk_build": "24B8118"},
+    "27A9275": {"version": "27.1", "iphoneos_sdk": "27.1", "iphoneos_sdk_build": "24A94232"},
+    "27A266a": {"version": "27.0", "iphoneos_sdk": "27.0", "iphoneos_sdk_build": "24A430"}
+  }
+}
