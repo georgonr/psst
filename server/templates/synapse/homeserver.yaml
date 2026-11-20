@@ -60,7 +60,7 @@ room_list_publication_rules:
   - action: allow
 
 # --- Účty, prihlásenie a registrácia: Matrix Authentication Service (MAS, __MAS_PUBLIC_BASE__) ---
-# Registrácia prebieha v MAS (aj z Element X), výhradne s pozývacím tokenom (scripts/members.sh invite).
+# Registrácia prebieha v MAS (aj z appiek): otvorená, s hCaptcha a súhlasom s Podmienkami (D88).
 enable_registration: false
 password_config:
   enabled: false
@@ -81,13 +81,13 @@ presence:
   enabled: false
 url_preview_enabled: false
 require_auth_for_profile_requests: true
-# D65: uzavretý server (registrácia len pozvánkou) = adresár členov. Profil a hľadanie ostatných členov psst je
-# povolené aj bez spoločnej miestnosti — inak Element X pri platnom používateľovi píše „This Matrix ID can't be
-# found“ a nový kontakt sa nedá nájsť menom. Mimo prihlásených členov sa nič nezverejňuje (require_auth_...).
+# D88: registrácia je otvorená → členov sa nedá vylistovať ani hľadať podľa časti mena. Adresár používateľov je
+# vypnutý (Synapse na /user_directory/search vráti prázdny zoznam). Rozhovor sa začína presným menom účtu: appky
+# doplnia krátke „meno“ na @meno:<server> a overia ho cez profil — preto profil ostáva dostupný aj bez spoločnej
+# miestnosti (inak Element X píše „This Matrix ID can't be found“, D65). Mimo prihlásených sa nič nezverejňuje.
 limit_profile_requests_to_users_who_share_rooms: false
 user_directory:
-  enabled: true
-  search_all_users: true
+  enabled: false
 # D65: súkromné miestnosti a DM (invite/private_chat) sú šifrované end-to-end automaticky; verejné kanály nie —
 # šifrovaný kanál v adresári by noví členovia nevedeli čítať spätne a serverové vyhľadávanie by nefungovalo.
 # (Šifrovanie verejného kanála môže jeho tvorca zapnúť ručne.)
