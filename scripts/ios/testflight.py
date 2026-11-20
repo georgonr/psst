@@ -350,11 +350,10 @@ def app_info():
     for info in infos:
         locs = ok(*asc.call("GET", f"/v1/appInfos/{info['id']}/appInfoLocalizations"), "locs")["data"]
         for loc in locs:
-            if loc["attributes"].get("privacyPolicyUrl") != PRIVACY_URL:
-                c, _ = asc.call("PATCH", f"/v1/appInfoLocalizations/{loc['id']}", {"data": {"type": "appInfoLocalizations", "id": loc["id"], "attributes": {"privacyPolicyUrl": PRIVACY_URL}}})
-                print(f"privacy policy URL ({loc['attributes']['locale']}): {c}")
-            else:
-                print(f"privacy policy URL ({loc['attributes']['locale']}): ok")
+            # D90: READ ONLY — app metadata belongs to the owner (App Store Connect in the browser). This used to PATCH
+            # the URL back to PRIVACY_URL and overwrote the owner's value on the b4 release.
+            cur = loc["attributes"].get("privacyPolicyUrl")
+            print(f"privacy policy URL ({loc['attributes']['locale']}): {cur}" + ("" if cur else "  ← EMPTY, set it in App Store Connect"))
 
 
 if __name__ == "__main__":
