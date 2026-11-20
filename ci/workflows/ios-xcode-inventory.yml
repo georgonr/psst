@@ -1,0 +1,26 @@
+# PSST (D90): list the Xcode versions installed on the iOS runner with their build numbers and the iOS SDK build
+# each one ships — to pick an explicit public (GM) Xcode for the App Store build and keep the gate allowlist
+# (ci/ios-public-xcode.json) correct. Read-only, no secrets.
+name: iOS Xcode inventory
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    runs-on: xcode-27
+    steps:
+      - name: Installed Xcodes, builds and iOS SDKs
+        run: |
+          for x in /Applications/Xcode*.app; do
+            [ -x "$x/Contents/Developer/usr/bin/xcodebuild" ] || continue
+            v=$(DEVELOPER_DIR="$x/Contents/Developer" xcodebuild -version | tr '\n' ' ')
+            sdk=$(DEVELOPER_DIR="$x/Contents/Developer" xcrun --sdk iphoneos --show-sdk-version 2>/dev/null)
+            sdkb=$(DEVELOPER_DIR="$x/Contents/Developer" xcrun --sdk iphoneos --show-sdk-build-version 2>/dev/null)
+            echo "XCODE|$x|$v|iphoneos $sdk|$sdkb"
+          done
+          echo "default: $(xcode-select -p)"
+          sw_vers
