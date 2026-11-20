@@ -162,14 +162,18 @@ def c_open_registration():
     meta = S.get(f"{BASE}/_matrix/client/v1/auth_metadata", timeout=10).json()
     mas = meta["issuer"].rstrip("/")
     origin = "/".join(mas.split("/", 3)[:3])
-    sess = requests.Session()
-    sess.verify = False
+    def new_session():
+        x = requests.Session()
+        x.verify = False
+        return x
+
+    sess = new_session()
 
     def form_page():
         r = sess.get(f"{mas}/register", timeout=15)
         expect(r.status_code == 200, f"MAS /register: {r.status_code}")
         csrf = re.search(r'data-csrf-token="([^"]+)"', r.text)
-        expect(csrf, "MAS /register: chýba CSRF token")
+        expect(csrf, f"MAS /register: chýba CSRF token ({r.url} {r.text[:120]!r})")
         return r.text, csrf.group(1)
 
     def submit(user, pw, captcha=None):
@@ -222,6 +226,7 @@ def c_open_registration():
     cfg.write_text(patched)
     try:
         restart_mas()
+        sess = new_session()
         r, kinds = submit(user, pw)
         expect(r.status_code in (302, 303), f"registrácia bez captcha (dočasne): {r.status_code} {kinds}")
         loc, steps = r.headers.get("location", ""), []
@@ -245,6 +250,7 @@ def c_open_registration():
     finally:
         cfg.write_text(orig)
         restart_mas()
+    sess = new_session()
     page, _ = form_page()
     expect("hcaptcha" in page, "po teste sa captcha do MAS nevrátila")
     return (f"bez tokenu aj s neplatným odmietnuté; testovací token: hCaptcha success (hostname dummy-key-pass), "
