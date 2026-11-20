@@ -185,6 +185,10 @@ jobs:
           mkdir -p "$RUNNER_TEMP/out/review-x"
           [ -d "$RUNNER_TEMP/out/review.xcresult" ] && xcrun xcresulttool export attachments --path "$RUNNER_TEMP/out/review.xcresult" --output-path "$RUNNER_TEMP/out/review-x" >/dev/null 2>&1 || true
           tail -40 "$RUNNER_TEMP/out/partner.log" 2>/dev/null || true
+          # crash reports of the app in the simulator (D88: diagnose crashes during UI tests)
+          mkdir -p "$RUNNER_TEMP/out/crash"
+          find ~/Library/Logs/DiagnosticReports -name "*.ips" -mmin -240 2>/dev/null | grep -iE "psst|ElementX" | while read -r f; do cp "$f" "$RUNNER_TEMP/out/crash/"; done
+          ls -la "$RUNNER_TEMP/out/crash" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
