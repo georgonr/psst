@@ -8,6 +8,9 @@
 #             DM invite sent). Secret part "d88": {"user", "password", "target", "target_name"}.
 #   brand   — (D89) PsstStoreTests.testMasBranding: psst brand on the MAS pages (registration, sign-in, account).
 #             Uses the "d88" secret part (user/password).
+#   reviewacct — (D90) PsstStoreTests.testReviewAccount on the review account: system sign-in prompt names psst,
+#             recovery key, encrypted DM + group readable, chat by typing "review-partner", sign out.
+#             Secret part "reviewacct": {"user", "password", "recovery"}.
 #   configuration — Debug (default) or Release (= the TestFlight build configuration, D89: no debug assertions).
 #
 # Test accounts only: secret PSST_STORE_IOS = {"review": {"a": {...}, "b": {...}},
@@ -23,7 +26,7 @@ on:
         default: psst
         required: true
       parts:
-        description: "review,shots,d88,brand"
+        description: "review,shots,d88,brand,reviewacct"
         default: "review,shots"
         required: true
       devices:
@@ -165,6 +168,17 @@ jobs:
             mkdir -p "$RUNNER_TEMP/out/d88-x/$t"
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/out/d88-$t.xcresult" --output-path "$RUNNER_TEMP/out/d88-x/$t" >/dev/null 2>&1 || true
           done
+
+      - name: D90 — review account on this build
+        if: contains(inputs.parts, 'reviewacct')
+        working-directory: ios
+        run: |
+          eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['reviewacct'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_RECOVERY_KEY=\"%s\"' % (d['user'], d['password'], d['recovery']))")"
+          export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/reviewacct"
+          xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests -configuration "$CONFIG" \
+            -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
+            -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/testReviewAccount \
+            -resultBundlePath "$RUNNER_TEMP/out/reviewacct.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/reviewacct.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
 
       - name: Screenshots on three simulators
         if: contains(inputs.parts, 'shots')
