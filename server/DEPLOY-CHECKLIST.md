@@ -73,14 +73,14 @@ cd /opt/psst/server
 ssh psst@<IP>
 cd /opt/psst/server
 sudo scripts/members.sh admin juro            # váš admin účet (vypíše heslo)
-sudo scripts/members.sh invite 5 7            # pozvánka pre 5 ľudí, platná 7 dní
 sudo cat secrets/backup.pass                  # ULOŽTE SI mimo servera (bez neho sa záloha neobnoví)
 sudo scripts/healthcheck.sh                   # všetko OK?
 ```
 
 ## 6. Po nasadení
 
-- [ ] `https://app.psst.pro` sa načíta, „Create account" s pozvánkou funguje, prihlásenie funguje
+- [ ] kľúče hCaptcha v `secrets/mas/hcaptcha_site_key` a `secrets/mas/hcaptcha_secret` (600) — inak deploy skončí
+- [ ] `https://app.psst.pro` sa načíta, „Create account" ukáže hCaptcha a súhlas 18+, prihlásenie funguje
 - [ ] Android: nainštalovať `psst-26.11.0-arm64-v8a.apk` — notifikácie fungujú hneď (Google FCM cez náš Sygnal),
       žiadna ďalšia appka; kľúč Firebase service accountu musí byť v `secrets/fcm/service-account.json`
 - [ ] iOS: TestFlight cez `ios-release.yml` (vyžaduje Apple Developer účet a secrets)

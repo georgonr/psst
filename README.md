@@ -3,8 +3,9 @@
 **psst** je súkromný messenger postavený na [Matrixe](https://matrix.org/) — vlastný Synapse homeserver pre
 **psst.pro** (ID `@meno:psst.pro`) a klienti Element s vlastným brandingom pre web, Windows, macOS, Android a iOS.
 
-- uzavretý server: federácia vypnutá, verejná registrácia zakázaná, účty len cez **pozývacie tokeny**
-  (registrácia priamo v appkách cez Matrix Authentication Service)
+- vlastný server bez federácie; registrácia otvorená pre každého od 18 rokov, chránená **hCaptcha** a limitom
+  na IP, s povinným súhlasom s Podmienkami (priamo v appkách cez Matrix Authentication Service, D88); adresár
+  používateľov je vypnutý — ľudia sa nájdu len podľa presného mena účtu
 - notifikácie cez vlastnú push bránu (Sygnal): Android doručuje Google FCM, iOS Apple APNs — cez ne ide len ID udalosti,
   nikdy obsah (ani šifrovaný); žiadna analytika ani iné služby Google
 - 1:1 chaty, skupiny, kanály (adresár miestností viditeľný len používateľom servera), súbory

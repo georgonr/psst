@@ -16,14 +16,14 @@ sudo ./deploy.sh <IP_SERVERA> <EMAIL> [--contact "…"] [--hosting "…"] [--app
 | Služba | Image | Doména / port | Úloha |
 |---|---|---|---|
 | Synapse | `ghcr.io/element-hq/synapse:v1.165.0` + vrstva `server/synapse/Dockerfile` (QR relácia 5 min, D66) | chat.psst.pro (len cez nginx; admin API 127.0.0.1:8008) | Matrix homeserver, federácia vypnutá |
-| MAS | `ghcr.io/element-hq/matrix-authentication-service:1.29.0` | chat.psst.pro**/auth/** | účty, prihlásenie, **registrácia len s pozývacím tokenom** (aj z Element X) |
+| MAS | `ghcr.io/element-hq/matrix-authentication-service:1.29.0` | chat.psst.pro**/auth/** | účty, prihlásenie, **otvorená registrácia s hCaptcha** (aj z appiek, D88) |
 | PostgreSQL | `postgres:18.7-alpine` | interne | databázy `synapse` a `mas` |
 | LiveKit | `livekit/livekit-server:v1.13.11` | chat.psst.pro/livekit/sfu, 7881/tcp, 7882/udp | SFU pre hovory |
 | lk-jwt-service | `ghcr.io/element-hq/lk-jwt-service:0.10.0` | chat.psst.pro/livekit/jwt | MatrixRTC autorizácia |
 | coturn | `coturn/coturn:4.18.0` (host sieť) | call.psst.pro:443 (TLS cez nginx, rozlíšené podľa ALPN) | TURN pre siete bez UDP; relay len na vlastnú SFU; 3478/udp sa nepublikuje |
 | Element Call | `ghcr.io/element-hq/element-call:v0.28.2` | call.psst.pro | samostatná web appka hovorov |
 | Sygnal | `matrixdotorg/sygnal:v0.15.1` (profil `sygnal`) | chat.psst.pro/_matrix/push/v1/notify (len cez nginx) | vlastná push brána: Android → FCM HTTP v1, iOS → APNs |
-| psst-admin | lokálny build `server/admin` (Python 3.13) | app.psst.pro**/admin** (len cez nginx) | správa pozvánok a členov (D56) |
+| psst-admin | lokálny build `server/admin` (Python 3.13) | app.psst.pro**/admin** (len cez nginx) | správa členov a nahlásení (D56, D87) |
 | nginx | `nginx:1.30.6-alpine` | 80, 443 | TLS, SNI smerovanie (stream), reverzná proxy, PSST web, právne stránky |
 | certbot | `certbot/certbot:v5.10.0` | — | Let's Encrypt (obnova 2× denne) |
 
@@ -37,7 +37,7 @@ Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets
 |---|---|
 | `deploy.sh <IP> <email>` | pre-flight (Docker, DNS 6 subdomén, porty, disk, RAM) → hardening → tajomstvá → konfigurácie → štart → Let's Encrypt → cron |
 | `scripts/harden.sh` | admin používateľ `psst` so SSH kľúčom, SSH len kľúčom, root login vypnutý (len ak kľúč existuje), UFW, fail2ban, unattended-upgrades |
-| `scripts/members.sh` | `invite [počet] [dni]`, `list`, `block <meno> [--deactivate]`, `unblock`, `admin <meno>`, `password <meno>` |
+| `scripts/members.sh` | `list`, `block <meno> [--deactivate]`, `unblock`, `admin <meno>`, `password <meno>` |
 | `scripts/healthcheck.sh` | kontajnery, všetky HTTPS endpointy, MAS, Sygnal (FCM/APNs), TURN/TLS handshake, certifikát, disk, vek zálohy |
 | `scripts/backup.sh` | šifrovaná záloha (AES-256, PBKDF2) — DB synapse + mas, médiá, **podpisový kľúč**, konfigurácie, certifikáty, tajomstvá; rotácia 7/4/6; cron denne 03:17 |
 | `scripts/restore.sh <archív.enc> [--force]` | obnova (aj na nový server); overí zhodu podpisového kľúča |
@@ -45,18 +45,19 @@ Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets
 
 ## Administrácia — https://app.psst.pro/admin
 
-Pozvánky a členovia v prehliadači (aj mobil), prihlásenie bežným účtom cez MAS; prístup len pre adminov
+Členovia a nahlásenia v prehliadači (aj mobil), prihlásenie bežným účtom cez MAS; prístup len pre adminov
 (`can_request_admin` v MAS — teraz `geo`, nastaviť: `sudo scripts/members.sh admin <meno>`), ostatní 403.
-Nová pozvánka (počet použití, platnosť, „pre koho") → kód `XXXX-XXXX` + text na poslanie; zoznam pozvánok so stavom
-(voľná / použitá / prepadnutá / zrušená) a kto sa ňou zaregistroval; zrušenie; zoznam členov s pozvánkou,
-poslednou aktivitou a stavom; zablokovať / odblokovať (vratné). Audit log: `data/admin/audit.log`.
+Zoznam členov s registráciou, poslednou aktivitou a stavom; zablokovať / odblokovať (vratné); nové heslo;
+nahlásenia (zablokovať, zmazať obsah). Pozvánky boli zrušené v D88. Audit log: `data/admin/audit.log`.
 Služba `admin` (server/admin) — DECISIONS D56.
 
 ## Registrácia a členovia
 
-Verejná registrácia neexistuje. Admin vytvorí pozvánku (`members.sh invite`), nový člen v ktorejkoľvek appke
-psst (Android, iOS, web, desktop) ťukne **Create account** → stránka MAS → meno, heslo, súhlas s podmienkami
-→ **pozývací token** → zobrazované meno → späť v appke. Neplatný, expirovaný alebo vyčerpaný token MAS odmietne.
+Registrácia je otvorená (D88): v ktorejkoľvek appke psst (Android, iOS, web, desktop) **Create account** →
+stránka MAS → meno, heslo, **„Mám aspoň 18 rokov a súhlasím s Podmienkami používania"** (povinné), **hCaptcha** →
+zobrazované meno → späť v appke. Registráciu bez platného tokenu hCaptcha MAS odmietne; z jednej IP 3 registrácie
+naraz, potom 1 za ~21 min. Kľúče hCaptcha: `secrets/mas/hcaptcha_site_key` a `secrets/mas/hcaptcha_secret`
+(bez nich `deploy.sh` skončí). Adresár používateľov je vypnutý — rozhovor sa začína presným menom účtu.
 
 ## Notifikácie
 

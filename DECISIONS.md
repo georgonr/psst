@@ -938,3 +938,59 @@ a skupina „Weekend trip“ zo zálohovaných webových relácií; údaje + kľ
   latest.json, upload skript ich pozná).
 - **Drobnosť na ďalší build:** dialóg batérie hovorí „Batéria → Bez obmedzení“. Na Android 15 je medzi tým ešte
   „Allow background usage“.
+
+**D88 — Otvorená registrácia s hCaptcha namiesto pozvánok, hľadanie ľudí len podľa presného mena účtu.**
+
+**Registrácia (MAS 1.29.0; názvy volieb overené v `docs/reference/configuration.md` tagu v1.29.0 a cez
+`mas-cli config check`):** `password_registration_enabled: true`, `password_registration_email_required: false`,
+`password_registration_token_required: false`; `captcha.service: hcaptcha` so `site_key` a `secret_key`.
+`rate_limiting.registration` burst 3 / `per_second` 0.0008 (3 naraz z jednej IP, potom 1 za ~21 min); limity
+prihlásenia (`rate_limiting.login.per_ip` 3 / 0.05, `per_account` 1800 / 0.5) sú v šablóne výslovne, rovnaké ako
+predvolené; `username_availability` 5 / 1.0. MAS nepozná `secret_key_file`, preto `deploy.sh` dosadí secret do
+vyrenderovaného `data/config/mas/config.yaml` (adresár len pre root/MAS) zo `secrets/mas/hcaptcha_secret` (600,
+UID 65532), rovnako ako tajomstvo admin klienta. Bez oboch súborov `deploy.sh` skončí — otvorená registrácia bez
+ochrany sa nedá nasadiť omylom. `--local-test` (CI smoke) používa verejné testovacie kľúče hCaptcha. Kľúče z
+`.hcaptcha-keys.txt` sú v `~/psst-keys/hcaptcha.txt` (600); súbor v repe nikdy nebol commitnutý (história overená
+podľa názvu aj obsahu).
+
+**Súhlas s Podmienkami a vek 18+:** natívna voľba MAS `branding.tos_uri: https://psst.pro/terms` pridá do
+registrácie povinné políčko (MAS ho uloží v `user_terms`). Samostatné potvrdenie veku MAS nemá → je v texte
+políčka: „Mám aspoň 18 rokov a súhlasím s Podmienkami používania“ / „I am at least 18 years old and I agree to the
+Terms and Conditions“ (ostatné jazyky po anglicky). Formulár je React a preklady sú skompilované v assets so SRI
+hashom v manifeste, preto `server/scripts/mas-assets.py` pri každom deployi vezme assets z image MAS, nahradí text
+(a v slovenčine aj hlášky hCaptcha), zmaže .br/.gz upravených súborov, prepočíta integrity a výsledok sa read-only
+pripojí do kontajnera (`data/config/mas-ui`). Pri novej verzii MAS sa to zopakuje; ak kľúč chýba, deploy skončí.
+
+**Pozvánky preč:** admin stránka bez sekcie Pozvánky, formulára, stĺpca „Pozvánka“ a endpointov `/admin/invites*`
+(členovia, nové heslo a nahlásenia ostávajú); rola `psst_admin_ro` stratila SELECT na tabuľky registrácií MAS.
+`members.sh invite` a `new-invite.sh` zrušené. Všetky registračné tokeny v MAS zneplatnené (10 nezrušených z 11, z
+toho 6 ešte použiteľných). Odkazy s kódom sa nikdy nerozosielali (kód sa písal ručne do kroku MAS), staré odkazy
+na app.psst.pro / „Create account“ vedú na bežnú registráciu. Appky nemali vlastné pole na kód — krok s tokenom
+bol na stránke MAS, ktorý sa vypnutím `password_registration_token_required` neukáže.
+
+**Hľadanie ľudí:** Synapse 1.165 `user_directory.enabled: false` (podľa kódu `rest/client/user_directory.py` vráti
+prázdny zoznam) → členov sa nedá vylistovať ani hľadať podľa časti mena. Profil zostáva dostupný prihláseným aj
+bez spoločnej miestnosti (`limit_profile_requests_to_users_who_share_rooms: false`, D65), inak by presné meno
+nefungovalo. Appky: krátke meno sa doplní na `@meno:<server>` a ukáže sa len vtedy, ak profil existuje (aby sa pri
+písaní neponúkali neexistujúce účty): Android `MatrixUserRepository` („jana“ aj „@jana“, aj kratšie ako 3 znaky),
+iOS `UserDiscoveryService` + prah hľadania 1 znak (start chat, pozvanie do miestnosti), web/desktop `InviteDialog`
+(návrhy, Enter) a `useProfileInfo` (vyhľadávanie). Na webe len tvar „jana“ — „@jana“ ostáva upstream správaniu
+(upstream testy pri ňom počítajú s neplatným ID a pri písaní znak po znaku by sa robilo veľa zbytočných dopytov).
+Plné `@meno:psst.pro` fungovalo vo všetkých appkách aj predtým. Zistenie: priame hľadanie profilu umožňuje overiť,
+či účet s presným menom existuje — to je pri začatí rozhovoru menom nevyhnutné a prijateľné.
+
+**hCaptcha v Zásadách a formulároch obchodov:** podľa hcaptcha.com/privacy a docs.hcaptcha.com/faq hCaptcha
+(Intuition Machines, Inc., USA, sprostredkovateľ podľa GDPR) spracúva IP adresu, údaje o prehliadači a zariadení
+(typ prehliadača, OS) a signály práce s overením (pohyby myši, dotyky, stlačenia klávesov); prenos do USA cez
+EU-U.S. Data Privacy Framework a SCC. Presne toto je v `/privacy` (body 2, 4, 5, 9, 10), dátum účinnosti 20. 11.
+2026. Obchody: Google vyžaduje deklarovať údaje z webview otvoreného z appky, Apple „data collected via web
+traffic“ (registrácia beží v Custom Tab / ASWebAuthenticationSession) → opatrne deklarujeme jednu položku navyše:
+Play **App activity → App interactions** (Fraud prevention, security, and compliance; nezdieľané — service
+provider), Apple **Usage Data → Product Interaction** (App Functionality, linked, bez sledovania). IP sa nikde
+nepoužíva na polohu → Location ostáva „Not collected“. Podrobne `play-listing/FORMS.md` §7 a
+`appstore-listing/FORMS.md` §3.
+
+**Texty:** všade namiesto „len na pozvánku“ pravdivo: účet si vytvorí ktokoľvek od 18 rokov, ľudia sa nájdu podľa
+presného mena účtu (psst.pro SK/EN, /privacy, /terms — aj zákaz hromadného/automatizovaného zakladania účtov,
+/support — nová otázka „Ako začnem rozhovor?“, /download, obchody, poznámky pre kontrolórov, feature grafika „For
+adults 18+“). /delete-account sa nemenil (pozvánky nespomínal).
