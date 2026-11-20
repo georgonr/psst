@@ -6,6 +6,9 @@
 #   d88     — PsstStoreTests.testRegistrationScreen (signed out: MAS registration without invite code, hCaptcha,
 #             18+ checkbox) and testExactNameSearch (partial name → nobody, short + full account name → the person,
 #             DM invite sent). Secret part "d88": {"user", "password", "target", "target_name"}.
+#   brand   — (D89) PsstStoreTests.testMasBranding: psst brand on the MAS pages (registration, sign-in, account).
+#             Uses the "d88" secret part (user/password).
+#   configuration — Debug (default) or Release (= the TestFlight build configuration, D89: no debug assertions).
 #
 # Test accounts only: secret PSST_STORE_IOS = {"review": {"a": {...}, "b": {...}},
 #                                               "shots": {"user", "password", "recovery"}} (qa-* accounts, deactivated
@@ -20,12 +23,16 @@ on:
         default: psst
         required: true
       parts:
-        description: "review,shots,d88"
+        description: "review,shots,d88,brand"
         default: "review,shots"
         required: true
       devices:
         description: "IPHONE69 IPHONE63 IPAD13"
         default: "IPHONE69 IPHONE63 IPAD13"
+        required: true
+      configuration:
+        description: "Debug or Release (Release = TestFlight configuration)"
+        default: Debug
         required: true
 
 permissions:
@@ -36,6 +43,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  CONFIG: ${{ inputs.configuration || 'Debug' }}
   FORK_REPO: georgonr/psst-ios
   FORK_REF: ${{ inputs.ref || 'psst' }}
 
@@ -105,7 +113,7 @@ jobs:
         working-directory: ios
         run: |
           xcrun simctl boot "$IPHONE63"; xcrun simctl bootstatus "$IPHONE63" -b
-          xcodebuild build-for-testing -project ElementX.xcodeproj -scheme IntegrationTests -configuration Debug \
+          xcodebuild build-for-testing -project ElementX.xcodeproj -scheme IntegrationTests -configuration "$CONFIG" \
             -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -skipPackagePluginValidation -skipMacroValidation \
             COMPILER_INDEX_STORE_ENABLE=NO CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO \
@@ -134,19 +142,22 @@ jobs:
           for i in $(seq 1 90); do grep -q "signed in" "$RUNNER_TEMP/out/partner.log" 2>/dev/null && break; sleep 2; done
           eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['review'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_AUDIT_PARTNER=@%s:psst.pro' % (d['a']['user'], d['a']['password'], d['b']['user']))")"
           export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/review"
-          xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests \
+          xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests -configuration "$CONFIG" \
             -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/testStoreReview \
             -resultBundlePath "$RUNNER_TEMP/out/review.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/review.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
           pkill -f ios-partner.mjs || true
       - name: D88 — registration screen and exact-name search
-        if: contains(inputs.parts, 'd88')
+        if: contains(inputs.parts, 'd88') || contains(inputs.parts, 'brand')
         working-directory: ios
         run: |
           eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['d88'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_EXACT_TARGET=%s TEST_RUNNER_PSST_EXACT_TARGET_NAME=\"%s\"' % (d['user'], d['password'], d['target'], d['target_name']))")"
           export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/d88"
-          for t in testRegistrationScreen testExactNameSearch; do
-            xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests \
+          TESTS=""
+          case "${{ inputs.parts }}" in *d88*) TESTS="testRegistrationScreen testExactNameSearch" ;; esac
+          case "${{ inputs.parts }}" in *brand*) TESTS="$TESTS testMasBranding" ;; esac
+          for t in $TESTS; do
+            xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests -configuration "$CONFIG" \
               -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
               -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/$t \
               -resultBundlePath "$RUNNER_TEMP/out/d88-$t.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/d88-$t.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
@@ -167,7 +178,7 @@ jobs:
             xcrun simctl status_bar "$udid" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
               --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100 || true
             export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/shots/$dev"
-            xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests \
+            xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests -configuration "$CONFIG" \
               -destination "platform=iOS Simulator,id=$udid" -derivedDataPath "$RUNNER_TEMP/dd" \
               -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -only-testing:IntegrationTests/PsstStoreTests/testStoreScreenshots \
               -resultBundlePath "$RUNNER_TEMP/out/shots-$dev.xcresult" 2>&1 | tee "$RUNNER_TEMP/out/shots-$dev.log" | grep -E "PSST-STORE|PSST-DIAG|error|Test Case" || true
