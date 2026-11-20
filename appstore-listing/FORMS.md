@@ -4,7 +4,7 @@ Poradie podľa App Store Connect: App Information → Pricing → App Privacy �
 Information) → Age Rating. Odpovede po anglicky, ako sa vypĺňajú. **Heslo ani kľúč na obnovenie tu nie sú** —
 sú v `~/proj/psst-review.txt` (chmod 600), majiteľ ich doplní do formulára.
 
-Dôkazy: `play-listing/FACTS.md` (rovnaký kód a server ako iOS), IPA b2 (`dist/ios/`), stránky na psst.pro.
+Dôkazy: `play-listing/FACTS.md` (rovnaký kód a server ako iOS), IPA b3 (`dist/ios/`), stránky na psst.pro.
 
 ## 1. App Information
 
@@ -78,7 +78,7 @@ Dôkaz: `play-listing/FACTS.md` bod 1 a 3 (žiadne analytické ani reklamné kni
 | Support URL | `https://psst.pro/support` (kontakt psst@psst.pro, nahlásenie, zmazanie účtu) |
 | Marketing URL | `https://psst.pro` |
 | Screenshots | `screenshots/iphone-6.9/` (1320×2868), `screenshots/iphone-6.3/` (1206×2622), `screenshots/ipad-13/` (2064×2752) |
-| Build | psst iOS **b2** (TestFlight, verzia 26.11.0) |
+| Build | psst iOS **b3** (TestFlight, verzia 26.11.0; D88 — b2 ešte nevedel krátke meno účtu) |
 | Version „What's New“ | prvé vydanie — netreba |
 
 **App Review Information**

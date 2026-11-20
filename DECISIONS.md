@@ -994,3 +994,23 @@ nepoužíva na polohu → Location ostáva „Not collected“. Podrobne `play-l
 presného mena účtu (psst.pro SK/EN, /privacy, /terms — aj zákaz hromadného/automatizovaného zakladania účtov,
 /support — nová otázka „Ako začnem rozhovor?“, /download, obchody, poznámky pre kontrolórov, feature grafika „For
 adults 18+“). /delete-account sa nemenil (pozvánky nespomínal).
+
+**D88 — zistenia pri overení (opravené / zapísané):**
+- **Cache a SRI pri úprave textov MAS:** prvá verzia `mas-assets.py` prepisovala preklady pod pôvodnými menami súborov.
+  MAS posiela assets s `Cache-Control: public, immutable, max-age=31536000`, takže prehliadač, ktorý ich už mal
+  (Chrome v emulátore po skorších prihláseniach), odmietol `modulepreload` pre nesúhlasný SRI a stránka registrácie
+  ukazovala surové kľúče prekladov (`common.username`…). To isté by postihlo správu účtu `/account` (`app.html`
+  prednačítava jazyk rovnako). Oprava (nasadená, overená v emulátore aj Playwright): upravené súbory dostanú nové
+  meno `…-p<tag>.js` a premenuje sa aj každý súbor, ktorý na ne odkazuje (mapa jazykov `mountIsland`, vstupné
+  body, chunky účtu — spolu 52 súborov), manifest dostane nové mená a SRI; pôvodné súbory ostávajú nezmenené
+  (overené: pôvodný `en-DUv-zzDo.js` má opäť pôvodný hash), takže staré cache nič nerozbijú.
+- **Testovacie kľúče hCaptcha v MAS nefungujú:** MAS 1.29 po overení tokenu porovná `hostname` z odpovede hCaptcha
+  so svojou doménou (`crates/handlers/src/captcha.rs`); testovacie kľúče vracajú `dummy-key-pass`, preto MAS
+  odmietne každú registráciu s nimi. Celú registráciu s testovacími kľúčmi teda overiť nejde. Smoke 1.3 v CI
+  overuje: bez tokenu a s neplatným tokenom odmietnuté, testovací token hCaptcha potvrdí, MAS ho odmietne (token
+  overuje na serveri), a celú registráciu bez kroku s kódom na lokálnom stacku s dočasne vypnutou captcha.
+- **iOS Debug assert:** pri vytvorení DM s človekom, ktorý ešte nemá kryptografickú identitu (nikdy sa neprihlásil),
+  upstream `RoomScreenViewModel.updateVerificationBadge` volá `MXLog.failure` → v Debug builde (XCUITest) pád, v
+  release (TestFlight) len záznam v logu. Nesúvisí s D88 (rovnako pri plnom MXID); test používa adresáta s identitou.
+- Web: v predvolenom vyhľadávaní (Ctrl+K) sa profil hľadá až vo filtri „Ľudia/People“ — upstream správanie, ako pri
+  plnom MXID. Hlavná cesta „Začať rozhovor“ nájde krátke meno priamo.

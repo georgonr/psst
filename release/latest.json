@@ -1,81 +1,81 @@
 {
  "web": {
-  "build": 33,
-  "date": "20261119",
-  "note": "Rovnaký obsah ako b32 (build spustený zmenou testovacieho skriptu); odkazy na psst.pro, kontakt psst@psst.pro (D87)",
+  "build": 36,
+  "date": "20261120",
+  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261119-b33.tar.gz",
-    "sha256": "3e0074d6ffbf494a4148aff676f9ed45c52af9534a9879ee05ad2ef243ac2ab3"
+    "name": "psst-web-20261120-b36.tar.gz",
+    "sha256": "b6be5799533b3d26f27e8ff71c440085d445126546f23e7eb7698c40d5231b4d"
    }
   ]
  },
  "macos": {
-  "build": 33,
-  "date": "20261119",
-  "note": "Rovnaký obsah ako b32 (build spustený zmenou testovacieho skriptu); odkazy na psst.pro, kontakt psst@psst.pro (D87)",
+  "build": 36,
+  "date": "20261120",
+  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261119-b33.dmg",
-    "sha256": "f493c5c39deea42aabf0f19a8e60db84af9a4ac36dbf30e1d1c2cb1006171bbf"
+    "name": "psst-macos-20261120-b36.dmg",
+    "sha256": "2ee8388bd4764b994146fb7bf2a01a364fd3eed31cf42c3ed8946ca2cc0c1caa"
    },
    {
-    "name": "psst-macos-20261119-b33.zip",
-    "sha256": "b501dac7215adbf68028a8f1f8ce6be382e25e4ba4b7023d9ea6b851439f97ce"
+    "name": "psst-macos-20261120-b36.zip",
+    "sha256": "38ee1e7480ead1be5f4ad2a3b79532902d73b1f99c18f9c64e61cac1947c359a"
    }
   ]
  },
  "windows": {
-  "build": 33,
-  "date": "20261119",
-  "note": "Rovnaký obsah ako b32 (build spustený zmenou testovacieho skriptu); odkazy na psst.pro, kontakt psst@psst.pro (D87)",
+  "build": 36,
+  "date": "20261120",
+  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261119-b33-setup.exe",
-    "sha256": "5fc34a878e001093cee30030cf1187e5466dda3db2d56c2e19fd9635013c602d"
+    "name": "psst-windows-20261120-b36-setup.exe",
+    "sha256": "92c5a8d9965248cff8f6e3262a2b46187e61d3b874ee28346562b75a061886f9"
    },
    {
-    "name": "psst-windows-20261119-b33.msi",
-    "sha256": "12397599aa95eb316bca15f9386d52bfa1e685fae151e111906f65529d996efe"
+    "name": "psst-windows-20261120-b36.msi",
+    "sha256": "d4a61ad83bd1774bdd98cf298e69cfbc7fc679c4417d0b20b42b5a2662424ce3"
    }
   ]
  },
  "android": {
-  "build": 51,
-  "date": "20261119",
-  "note": "Google Play: bez povolení na inštaláciu balíkov, polohu a výnimku z batérie; O aplikácii: zmazanie účtu a kontakt psst@psst.pro (D87)",
+  "build": 54,
+  "date": "20261120",
+  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261119-b51-arm64.apk",
-    "sha256": "b74e9ff957717622cda6cca64d57e6958ef1045d4063ef0e890e4e4cb2a2a659"
+    "name": "psst-android-20261120-b54-arm64.apk",
+    "sha256": "814f10c7590e72a9f01e03591ecf0b4ec475370c45f247b8dfbcf68a21b6f0b2"
    },
    {
-    "name": "psst-android-20261119-b51-armv7.apk",
-    "sha256": "cd8fbdb889e1976297b8d1e85e70d2d5f652e1a85f22b0f6308a99af3d7ebfda"
+    "name": "psst-android-20261120-b54-armv7.apk",
+    "sha256": "4e82f38752c9f9e0c6f42cf07ff62cdf01f16957fd3f5c26f1d482dc7bb22f71"
    },
    {
-    "name": "psst-android-20261119-b51-x86_64.apk",
-    "sha256": "186d12098c574aa08ad463272e34d9fce162cd86913aa66245a9abc321c25493"
+    "name": "psst-android-20261120-b54-x86_64.apk",
+    "sha256": "16961d3afaa55896f1c106794ee5255ea1d50a2bbd7fce484a8a2c9ab43002d5"
    },
    {
-    "name": "psst-android-20261119-b51.aab",
-    "sha256": "6bc317553c05571f7aceed2490595302c8dcc6df90f1e47f86dfa1cd7a669264"
+    "name": "psst-android-20261120-b54.aab",
+    "sha256": "efa44490c7ff51993d4b575c8206d42ae016ab2befb97d63f85ea3d2ae6db6f4"
    }
   ]
  },
  "ios": {
-  "build": 2,
-  "date": "20261119",
-  "note": "iOS b2: About — Delete account, contact psst@psst.pro, legal pages on psst.pro (D87)",
+  "build": 3,
+  "date": "20261120",
+  "note": "D88: chat podľa presného mena účtu (krátke meno → @meno:psst.pro), otvorená registrácia s hCaptcha",
   "dir": "ios",
   "files": [
    {
-    "name": "psst-ios-20261119-b2.ipa",
-    "sha256": "c8eba16904bcef019c8b4ce9a9edc6ce747fe96c77785c7936b5248c66eb3b2a"
+    "name": "psst-ios-20261120-b3.ipa",
+    "sha256": "c7b1e8cfc460e3a9c91cc4de58f734313222b2e911828e0f9ea1d835382f9b6a"
    }
   ]
  }

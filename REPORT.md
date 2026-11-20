@@ -1,3 +1,18 @@
+# psst — dávka 21 (2026-11-20): otvorená registrácia s hCaptcha, bez pozvánok, hľadanie podľa presného mena
+
+Plný detail: **REGISTRATION-DONE.md**, rozhodnutia DECISIONS.md **D88**.
+
+- Registrácia otvorená pre každého od 18 rokov (MAS 1.29: hCaptcha, limit 3 + 1/21 min na IP, povinné políčko
+  „Mám aspoň 18 rokov a súhlasím s Podmienkami používania“); bez platného tokenu hCaptcha server odmietne.
+- Pozvánky zrušené (admin, skripty, 10 tokenov zneplatnených); adresár používateľov vypnutý; krátke „meno“ aj plné
+  „@meno:psst.pro“ fungujú na webe, macOS desktope, Androide aj iOS (overené, žiadosti o chat dorazili).
+- Texty: psst.pro, /privacy (hCaptcha ako sprostredkovateľ), /terms, /support, /download, obchody, poznámky pre
+  kontrolórov. hCaptcha pridáva jednu položku v Play Data safety aj v Apple App Privacy.
+- Buildy: Android **b54**, iOS **b3** (TestFlight), web + desktop **b36** (macOS notarizovaný). Brány a CI zelené.
+- Neoverené: dokončenie registrácie s hCaptcha na produkcii (MAS odmieta testovacie kľúče), Windows, reálne telefóny.
+
+---
+
 # psst — nočný beh 2026-11-19/20 (dávka 20): príprava na Google Play a App Store
 
 **Nič sa nezaseklo na veci mimo môjho dosahu.** Do Play Console ani App Store Connect som nič neposlal, okrem iOS

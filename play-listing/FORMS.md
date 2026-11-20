@@ -4,7 +4,8 @@ Poradie podľa Play Console: **Dashboard → Set up your app** (App content) a p
 listing**. Odpovede sú po anglicky, ako sa vypĺňajú. Pri každej je odkaz na dôkaz. Heslá tu nie sú: App access
 odkazuje na `~/proj/psst-review.txt` (chmod 600, len na Macu majiteľa).
 
-Overené na buildoch **b51** (AAB `dist/android/psst-android-20261119-b51.aab`) a na produkčnom serveri psst.pro.
+Overené na buildoch **b51** a **b54** (D88; AAB na nahratie: `dist/android/psst-android-20261120-b54.aab`, manifest b54 prešiel
+`check-manifest.py` — povolenia rovnaké ako b51) a na produkčnom serveri psst.pro.
 Do Play Console som nič nenahral ani neodoslal.
 
 Poradie sekcií App content nie je v dokumentácii Google celé popísané; je podľa Play Console (Privacy policy,
