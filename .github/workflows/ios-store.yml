@@ -154,8 +154,10 @@ jobs:
           eval "$(python3 -c "import json;d=json.load(open('$RUNNER_TEMP/store.json'))['d88'];print('export TEST_RUNNER_INTEGRATION_TESTS_USERNAME=%s TEST_RUNNER_INTEGRATION_TESTS_PASSWORD=%s TEST_RUNNER_PSST_EXACT_TARGET=%s TEST_RUNNER_PSST_EXACT_TARGET_NAME=\"%s\"' % (d['user'], d['password'], d['target'], d['target_name']))")"
           export TEST_RUNNER_PSST_SHOT_DIR="$RUNNER_TEMP/out/d88"
           TESTS=""
-          case "${{ inputs.parts }}" in *d88*) TESTS="testRegistrationScreen testExactNameSearch" ;; esac
+          # order: signed out first (registration screen, brand on sign-in), then signed-in checks
+          case "${{ inputs.parts }}" in *d88*) TESTS="testRegistrationScreen" ;; esac
           case "${{ inputs.parts }}" in *brand*) TESTS="$TESTS testMasBranding" ;; esac
+          case "${{ inputs.parts }}" in *d88*) TESTS="$TESTS testExactNameSearch" ;; esac
           for t in $TESTS; do
             xcodebuild test-without-building -project ElementX.xcodeproj -scheme IntegrationTests -configuration "$CONFIG" \
               -destination "platform=iOS Simulator,id=$IPHONE63" -derivedDataPath "$RUNNER_TEMP/dd" \
