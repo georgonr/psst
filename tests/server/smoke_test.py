@@ -105,44 +105,6 @@ def auth(token):
     return {"Authorization": f"Bearer {token}"}
 
 
-def register(username, password, token=None, dummy_without_token=False):
-    """Registrácia cez bežné client API (UIA). Vráti finálnu odpoveď."""
-    url = f"{BASE}/_matrix/client/v3/register"
-    body = {"username": username, "password": password, "initial_device_display_name": "psst-smoke"}
-    r = req("POST", url, json=body)
-    if r.status_code != 401:
-        return r
-    j = r.json()
-    session = j.get("session")
-    CTX.setdefault("flows_seen", j.get("flows"))
-    if token is None:
-        if dummy_without_token:
-            return req("POST", url, json={**body, "auth": {"type": "m.login.dummy", "session": session}})
-        return r
-    r = req("POST", url, json={**body, "auth": {"type": "m.login.registration_token",
-                                                "token": token, "session": session}})
-    # ak by flow obsahoval ďalší krok (m.login.dummy), dokončíme ho
-    for _ in range(3):
-        if r.status_code != 401:
-            break
-        j = r.json()
-        done = set(j.get("completed", []))
-        if "m.login.registration_token" not in done:
-            break
-        nxt = None
-        for flow in j.get("flows", []):
-            stages = flow["stages"]
-            if all(s in stages for s in done):
-                rest = [s for s in stages if s not in done]
-                if rest:
-                    nxt = rest[0]
-                    break
-        if nxt != "m.login.dummy":
-            break
-        r = req("POST", url, json={**body, "auth": {"type": "m.login.dummy", "session": session}})
-    return r
-
-
 # ----------------------------------------------------------------------------- 1. Synapse + admin
 @check("1.1", "Synapse health (loopback 127.0.0.1:8008) + client API cez nginx")
 def c_health():
@@ -187,13 +149,60 @@ def c_admin():
     return "servisný admin token (MAS compat, admin scope) funguje"
 
 
-@check("1.3", "pozývacie tokeny v MAS (scripts/members.sh invite)")
-def c_tokens():
-    CTX["tok_single"] = run_script("./scripts/members.sh", "invite", "1", "1").splitlines()[-1]
-    CTX["tok_multi"] = run_script("./scripts/members.sh", "invite", "3", "1").splitlines()[-1]
-    expect(all(len(CTX[k]) >= 8 for k in ("tok_single", "tok_multi")), f"tokeny: {CTX['tok_single']}, {CTX['tok_multi']}")
-    (SERVER.parent / ".local-test-tokens.json").write_text(json.dumps({k: CTX[k] for k in ("tok_single", "tok_multi")}))
-    return "2 tokeny vytvorené (1× a 3× použiteľný) — registráciu nimi overuje scripts/web/register-test.mjs"
+@check("1.3", "otvorená registrácia v MAS s hCaptcha (D88): bez tokenu odmietnutá, s testovacím tokenom účet vznikne")
+def c_open_registration():
+    """Lokálny test (deploy.sh --local-test) beží s verejnými TESTOVACÍMI kľúčmi hCaptcha; MAS overuje token naozaj
+    na api.hcaptcha.com. Na produkcii sú ostré kľúče (deploy.sh bez nich skončí)."""
+    import re
+    meta = S.get(f"{BASE}/_matrix/client/v1/auth_metadata", timeout=10).json()
+    mas = meta["issuer"].rstrip("/")
+    sess = requests.Session()
+    sess.verify = False
+
+    def form_page():
+        r = sess.get(f"{mas}/register", timeout=15)
+        expect(r.status_code == 200, f"MAS /register: {r.status_code}")
+        csrf = re.search(r'data-csrf-token="([^"]+)"', r.text)
+        expect(csrf, "MAS /register: chýba CSRF token")
+        return r.text, csrf.group(1)
+
+    page, csrf = form_page()
+    cap = re.search(r"data-captcha-config='([^']*)'", page)
+    expect(cap and json.loads(cap.group(1)).get("service") == "hcaptcha", f"captcha config: {cap.group(1) if cap else None}")
+    feats = json.loads(re.search(r"data-features='([^']*)'", page).group(1))
+    expect(feats.get("password_registration") is True, f"password_registration: {feats}")
+    expect("registration_token" not in page, "registračný formulár stále pýta pozývací kód")
+
+    user = "smoke-" + secrets.token_hex(3)
+    pw = "Passw0rd-" + secrets.token_hex(8)
+    body = {"csrf": csrf, "username": user, "password": pw, "password_confirm": pw, "accept_terms": "on"}
+    r = sess.post(f"{mas}/register", data=body, timeout=30, allow_redirects=False)
+    errs = re.search(r"data-form='([^']*)'", r.text)
+    kinds = [e.get("kind") for e in json.loads(errs.group(1)).get("errors", [])] if errs else []
+    expect(r.status_code == 200 and "captcha" in kinds, f"bez tokenu hCaptcha: {r.status_code} {kinds}")
+
+    page, csrf = form_page()
+    body = {**body, "csrf": csrf, "h-captcha-response": "10000000-aaaa-bbbb-cccc-000000000001"}
+    r = sess.post(f"{mas}/register", data=body, timeout=30, allow_redirects=False)
+    expect(r.status_code in (302, 303), f"s testovacím tokenom hCaptcha: {r.status_code} {r.text[:300]}")
+    # ďalšie kroky registrácie (zobrazované meno a pod.) dokončiť, kým MAS nepresmeruje mimo /register
+    loc = r.headers.get("location", "")
+    for _ in range(6):
+        if "/register" not in loc:
+            break
+        url = loc if loc.startswith("http") else mas.split("/", 3)[0] + "//" + mas.split("/", 3)[2] + loc
+        r = sess.get(url, timeout=15, allow_redirects=False)
+        if r.status_code in (302, 303):
+            loc = r.headers.get("location", "")
+            continue
+        csrf = re.search(r'name="csrf" value="([^"]+)"', r.text)
+        expect(csrf and 'name="display_name"' in r.text, f"neznámy krok registrácie {url}: {r.text[:200]}")
+        r = sess.post(url, data={"csrf": csrf.group(1), "action": "set", "display_name": "Smoke"}, timeout=15,
+                      allow_redirects=False)
+        loc = r.headers.get("location", "")
+    login = compat_login(user, pw)
+    CTX["open_reg_user"] = login["user_id"]
+    return f"bez tokenu hCaptcha odmietnuté ({kinds}); s testovacím tokenom vznikol {login['user_id']} a prihlási sa"
 
 
 @check("1.4", "admin API je z internetu blokované, z loopbacku dostupné")
@@ -207,7 +216,7 @@ def c_admin_blocked():
 
 
 # ----------------------------------------------------------------------------- 2. registrácia (MAS)
-@check("2.1", "registrácia mimo MAS nie je možná; MAS ponúka registráciu (prompt=create) s tokenom")
+@check("2.1", "registrácia mimo MAS nie je možná; MAS ponúka registráciu (prompt=create)")
 def c_reg_no_token():
     r = req("POST", f"{BASE}/_matrix/client/v3/register", json={"username": "eve", "password": "Passw0rd-x1"})
     expect("access_token" not in r.text and r.status_code in (400, 401, 403, 404, 405), f"Synapse /register: {r.status_code} {r.text[:150]}")
@@ -237,6 +246,22 @@ def c_reg_ok():
     CTX["users"] = users
     CTX["passwords"] = pw
     return "prihlásení: " + ", ".join(v["user_id"] for v in users.values())
+
+
+@check("2.4", "adresár používateľov vypnutý (D88): hľadanie podľa časti mena nič nevráti, profil podľa presného mena áno")
+def c_directory_off():
+    tok = CTX["users"]["alice"]["access_token"]
+    bob = CTX["users"]["bob"]["user_id"]
+    found = {}
+    for term in ("bo", "bob", bob, "carol"):
+        r = req("POST", f"{BASE}/_matrix/client/v3/user_directory/search", json={"search_term": term, "limit": 10},
+                headers=auth(tok))
+        expect(r.status_code == 200, f"user_directory/search {term}: {r.status_code}")
+        found[term] = len(r.json().get("results", []))
+    expect(not any(found.values()), f"adresár vrátil výsledky: {found}")
+    r = req("GET", f"{BASE}/_matrix/client/v3/profile/{requests.utils.quote(bob, safe='')}", headers=auth(tok))
+    expect(r.status_code == 200, f"profil {bob}: {r.status_code}")
+    return f"hľadanie {found} → 0 výsledkov; profil {bob} 200"
 
 
 # ----------------------------------------------------------------------------- 3. federácia vypnutá
@@ -588,7 +613,7 @@ def c_call():
 
 
 def main():
-    checks = [c_health, c_admin, c_tokens, c_admin_blocked, c_reg_no_token, c_reg_ok,
+    checks = [c_health, c_admin, c_open_registration, c_admin_blocked, c_reg_no_token, c_reg_ok, c_directory_off,
               c_federation, c_e2ee_dm, c_group, c_wellknown, c_transports, c_lk_health, c_rtc_legacy,
               c_rtc_cs, c_containers, c_app, c_call]
     only = os.environ.get("SMOKE_ONLY")

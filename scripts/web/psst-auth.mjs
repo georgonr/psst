@@ -44,30 +44,31 @@ export async function loginViaMas(page, user, password) {
     await waitForApp(page);
 }
 
-// Registrácia s pozývacím tokenom cez MAS. Vráti { ok, error } — pri neplatnom tokene ok=false a text chyby.
-// Tok MAS 1.29: (1) meno, heslo, potvrdenie, súhlas s podmienkami → (2) stránka "Registration token" → (3) súhlas → appka
-export async function registerViaMas(page, user, password, token) {
-    await page.goto("https://app.psst.pro/#/register");
-    await page.locator('button:has-text("Continue")').first().click({ timeout: 90000 });
+// Otvorí registračný formulár MAS z Element Web (#/register → Continue). Vráti page na stránke MAS.
+export async function openMasRegistration(page, base = "https://app.psst.pro") {
+    await page.goto(base + "/#/register");
+    await page.locator('.mx_Login_fullWidthButton, [role=button]:has-text("Continue"), button:has-text("Continue")').first().click({ timeout: 90000 });
     await page.waitForURL(MAS_URL_RE, { timeout: 60000 });
     await page.waitForSelector('input[name="username"]', { timeout: 60000 });
+}
+
+// Otvorená registrácia cez MAS (D88): meno, heslo, potvrdenie, súhlas s Podmienkami a 18+, hCaptcha → (zobrazované
+// meno) → súhlas → appka. hCaptcha sa dá prejsť automaticky LEN s testovacími kľúčmi (lokálny stack, deploy.sh
+// --local-test); na produkcii s ostrými kľúčmi registráciu robí človek. Vráti { ok, error }.
+export async function registerViaMas(page, user, password) {
+    await openMasRegistration(page);
     await page.fill('input[name="username"]', user);
     await page.fill('input[name="password"]', password);
     await page.fill('input[name="password_confirm"]', password);
     await page.check('input[name="accept_terms"]');
-    // MAS overuje meno asynchrónne — odošli, kým sa neobjaví krok s tokenom
-    for (let i = 0; i < 5 && !/\/token/.test(page.url()); i++) {
-        await page.waitForTimeout(2500);
-        await page.locator('button[type=submit]').first().click().catch(() => {});
-        await page.waitForURL(/\/token/, { timeout: 5000 }).catch(() => {});
-    }
-    if (!/\/token/.test(page.url())) {
-        return { ok: false, error: "krok s tokenom sa neobjavil: " + (await page.locator("body").innerText()).slice(0, 200) };
-    }
-    await page.fill('input[name="token"]', token);
-    await page.locator('button[type=submit]').first().click();
+    const box = page.frameLocator('iframe[src*="hcaptcha.com"][title*="checkbox" i]').locator("#checkbox");
+    await box.click({ timeout: 60000 });
     await page.waitForTimeout(3000);
-    if (/\/token/.test(page.url())) {
+    for (let i = 0; i < 5 && /\/register\/?(\?|$)/.test(new URL(page.url()).pathname + "?"); i++) {
+        await page.locator('button[type=submit]').first().click().catch(() => {});
+        await page.waitForTimeout(3000);
+    }
+    if (/\/register\/?$/.test(new URL(page.url()).pathname)) {
         const txt = (await page.locator("body").innerText()).replace(/\s+/g, " ");
         return { ok: false, error: txt.slice(0, 200) };
     }

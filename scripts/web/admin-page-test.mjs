@@ -1,18 +1,18 @@
-// PSST — test administračnej stránky https://app.psst.pro/admin na produkcii (D56).
+// PSST — test administračnej stránky https://app.psst.pro/admin na produkcii (D56; pozvánky zrušené v D88).
 //   node admin-page-test.mjs <out-dir> <accounts.json> [<pw-user>]
 //     accounts.json: {"<admin user>": "pw", "<plain user>": "pw", "<pw-user>": "pw"} (order matters: admin first, plain second)
-//     ADMIN_TEST_ONLY=pwreset  → len prihlásenie admina + test "Nastaviť nové heslo" (bez pozvánok/registrácií)
+//     ADMIN_TEST_ONLY=pwreset  → len prihlásenie admina + test "Nastaviť nové heslo"
 //     PSST_SSH=psst            → overí aj záznam v audit logu na serveri (ssh <host> sudo tail …/audit.log)
-// Overí: prihlásenie cez MAS, pozvánka → registrácia → "použitá" + priradenie, blokovanie/odblokovanie,
-// zrušenie pozvánky → registrácia neprejde, 403 pre neadmina, CSRF/Origin ochrana, geo sa nedá zablokovať,
+// Overí: prihlásenie cez MAS, sekcia Pozvánky a jej endpointy neexistujú (D88), blokovanie/odblokovanie bežného
+// účtu (<plain user>), 403 pre neadmina, CSRF/Origin ochrana, geo sa nedá zablokovať,
 // nové heslo (D70): heslo sa ukáže raz, audit bez hesla, prihlásenie do appky novým heslom, staré neplatí.
 // <pw-user> = čerstvý testovací účet (napr. qa-pw<MMDDHHMM>), heslo v accounts.json; po teste ho deaktivujte.
-// Na konci vypíše JSON {codes, user} pre upratovanie.
+// Na konci vypíše JSON {user} pre upratovanie.
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { loginViaMas, MAS_URL_RE, registerViaMas } from "./psst-auth.mjs";
+import { loginViaMas, MAS_URL_RE } from "./psst-auth.mjs";
 
 const [out, accFile, PWUSER] = process.argv.slice(2);
 const ONLY = process.env.ADMIN_TEST_ONLY || "";
@@ -44,26 +44,13 @@ async function adminLogin(user, pw, viewport = { width: 1280, height: 900 }) {
     return { ctx, page, status: () => final };
 }
 
-async function newInvite(page, note, uses = 1, days = 7) {
-    await page.goto(A);
-    await page.fill('input[name="uses"]', String(uses));
-    await page.fill('input[name="days"]', String(days));
-    await page.fill('input[name="note"]', note);
-    await page.locator('button:has-text("Nová pozvánka")').click();
-    await page.waitForSelector("#code", { timeout: 20000 });
-    return { code: (await page.locator("#code").innerText()).trim(), msg: await page.locator("#msg").innerText() };
-}
-
 const sec = (page, title) => page.locator("section").filter({ has: page.locator("h2", { hasText: new RegExp("^" + title + "$") }) });
-const row = (page, text) => sec(page, "Pozvánky").locator("tr", { hasText: text }).first();
 const mrow = (page, text) => sec(page, "Členovia").locator("tr", { hasText: text }).first();
-const sfx = Date.now() % 100000;
-const newUser = ONLY === "pwreset" ? null : `qa-inv${sfx}`;
-const codes = [];
+const newUser = ONLY === "pwreset" ? null : PLAIN;
 
 // 1) admin login
 const adm = await adminLogin(ADM, acc[ADM]);
-check("admin: prihlásenie cez MAS → stránka správy", (await adm.page.locator("h2", { hasText: "Nová pozvánka" }).count()) === 1, adm.page.url());
+check("admin: prihlásenie cez MAS → stránka správy (Členovia)", (await adm.page.locator("h2", { hasText: /^Členovia$/ }).count()) === 1, adm.page.url());
 await shot(adm.page, "1-admin");
 const cookies = await adm.ctx.cookies();
 const ck = cookies.find((c) => c.name === "psst_admin");
@@ -74,26 +61,14 @@ const html = await adm.page.content();
 check("v prehliadači nie je admin token (len náhodné ID session + CSRF)", !/mct_|mat_|Bearer|client_secret/.test(html));
 
 if (ONLY !== "pwreset") {
-// 2) invite A → registration
-const invA = await newInvite(adm.page, "test A");
-codes.push(invA.code);
-check("pozvánka A vytvorená, kód + text na poslanie", /^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(invA.code) && invA.msg.includes(invA.code) && /Platí do \d+\. \d+\./.test(invA.msg), invA.msg.split("\n")[0]);
-await shot(adm.page, "2-invite-created");
-check("pozvánka A: stav voľná, 0/1", /voľná/.test(await row(adm.page, invA.code).innerText()) && /0\/1/.test(await row(adm.page, invA.code).innerText()));
-const invB = await newInvite(adm.page, "test B");
-codes.push(invB.code);
-
-const regCtx = await browser.newContext({ viewport: { width: 1280, height: 860 } });
-const reg = await registerViaMas(await regCtx.newPage(), newUser, "Psst-Inv-" + sfx + "-ok!", invA.code);
-await regCtx.close();
-check("registrácia z webu kódom A → účet vytvorený", reg.ok, reg.error || `@${newUser}`);
-
-await adm.page.goto(A);
-const rA = await row(adm.page, invA.code).innerText();
-check("pozvánka A: stav použitá, 1/1, zaregistrovaný " + newUser, /použitá/.test(rA) && /1\/1/.test(rA) && rA.includes(newUser), rA.replace(/\s+/g, " "));
-const rU = await mrow(adm.page, newUser).innerText();
-check("člen " + newUser + ": pozvánka A, stav aktívny", rU.includes(invA.code) && /aktívny/.test(rU), rU.replace(/\s+/g, " "));
-await shot(adm.page, "3-used");
+// 2) D88: pozvánky zrušené — sekcia, formulár, stĺpec ani endpointy neexistujú
+const h2s = await adm.page.locator("h2").allInnerTexts();
+check("sekcia Pozvánky a formulár Nová pozvánka nie sú", !h2s.some((t) => /Pozvánk|pozvánk/.test(t)), h2s.join(" | "));
+check("tabuľka Členovia bez stĺpca Pozvánka", !(await sec(adm.page, "Členovia").locator("th").allInnerTexts()).includes("Pozvánka"));
+const csrfTok = await adm.page.locator('input[name="csrf"]').first().getAttribute("value");
+const gone = await adm.ctx.request.post(A + "/invites", { form: { uses: "1", days: "1", note: "x", csrf: csrfTok }, headers: { Origin: "https://app.psst.pro" }, maxRedirects: 0 });
+check("POST /admin/invites (aj s platným CSRF) → neexistuje", [404, 405].includes(gone.status()), String(gone.status()));
+await shot(adm.page, "2-no-invites");
 
 // 3) lock / unlock
 await mrow(adm.page, newUser).locator('button:has-text("Zablokovať")').click();
@@ -106,19 +81,11 @@ check("Odblokovať → stav aktívny", /aktívny/.test(await mrow(adm.page, newU
 const geoRow = await sec(adm.page, "Členovia").locator("tr").filter({ has: adm.page.locator("b", { hasText: /^geo$/ }) }).first().innerHTML();
 check("geo sa nedá zablokovať (žiadne tlačidlo)", !/Zablokovať/.test(geoRow));
 
-// 4) revoke B → registration must fail
-await row(adm.page, invB.code).locator('button:has-text("Zrušiť")').click();
-await adm.page.waitForLoadState("networkidle");
-check("Zrušiť pozvánku B → stav zrušená", /zrušená/.test(await row(adm.page, invB.code).innerText()));
-const regCtx2 = await browser.newContext({ viewport: { width: 1280, height: 860 } });
-const reg2 = await registerViaMas(await regCtx2.newPage(), `${newUser}b`, "Psst-Inv-" + sfx + "-ok!", invB.code);
-await regCtx2.close();
-check("registrácia zrušeným kódom B → odmietnutá", !reg2.ok, (reg2.error || "").slice(0, 100));
-
 // 5) CSRF / Origin
-const csrf1 = await adm.ctx.request.post(A + "/invites", { form: { uses: "1", days: "1", note: "csrf" }, headers: { Origin: "https://evil.example" }, maxRedirects: 0 });
+const lockAction = await mrow(adm.page, newUser).locator('form[action$="/lock"]').getAttribute("action");
+const csrf1 = await adm.ctx.request.post("https://app.psst.pro" + lockAction, { form: { csrf: csrfTok }, headers: { Origin: "https://evil.example" }, maxRedirects: 0 });
 check("POST z cudzieho pôvodu → 403", csrf1.status() === 403, String(csrf1.status()));
-const csrf2 = await adm.ctx.request.post(A + "/invites", { form: { uses: "1", days: "1", note: "csrf", csrf: "zly" }, headers: { Origin: "https://app.psst.pro" }, maxRedirects: 0 });
+const csrf2 = await adm.ctx.request.post("https://app.psst.pro" + lockAction, { form: { csrf: "zly" }, headers: { Origin: "https://app.psst.pro" }, maxRedirects: 0 });
 check("POST bez platného CSRF tokenu → 403", csrf2.status() === 403, String(csrf2.status()));
 
 // 6) mobile layout
@@ -197,7 +164,7 @@ if (PWUSER) {
 
 await browser.close();
 const fails = res.filter((x) => !x.ok).length;
-fs.writeFileSync(path.join(out, "result.json"), JSON.stringify({ res, codes, user: newUser }, null, 2));
-console.log(JSON.stringify({ codes, user: newUser }));
+fs.writeFileSync(path.join(out, "result.json"), JSON.stringify({ res, user: newUser }, null, 2));
+console.log(JSON.stringify({ user: newUser }));
 console.log(`\n${res.length - fails}/${res.length} checks passed`);
 process.exit(fails ? 1 : 0);

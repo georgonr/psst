@@ -5,7 +5,7 @@ PSST — doplnkový test lokálneho stacku: verejný kanál a súbory.
 Spúšťať po smoke_test.py (potrebuje server/secrets/admin_token):
     ~/.local/psst-venv/bin/python tests/server/extra_test.py
 
-- vytvorí pozývací token cez scripts/new-invite.sh a zaregistruje dana + erik
+- zaregistruje dana + erik (mas-cli; registrácia je otvorená, D88)
   (heslá uloží do .local-test-accounts.json v koreni repa — gitignored, len lokálny stack),
 - dana vytvorí verejný kanál (#kanal) a publikuje ho do adresára,
 - adresár NIE je dostupný bez prihlásenia, erik kanál nájde v adresári a pripojí sa cez alias,
