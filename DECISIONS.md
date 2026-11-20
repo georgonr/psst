@@ -1014,3 +1014,40 @@ adults 18+“). /delete-account sa nemenil (pozvánky nespomínal).
   release (TestFlight) len záznam v logu. Nesúvisí s D88 (rovnako pri plnom MXID); test používa adresáta s identitou.
 - Web: v predvolenom vyhľadávaní (Ctrl+K) sa profil hľadá až vo filtri „Ľudia/People“ — upstream správanie, ako pri
   plnom MXID. Hlavná cesta „Začať rozhovor“ nájde krátke meno priamo.
+
+**D89 — Značka psst na stránkach MAS, overenie iOS Release pri novom kontakte.**
+
+**Ako (MAS 1.29.0, bez forku MAS):** titulok karty je serverový preklad `app.name` („matrix-authentication-service“)
+→ upravené serverové preklady (`translations/*.json`: `app.name` = `app.human_name` = „psst“, „Matrix ID“ → „meno
+účtu“, „matrix-authentication-service“ v texte rozsahu admin → „psst“) a dve šablóny (`base.html` pre serverové
+stránky, `app.html` pre správu účtu): `<html class="cpd-theme-dark">` (tmavá téma Compound, ktorú CSS MAS už
+obsahuje — vynútená bez ohľadu na systém), favicon a apple-touch-icon z psst.pro, `theme-color`, logo psst (malé
+inline SVG + „psst“) nad obsahom a krátky inline skript, ktorý nastaví titulok „psst – <nadpis h1 stránky>“ (aj keď
+React nadpis zmení). Šablóny samy titulok podstránok nemajú (stránky neprepisujú `block title`), preto skript;
+bez JS ostáva titulok „psst“. Všetko robí `server/scripts/mas-assets.py` pri deployi z image MAS (rovnako ako D88)
+a pripojí sa read-only na predvolené cesty `/usr/local/share/mas-cli/{templates,translations}` — pri novej verzii
+MAS sa zopakuje; ak sa nájdu očakávané miesta v šablónach, inak deploy skončí. MAS neposiela CSP, inline štýl a
+skript prejdú. Šablóny a serverové preklady sa renderujú na serveri → žiadny problém s cache (poučenie z D88).
+`mas-cli templates check` s upravenými šablónami: 1585 renderov bez chyby.
+**Frontend texty (React, s novými menami súborov ako v D88):** dialóg zmazania účtu bez „(MXID)“ a bez bodu
+„You will be removed from the identity server…“ (psst identity server nepoužíva, bod by nebol pravdivý);
+„Confirm your Matrix ID“ → „Confirm your account name“ / „Potvrďte meno svojho účtu“ (pole sa ukazuje len účtom
+bez hesla). Staršie generácie premenovaných súborov (`-p<tag>`) sa pri synchronizácii nemažú.
+**E-maily:** MAS žiadne neposiela (`email.transport: blackhole`); šablóny e-mailov aj tak neobsahujú Element/Matrix.
+**Matrix ostáva** len vo formáte mena `@meno:psst.pro` a v licenčných hlavičkách šablón (nezobrazujú sa).
+**Známe drobnosti (upstream):** časť textov MAS nemá slovenský preklad (napr. „Your account“, dialóg zmazania,
+pätička „Privacy Policy / Terms & Conditions“) — ostáva anglicky; widget hCaptcha volí tému podľa systému (pri
+svetlom systéme je na tmavej stránke svetlý); chyby z neplatných URL (napr. `authorize` bez `scope`) vracia MAS ako
+holý text bez šablóny — bežný používateľ sa k nim nedostane.
+**D89 — výsledky:** web (Chromium) EN aj SK 45/45 v čistom profile a 41/41 s cache z predchádzajúcej verzie
+(prihlásenie, registrácia, obnovenie, chybové stránky, súhlas, účet, zariadenia, zmena hesla, reset identity,
+dialóg zmazania); Android b54 (Chrome Custom Tab): „psst – Create an account“, „psst – Sign in“, „psst – Your
+account“, tmavé, logo psst; iOS simulátor: registrácia a prihlásenie so značkou psst, súhlas so značkou (snímka).
+**iOS Release (konfigurácia TestFlightu) pri novom kontakte nepadá:** build Release pre simulátor (CI ios-store,
+`configuration=Release`, `ONLY_ACTIVE_ARCH=YES`), Start chat „qa-d89b“ (účet, ktorý sa nikdy neprihlásil) → QA
+Novak → Send invite → DM vytvorený a správa odoslaná, test prešiel, žiadny crash report. Debug assert z D88 sa v
+Release nekompiluje (`#if DEBUG`) → nič nemením, b4 netreba.
+**Zistenie mimo MAS:** systémový dialóg iOS „„ElementX“ Wants to Use „chat.psst.pro“ to Sign In“ — iOS v ňom
+ukazuje `CFBundleName`, ktorý je v b3 „ElementX“ (`CFBundleDisplayName` je „psst“). Oprava je vo forku
+(`CFBundleName = $(APP_DISPLAY_NAME)`), do TestFlightu pôjde s ďalším buildom (táto dávka nové buildy nerobí);
+v simulátore ju dokončiť overiť nestihol test (spadol na systémovom „Save Password?“).
