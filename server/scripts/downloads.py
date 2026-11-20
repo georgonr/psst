@@ -184,12 +184,16 @@ def render(state):
 <p class="lead">Private, end-to-end encrypted messenger. Pick your platform — always the latest version.
 Prefer the browser? <a href="https://{APP_DOMAIN}/">Open psst on the web</a>.</p>
 <div class="grid">{''.join(cards)}</div>
+<p class="lead" lang="sk"><b>Účet:</b> v appke zvoľte <b>Create account</b> (Vytvoriť účet). Účet si môže vytvoriť
+ktokoľvek od 18 rokov; ľudí v psst nájdete podľa presného mena účtu (napr. <code>jana</code>).</p>
+<p class="lead"><b>Account:</b> in the app choose <b>Create account</b>. Anyone aged 18 or over can create one; you find
+people in psst by their exact account name (e.g. <code>jana</code>).</p>
 <p class="lead" lang="sk"><b>Mali ste psst už predtým?</b> Novú verziu nainštalujte cez tú starú (dáta sa nemažú) — po
 spustení sa ukáže prihlásenie. psst sa presunul na nový server, staré účty a správy sa nepreniesli: požiadajte
-správcu o novú pozvánku a vytvorte si účet (Create account). Stará verzia o novej sama nevie.</p>
+a vytvorte si nový účet (Create account). Stará verzia o novej sama nevie.</p>
 <p class="lead"><b>Used psst before?</b> Install the new version over the old one — it opens on the sign-in screen.
-psst moved to a new server and old accounts and messages were not carried over: ask the admin for a new invite and
-create an account. The old version does not learn about this update by itself.</p>
+psst moved to a new server and old accounts and messages were not carried over: create a new account
+(Create account). The old version does not learn about this update by itself.</p>
 <footer>Updated {updated} · <a href="latest.json">latest.json</a> ·
 <a href="https://{WEB_DOMAIN}/privacy">Privacy Policy</a> · <a href="https://{WEB_DOMAIN}/terms">Terms</a> ·
 <a href="https://{WEB_DOMAIN}/delete-account">Delete account</a> · <a href="mailto:psst@psst.pro">psst@psst.pro</a> ·

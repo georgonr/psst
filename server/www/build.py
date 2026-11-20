@@ -23,9 +23,9 @@ T = {
     "sk": {
         "lang": "sk",
         "title": "psst — súkromné správy a hovory",
-        "desc": "Bezpečný komunikátor na správy a hovory, šifrovaný medzi zariadeniami, na vlastnom serveri a s prístupom len na pozvánku.",
+        "desc": "Bezpečný komunikátor na správy a hovory, šifrovaný medzi zariadeniami, na vlastnom serveri v EÚ, pre každého od 18 rokov.",
         "h1": "Súkromné správy a hovory.",
-        "lead": "Bezpečný komunikátor na správy a hovory, šifrovaný medzi zariadeniami, na vlastnom serveri a s prístupom len na pozvánku.",
+        "lead": "Bezpečný komunikátor na správy a hovory, šifrovaný medzi zariadeniami, na vlastnom serveri v EÚ, pre každého od 18 rokov.",
         "dl": "Stiahnuť aplikáciu",
         "login": "Prihlásiť sa",
         "platforms": "Android · Windows · macOS · web",
@@ -37,9 +37,9 @@ T = {
     "en": {
         "lang": "en",
         "title": "psst — private messages and calls",
-        "desc": "A secure messenger for messages and calls, encrypted between devices, on our own server and by invitation only.",
+        "desc": "A secure messenger for messages and calls, encrypted between devices, on our own server in the EU, for anyone aged 18 and over.",
         "h1": "Private messages and calls.",
-        "lead": "A secure messenger for messages and calls, encrypted between devices, on our own server and by invitation only.",
+        "lead": "A secure messenger for messages and calls, encrypted between devices, on our own server in the EU, for anyone aged 18 and over.",
         "dl": "Download the app",
         "login": "Sign in",
         "platforms": "Android · Windows · macOS · web",

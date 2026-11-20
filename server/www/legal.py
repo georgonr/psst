@@ -13,7 +13,7 @@ OPERATOR = {
     "country_en": "Slovak Republic",
     "email": "psst@psst.pro",
 }
-EFFECTIVE = {"sk": "19. 11. 2026", "en": "19 November 2026"}
+EFFECTIVE = {"sk": "20. 11. 2026", "en": "20 November 2026"}
 HOSTING = {"sk": "Hetzner Online GmbH, dátové centrum Helsinki, Fínsko (EÚ)",
            "en": "Hetzner Online GmbH, data centre in Helsinki, Finland (EU)"}
 
@@ -38,9 +38,9 @@ PAGES = {
 <ul>
 <li>Priame správy a súkromné skupiny sú <strong>šifrované medzi zariadeniami</strong> (end-to-end). Ich obsah server nevidí.</li>
 <li>Server <strong>vidí metadáta</strong>: kto ste, v ktorých miestnostiach ste, s kým a kedy komunikujete a z akej IP adresy. psst <strong>nie je anonymná služba</strong>.</li>
-<li>Všetko beží na <strong>vlastnom serveri v EÚ</strong>. Tretie strany dostávajú len technické údaje na doručenie upozornení (Google, Apple), nikdy obsah správ.</li>
+<li>Všetko beží na <strong>vlastnom serveri v EÚ</strong>. Tretie strany dostávajú len technické údaje na doručenie upozornení (Google, Apple) a pri registrácii na ochranu pred robotmi (hCaptcha), nikdy obsah správ.</li>
 <li>Žiadna reklama, analytika, sledovanie ani hlásenia o pádoch. Údaje nepredávame.</li>
-<li>Služba je <strong>len na pozvánku</strong> a určená <strong>osobám od 18 rokov</strong>.</li>
+<li>Účet si môže vytvoriť ktokoľvek <strong>od 18 rokov</strong>. Zoznam členov sa nedá prezerať ani prehľadávať; ostatní vás nájdu len podľa <strong>presného mena účtu</strong>.</li>
 </ul>
 
 <h2 id="sk-e2ee">3. Čo je šifrované medzi zariadeniami a čo vidí server</h2>
@@ -63,13 +63,15 @@ PAGES = {
 <li><strong>Hovory:</strong> server hovorov (LiveKit) vidí, kto a kedy sa pripojil k hovoru a z akej IP adresy.</li>
 <li><strong>Nahlásenia:</strong> ak nahlásite správu alebo miestnosť (alebo používateľa), uložíme kto, čo, kedy a dôvod, ktorý napíšete. Správca nevidí obsah šifrovaných správ, len to, čo do nahlásenia sami napíšete.</li>
 <li><strong>Upozornenia (push):</strong> identifikátor zariadenia na doručovanie upozornení (push token), pozri bod 5.</li>
+<li><strong>Registrácia:</strong> pri vytvorení účtu overenie hCaptcha (IP adresa, údaje o prehliadači a zariadení, práca s overením), pozri bod 5, a záznam o vašom súhlase s Podmienkami používania. Účel: ochrana pred automatizovaným zakladaním účtov.</li>
 </ul>
 <p>Nespracúvame kontakty z telefónu, polohu, reklamný identifikátor ani údaje o používaní aplikácie.</p>
-<p><strong>Právny základ:</strong> plnenie zmluvy, teda poskytovanie služby, o ktorú ste požiadali registráciou (čl. 6 ods. 1 písm. b GDPR); pri technických záznamoch a riešení nahlásení oprávnený záujem na bezpečnosti služby (čl. 6 ods. 1 písm. f GDPR); a plnenie zákonných povinností (čl. 6 ods. 1 písm. c GDPR).</p>
+<p><strong>Právny základ:</strong> plnenie zmluvy, teda poskytovanie služby, o ktorú ste požiadali registráciou (čl. 6 ods. 1 písm. b GDPR); pri technických záznamoch, overení hCaptcha pri registrácii a riešení nahlásení oprávnený záujem na bezpečnosti služby a jej ochrane pred zneužitím (čl. 6 ods. 1 písm. f GDPR); a plnenie zákonných povinností (čl. 6 ods. 1 písm. c GDPR).</p>
 
 <h2 id="sk-where">5. Kde sú údaje a kto ich ešte dostane</h2>
 <p>Údaje sú na serveri prevádzkovateľa: {HOSTING["sk"]}. Hetzner prevádzkuje hardvér ako sprostredkovateľ a k obsahu nemá prístup.</p>
 <p><strong>Upozornenia:</strong> náš server posiela doručovacej službe len <strong>identifikátor udalosti a miestnosti a počet neprečítaných</strong>, nikdy text ani odosielateľa. Aplikácia si správu potom stiahne z nášho servera a dešifruje ju v zariadení. Na Androide upozornenia doručuje <strong>Google (Firebase Cloud Messaging)</strong>, na iPhone <strong>Apple (Apple Push Notification service)</strong>. Tieto firmy tak vidia push token vášho zariadenia, čas upozornenia a spomenuté identifikátory a môžu ich spracúvať aj mimo EÚ podľa vlastných zmluvných záruk. Iné služby Google ani Apple (analytiku, hlásenia o pádoch) aplikácia nepoužíva.</p>
+<p><strong>Ochrana registrácie (hCaptcha):</strong> registračnú stránku chráni pred automatizovaným zakladaním účtov služba hCaptcha spoločnosti <strong>Intuition Machines, Inc.</strong> (USA), ktorá pre nás pracuje ako sprostredkovateľ. Pri registrácii spracúva vašu IP adresu, údaje o prehliadači a zariadení (napríklad typ prehliadača a operačný systém) a to, ako s overením pracujete (pohyby myši, dotyky, stlačenia klávesov), aby rozlíšila človeka od robota. Údaje sa môžu prenášať do USA na základe rámca na ochranu údajov medzi EÚ a USA (EU-U.S. Data Privacy Framework) a štandardných zmluvných doložiek. hCaptcha sa používa len pri vytvorení nového účtu (na registračnej stránke, aj keď ju otvoríte z aplikácie), nie pri bežnom používaní. Zásady hCaptcha: <a href="https://www.hcaptcha.com/privacy">hcaptcha.com/privacy</a>.</p>
 <p>Inak údaje tretím stranám neposkytujeme, okrem prípadov, keď to vyžaduje zákon.</p>
 
 <h2 id="sk-retention">6. Ako dlho údaje uchovávame</h2>
@@ -88,10 +90,10 @@ PAGES = {
 <p>Podľa GDPR máte právo na prístup k údajom, ich opravu, vymazanie, obmedzenie spracúvania, prenosnosť a právo namietať. Uplatníte ich e-mailom na {MAIL}. Aby sme údaje nevydali niekomu inému, môžeme vás požiadať o overenie, že účet je váš (napríklad potvrdením v aplikácii). Odpovieme bez zbytočného odkladu, najneskôr do jedného mesiaca. Máte tiež právo podať sťažnosť dozornému orgánu, na Slovensku Úradu na ochranu osobných údajov SR (<a href="https://dataprotection.gov.sk">dataprotection.gov.sk</a>).</p>
 
 <h2 id="sk-age">9. Vek a prístup</h2>
-<p>psst je určený osobám od 18 rokov. Účet si môže vytvoriť len ten, kto dostal pozvánku. Ak zistíme, že účet patrí mladšej osobe, zrušíme ho.</p>
+<p>psst je určený osobám od 18 rokov. Účet si môže vytvoriť ktokoľvek, kto má aspoň 18 rokov; pri registrácii to potvrdí spolu so súhlasom s Podmienkami používania. Ak zistíme, že účet patrí mladšej osobe, zrušíme ho.</p>
 
 <h2 id="sk-cookies">10. Cookies a úložisko v prehliadači</h2>
-<p>Webová aplikácia ukladá prihlásenie a šifrovacie kľúče v úložisku prehliadača a prihlasovacia stránka používa nevyhnutný cookie relácie. Reklamné ani analytické cookies nepoužívame. Táto stránka si v prehliadači pamätá len zvolený jazyk.</p>
+<p>Webová aplikácia ukladá prihlásenie a šifrovacie kľúče v úložisku prehliadača a prihlasovacia stránka používa nevyhnutný cookie relácie. Na registračnej stránke môže hCaptcha použiť nevyhnutné cookies na ochranu pred robotmi. Reklamné ani analytické cookies nepoužívame. Táto stránka si v prehliadači pamätá len zvolený jazyk.</p>
 
 <h2 id="sk-changes">11. Zmeny</h2>
 <p>O podstatných zmenách týchto zásad vás vopred upozorníme v aplikácii alebo na tejto stránke.</p>
@@ -110,9 +112,9 @@ PAGES = {
 <ul>
 <li>Direct messages and private groups are <strong>end-to-end encrypted</strong>. The server cannot see their content.</li>
 <li>The server <strong>does see metadata</strong>: who you are, which rooms you are in, with whom and when you communicate, and from which IP address. psst is <strong>not an anonymous service</strong>.</li>
-<li>Everything runs on <strong>our own server in the EU</strong>. Third parties only receive technical data needed to deliver notifications (Google, Apple), never message content.</li>
+<li>Everything runs on <strong>our own server in the EU</strong>. Third parties only receive technical data needed to deliver notifications (Google, Apple) and, at sign-up, to protect against bots (hCaptcha), never message content.</li>
 <li>No ads, analytics, tracking or crash reporting. We do not sell data.</li>
-<li>The service is <strong>invitation only</strong> and intended for <strong>people aged 18 and over</strong>.</li>
+<li>Anyone <strong>aged 18 or over</strong> can create an account. The member list cannot be browsed or searched; others can find you only by your <strong>exact account name</strong>.</li>
 </ul>
 
 <h2 id="en-e2ee">3. What is end-to-end encrypted and what the server sees</h2>
@@ -135,13 +137,15 @@ PAGES = {
 <li><strong>Calls:</strong> the call server (LiveKit) sees who joined a call, when, and from which IP address.</li>
 <li><strong>Reports:</strong> if you report a message or room (or a user), we store who reported what, when, and the reason you write. The administrator cannot see the content of encrypted messages, only what you write in the report.</li>
 <li><strong>Push notifications:</strong> a device identifier for delivering notifications (push token), see section 5.</li>
+<li><strong>Sign-up:</strong> when you create an account, the hCaptcha check (IP address, browser and device data, how you interact with the check), see section 5, and a record that you accepted the Terms of Use. Purpose: protecting against automated account creation.</li>
 </ul>
 <p>We do not process your phone contacts, location, advertising ID or app usage data.</p>
-<p><strong>Legal basis:</strong> performance of a contract, i.e. providing the service you requested by registering (Art. 6(1)(b) GDPR); for technical logs and handling reports, our legitimate interest in keeping the service secure (Art. 6(1)(f) GDPR); and compliance with legal obligations (Art. 6(1)(c) GDPR).</p>
+<p><strong>Legal basis:</strong> performance of a contract, i.e. providing the service you requested by registering (Art. 6(1)(b) GDPR); for technical logs, the hCaptcha check at sign-up and handling reports, our legitimate interest in keeping the service secure and preventing abuse (Art. 6(1)(f) GDPR); and compliance with legal obligations (Art. 6(1)(c) GDPR).</p>
 
 <h2 id="en-where">5. Where the data is and who else receives it</h2>
 <p>The data is stored on the operator's server: {HOSTING["en"]}. Hetzner operates the hardware as a processor and has no access to the content.</p>
 <p><strong>Notifications:</strong> our server sends the delivery service only the <strong>event and room identifiers and the unread count</strong>, never the text or the sender. The app then fetches the message from our server and decrypts it on the device. On Android, notifications are delivered by <strong>Google (Firebase Cloud Messaging)</strong>, on iPhone by <strong>Apple (Apple Push Notification service)</strong>. These companies therefore see your device's push token, the time of the notification and those identifiers, and may process them outside the EU under their own contractual safeguards. The app uses no other Google or Apple services (no analytics, no crash reporting).</p>
+<p><strong>Sign-up protection (hCaptcha):</strong> the sign-up page is protected against automated account creation by the hCaptcha service of <strong>Intuition Machines, Inc.</strong> (USA), which acts as our processor. At sign-up it processes your IP address, browser and device data (such as browser type and operating system) and how you interact with the check (mouse movements, touches, key presses) to tell humans from bots. The data may be transferred to the USA under the EU-U.S. Data Privacy Framework and standard contractual clauses. hCaptcha is used only when creating a new account (on the sign-up page, also when you open it from the app), not during normal use. hCaptcha privacy policy: <a href="https://www.hcaptcha.com/privacy">hcaptcha.com/privacy</a>.</p>
 <p>We do not share data with any other third party, except where required by law.</p>
 
 <h2 id="en-retention">6. How long we keep data</h2>
@@ -160,10 +164,10 @@ PAGES = {
 <p>Under the GDPR you have the right of access, rectification, erasure, restriction of processing, data portability and the right to object. To exercise them, e-mail {MAIL}. So that we do not hand your data to someone else, we may ask you to confirm that the account is yours (for example in the app). We reply without undue delay and within one month at the latest. You also have the right to lodge a complaint with a supervisory authority; in Slovakia this is the Office for Personal Data Protection (<a href="https://dataprotection.gov.sk">dataprotection.gov.sk</a>).</p>
 
 <h2 id="en-age">9. Age and access</h2>
-<p>psst is intended for people aged 18 and over. Only people who received an invitation can create an account. If we learn that an account belongs to a younger person, we close it.</p>
+<p>psst is intended for people aged 18 and over. Anyone aged 18 or over can create an account and confirms this at sign-up together with accepting the Terms of Use. If we learn that an account belongs to a younger person, we close it.</p>
 
 <h2 id="en-cookies">10. Cookies and browser storage</h2>
-<p>The web app keeps your sign-in and encryption keys in your browser's storage, and the sign-in page uses a strictly necessary session cookie. We use no advertising or analytics cookies. This website only remembers your chosen language in your browser.</p>
+<p>The web app keeps your sign-in and encryption keys in your browser's storage, and the sign-in page uses a strictly necessary session cookie. On the sign-up page, hCaptcha may use strictly necessary cookies to protect against bots. We use no advertising or analytics cookies. This website only remembers your chosen language in your browser.</p>
 
 <h2 id="en-changes">11. Changes</h2>
 <p>We will announce material changes to this policy in advance in the app or on this page.</p>
@@ -183,8 +187,8 @@ PAGES = {
 
 <h2>2. Kto ju môže používať</h2>
 <ul>
-<li>Účet si môže vytvoriť len ten, kto dostal <strong>pozvánku</strong>. Pozvánka je určená jednej osobe, neposúvajte ju ďalej.</li>
-<li>Služba je určená <strong>osobám od 18 rokov</strong>.</li>
+<li>Účet si môže vytvoriť ktokoľvek, kto má aspoň <strong>18 rokov</strong>. Pri registrácii to potvrdíte spolu so súhlasom s týmito podmienkami.</li>
+<li>Ostatných ľudí nájdete len podľa presného mena účtu; zoznam členov sa nedá prezerať ani prehľadávať.</li>
 <li>Za svoj účet, heslo a kľúč na obnovenie šifrovania zodpovedáte vy. Prevádzkovateľ nevie obnoviť šifrované správy.</li>
 </ul>
 
@@ -195,6 +199,7 @@ PAGES = {
 <li>vyhrážať sa, obťažovať, šikanovať, šíriť nenávisť alebo podnecovať k násiliu;</li>
 <li>podvádzať, vydávať sa za iného, šíriť spam alebo škodlivý softvér;</li>
 <li>šíriť obsah, ktorý porušuje zákon, autorské práva alebo súkromie iných;</li>
+<li>zakladať účty hromadne alebo automatizovane;</li>
 <li>útočiť na server alebo iných používateľov.</li>
 </ul>
 
@@ -231,8 +236,8 @@ PAGES = {
 
 <h2>2. Who may use it</h2>
 <ul>
-<li>Only people who received an <strong>invitation</strong> can create an account. An invitation is meant for one person; do not pass it on.</li>
-<li>The service is intended for <strong>people aged 18 and over</strong>.</li>
+<li>Anyone aged <strong>18 or over</strong> can create an account. At sign-up you confirm this together with accepting these terms.</li>
+<li>You can find other people only by their exact account name; the member list cannot be browsed or searched.</li>
 <li>You are responsible for your account, password and encryption recovery key. The operator cannot recover encrypted messages.</li>
 </ul>
 
@@ -243,6 +248,7 @@ PAGES = {
 <li>threaten, harass or bully others, spread hate or incite violence;</li>
 <li>commit fraud, impersonate others, send spam or malware;</li>
 <li>share content that breaks the law or infringes copyright or other people's privacy;</li>
+<li>create accounts in bulk or by automated means;</li>
 <li>attack the server or other users.</li>
 </ul>
 
@@ -368,8 +374,11 @@ PAGES = {
 <p class="meta">Aplikácia <strong>psst secure chat</strong> · prevádzkovateľ {OP_SK}</p>
 <p class="callout">Kontakt: {MAIL}. Odpovedáme spravidla do 2 pracovných dní, na nahlásenia zneužitia do 24 hodín.</p>
 
-<h2>Ako získam účet?</h2>
-<p>psst je len na pozvánku. Pozývací kód dostanete od niekoho, kto službu používa, alebo od prevádzkovateľa. V aplikácii zvoľte <strong>Create account</strong> (Vytvoriť účet) a zadajte kód.</p>
+<h2>Ako si vytvorím účet?</h2>
+<p>Účet si môže vytvoriť ktokoľvek od 18 rokov. V aplikácii alebo na <a href="https://app.psst.pro/">app.psst.pro</a> zvoľte <strong>Create account</strong> (Vytvoriť účet), vyberte si meno účtu a heslo, prejdite overením hCaptcha a potvrďte vek a súhlas s <a href="/terms">Podmienkami používania</a>.</p>
+
+<h2>Ako začnem rozhovor?</h2>
+<p>Zoznam členov sa nedá prezerať ani prehľadávať podľa časti mena. Rozhovor začnete zadaním <strong>presného mena účtu</strong>, napríklad <code>jana</code> alebo <code>@jana:psst.pro</code>. Druhá strana dostane žiadosť o rozhovor.</p>
 
 <h2>Kde stiahnem aplikáciu?</h2>
 <p>Android, Windows a macOS: <a href="https://app.psst.pro/download/">app.psst.pro/download</a>. Na webe: <a href="https://app.psst.pro/">app.psst.pro</a>.</p>
@@ -394,8 +403,11 @@ PAGES = {
 <p class="meta">App <strong>psst secure chat</strong> · operator {OP_EN}</p>
 <p class="callout">Contact: {MAIL}. We usually reply within 2 working days, and to abuse reports within 24 hours.</p>
 
-<h2>How do I get an account?</h2>
-<p>psst is invitation only. You get an invitation code from someone who uses the service or from the operator. In the app choose <strong>Create account</strong> and enter the code.</p>
+<h2>How do I create an account?</h2>
+<p>Anyone aged 18 or over can create an account. In the app or at <a href="https://app.psst.pro/">app.psst.pro</a> choose <strong>Create account</strong>, pick an account name and password, pass the hCaptcha check and confirm your age and the <a href="/terms">Terms of Use</a>.</p>
+
+<h2>How do I start a chat?</h2>
+<p>The member list cannot be browsed or searched by part of a name. You start a chat by entering the <strong>exact account name</strong>, for example <code>jana</code> or <code>@jana:psst.pro</code>. The other person receives a chat request.</p>
 
 <h2>Where can I download the app?</h2>
 <p>Android, Windows and macOS: <a href="https://app.psst.pro/download/">app.psst.pro/download</a>. On the web: <a href="https://app.psst.pro/">app.psst.pro</a>.</p>
