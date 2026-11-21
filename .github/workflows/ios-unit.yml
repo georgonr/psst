@@ -1,0 +1,66 @@
+# PSST (D94–D97): iOS unit tests (scheme UnitTests of georgonr/psst-ios) on the simulator with the public Xcode
+# from ci/ios-public-xcode.json. The fork's own GitHub workflows don't run (Actions are off there).
+name: iOS unit tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "georgonr/psst-ios ref"
+        default: psst
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: xcode-27
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: psst
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: georgonr/psst-ios
+          ref: ${{ inputs.ref }}
+          path: ios
+          fetch-depth: 1
+          lfs: false
+          submodules: false
+          persist-credentials: false
+      - name: Select public Xcode
+        run: psst/scripts/ios/select-xcode.sh psst/ci/ios-public-xcode.json
+      - name: Tools + project
+        working-directory: ios
+        run: |
+          export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_CLEANUP=1
+          brew install xcodegen
+          mkdir -p "$RUNNER_TEMP/shims"
+          for t in swiftlint swiftformat; do printf '#!/bin/sh\nexit 0\n' > "$RUNNER_TEMP/shims/$t"; chmod +x "$RUNNER_TEMP/shims/$t"; done
+          echo "$RUNNER_TEMP/shims" >> "$GITHUB_PATH"
+          xcodegen
+      - uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/spm
+          key: spm-${{ hashFiles('ios/project.yml') }}
+          restore-keys: spm-
+      - name: Unit tests
+        working-directory: ios
+        run: |
+          SIM=$(xcrun simctl list devices available -j | python3 -c "import json,sys;d=json.load(sys.stdin)['devices'];print(next(x['udid'] for k,v in sorted(d.items(),reverse=True) if 'iOS' in k for x in v if x['name'].startswith('iPhone') and x['name'].endswith('Pro')))")
+          xcodebuild test -project ElementX.xcodeproj -scheme UnitTests -destination "platform=iOS Simulator,id=$SIM" \
+            -derivedDataPath "$RUNNER_TEMP/dd" -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" \
+            -skipPackagePluginValidation -skipMacroValidation COMPILER_INDEX_STORE_ENABLE=NO ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO PROVISIONING_PROFILE_SPECIFIER= \
+            DEVELOPMENT_TEAM=PSSTSIMULA -resultBundlePath "$RUNNER_TEMP/unit.xcresult" > "$RUNNER_TEMP/unit.log" 2>&1 && rc=0 || rc=$?
+          grep -E "Test Suite .*(passed|failed)|Executed [0-9]+ test|✘|error:|failed \(" "$RUNNER_TEMP/unit.log" | tail -80
+          [ $rc -eq 0 ] || exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ios-unit-log
+          path: ${{ runner.temp }}/unit.log
+          retention-days: 7
