@@ -1083,3 +1083,14 @@ nedá sa zablokovať ani mu resetovať heslo z /admin), kontajner `admin` presta
 `OPERATOR_CONTACT` a príkaz nasadenia v poznámkach: `@gg:psst.pro`. Záložný servisný správca `psstadmin` funguje
 (MAS admin, Synapse admin token cez `members.sh list`). `review` a `review-partner` bez zmeny (nie sú admin).
 Poznámka: deaktivované testovacie účty `qa-rpadm`, `qa-d88adm` majú v MAS ešte príznak admin — prihlásiť sa nedajú.
+
+**D93 — Deaktivované účty natrvalo vymazané (104: `geo` + 103 testovacích `qa-*`).** Majiteľ potvrdil, že ich
+nepotrebuje. Pred mazaním zoznam (`DELETED-ACCOUNTS.md`, MAS a Synapse zhodne 104, bez gg/psstadmin/review/
+review-partner a bez aktívnych účtov — overené skriptom) a záloha oboch databáz (`backups/*-pre-d93-20261121T0822Z.dump`).
+Synapse: deaktivácia s GDPR vymazaním (`erase: true`) pre všetkých — meno, avatar a príznak erased (správy erased
+používateľov Synapse noví členovia nevidia), zariadenia 237 → 0, tokeny 0; udalosti v ostávajúcich miestnostiach
+žiadne. Synapse ani MAS 1.29 neumožňujú zmazať samotný riadok používateľa (MAS: admin API a CLI bez delete) → v MAS
+ostávajú deaktivované a zamknuté, bez admin príznaku, e-mailov a relácií; meno účtu sa tým nedá znova zaregistrovať
+(MAS ho drží obsadené), čo je pri zmazaných účtoch žiadúce. Miestnosti bez aktívneho člena neboli (4 miestnosti,
+všetky s aktívnym členom). Overené: zmazaný účet sa neprihlási (403) ani nenájde (profil 404), správcovia len gg a
+psstadmin, review a review-partner sa prihlásia s rozhovorom a skupinou na mieste.
