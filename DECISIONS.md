@@ -1127,3 +1127,12 @@ cez proxy psst `app.psst.pro/maps/` (nginx prepíše URL v JSON, cache 7 dní) �
 Statické náhľady sa vykresľujú v zariadení (MapLibre snapshotter), nie cez MapTiler static API. Obchody: poloha
 „collected“ (Google: E2EE výnimka neplatí pre verejné kanály; Apple: výnimku nemá) — `play-listing/FORMS.md`,
 `DECLARATIONS.md` §2d (služba v popredí typu location, video), `appstore-listing/FORMS.md`.
+
+**D98 — Appky len po slovensky a anglicky.** Element X dodával ~40 jazykov (Android `localeFilters`, iOS `*.lproj`);
+tieto preklady stále hovorili „Element X“ a nemali texty psst, takže napr. pri nemčine v telefóne by sa zobrazila
+zmes Element a anglických textov psst. Android: `localeFilters` en, sk + `locales_config.xml` (výber jazyka appky
+v systéme ponúkne len tieto dva); iOS: odstránené ostatné `Localizations/*.lproj` a `Settings.bundle/*.lproj`, testy
+lokalizácie prepnuté na sk. Ostatné jazyky systému dostanú angličtinu. Web/desktop: Element Web používa názov
+značky (`brand` psst) cez premennú, preto ostáva bez zmeny; psst texty tam majú len SK/EN (ostatné jazyky → EN).
+Súčasne opravené zobrazenie psst nastavení v časovej osi Android/iOS: Rust SDK hlási `m.room.retention` ako
+`org.matrix.msc1763.retention` a filter Element X Android vyraďoval všetky vlastné stavy (aj ochranu obrazovky).
