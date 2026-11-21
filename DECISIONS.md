@@ -1051,3 +1051,23 @@ Release nekompiluje (`#if DEBUG`) → nič nemením, b4 netreba.
 ukazuje `CFBundleName`, ktorý je v b3 „ElementX“ (`CFBundleDisplayName` je „psst“). Oprava je vo forku
 (`CFBundleName = $(APP_DISPLAY_NAME)`), do TestFlightu pôjde s ďalším buildom (táto dávka nové buildy nerobí);
 v simulátore ju dokončiť overiť nestihol test (spadol na systémovom „Save Password?“).
+
+**D91 — Registrácia s hCaptcha nefungovala: MAS porovnával hostname prísne, hCaptcha vracia nadradenú doménu.**
+Príznak: po vyriešení hCaptcha MAS vrátil „CAPTCHA verification failed“; nikto sa nevedel zaregistrovať (dávka 21
+celú registráciu s ostrými kľúčmi neoverila — testovacie kľúče MAS odmietal, čo bol ten istý problém).
+Príčina: MAS 1.29.0 (`crates/handlers/src/captcha.rs`) po úspešnom `siteverify` vyžaduje `hostname == chat.psst.pro`;
+hCaptcha vracia registrovateľnú doménu (`psst.pro`) aj pri subdoméne v nastaveniach — upstream issue #3549 (otvorené,
+oprava PR #5376 zatvorená bez zlúčenia; `main` aj 1.30.0-rc.0 majú stále prísnu kontrolu). Handler výsledok iba
+prevedie na `is_ok()`, preto v logoch nič nebolo. Secret je platný (siteverify s neplatným tokenom → `invalid-input-
+response`, nie `invalid-input-secret`), site key sedí (d49cfb64-…), MAS posiela secret, response a remoteip klienta.
+Hodnotu hostname z ostrého tokenu som priamo nevidel: automat dostal obrázkovú výzvu a CAPTCHA neobchádzam.
+Oprava: vlastný build MAS 1.29.0 s malým patchom (`server/mas/psst-captcha-hostname.patch`): hostname sa prijme, ak
+je doménou stránky alebo jej nadradenou doménou (s bodkou, bez rozlíšenia veľkosti písmen; holá TLD nie), hostname
+testovacích kľúčov „dummy-key-pass“ len pri oficiálnom testovacom sitekey; dôvod zamietnutia sa loguje (WARN).
+Binárka zostavená oficiálnym Dockerfile v CI (`mas-build.yml`, unit test funkcie), release `mas-1.29.0-psst1`, SHA-256
+pripnutý v `server/mas/mas-cli.sha256`; `server/mas/Dockerfile` = oficiálny obraz + táto binárka (šablóny, preklady,
+assets a politika ostávajú oficiálne). Pred nasadením záloha DB MAS (`backups/mas-pre-d91-20261120T1650Z.dump`).
+Overenie na produkcii: na <1 min testovacie kľúče, registrácia cez webový formulár v prehliadači (súhlas 18+,
+hCaptcha) → účet qa-d91a vznikol so súhlasom s podmienkami → deaktivovaný; ostré kľúče späť (hash = ~/psst-keys).
+Iné formuláre s CAPTCHA MAS nemá (obnova hesla je vypnutá). Pri aktualizácii MAS treba patch preniesť alebo overiť,
+či upstream chybu opravil.
