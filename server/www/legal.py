@@ -13,7 +13,7 @@ OPERATOR = {
     "country_en": "Slovak Republic",
     "email": "psst@psst.pro",
 }
-EFFECTIVE = {"sk": "20. 11. 2026", "en": "20 November 2026"}
+EFFECTIVE = {"sk": "22. 11. 2026", "en": "22 November 2026"}
 HOSTING = {"sk": "Hetzner Online GmbH, dátové centrum Helsinki, Fínsko (EÚ)",
            "en": "Hetzner Online GmbH, data centre in Helsinki, Finland (EU)"}
 
@@ -65,7 +65,9 @@ PAGES = {
 <li><strong>Upozornenia (push):</strong> identifikátor zariadenia na doručovanie upozornení (push token), pozri bod 5.</li>
 <li><strong>Registrácia:</strong> pri vytvorení účtu overenie hCaptcha (IP adresa, údaje o prehliadači a zariadení, práca s overením), pozri bod 5, a záznam o vašom súhlase s Podmienkami používania. Účel: ochrana pred automatizovaným zakladaním účtov.</li>
 </ul>
-<p>Nespracúvame kontakty z telefónu, polohu, reklamný identifikátor ani údaje o používaní aplikácie.</p>
+<p><strong>Poloha</strong> len vtedy, keď ju sami pošlete do rozhovoru alebo spustíte živé zdieľanie (15 alebo 60 minút, dá sa kedykoľvek ukončiť). Dostanú ju len účastníci rozhovoru; v šifrovaných rozhovoroch je šifrovaná medzi zariadeniami, vo verejných kanáloch ju vidí aj server. Na pozadí bez zapnutého zdieľania sa poloha nezisťuje. Mapové podklady (OpenStreetMap cez službu OpenFreeMap) sťahuje náš server, takže poskytovateľ máp nevidí vašu IP adresu ani polohu.</p>
+<p><strong>Miznúce správy a ochrana obrazovky:</strong> nastavenie rozhovoru je uložené na serveri ako jeho súčasť. Pri miznúcich správach server po zvolenom čase správy zmaže a appky psst ich prestanú zobrazovať. Ak je zapnutá ochrana obrazovky a niekto urobí snímku obrazovky, do rozhovoru sa pošle upozornenie s jeho menom.</p>
+<p>Nespracúvame kontakty z telefónu, reklamný identifikátor ani údaje o používaní aplikácie.</p>
 <p><strong>Právny základ:</strong> plnenie zmluvy, teda poskytovanie služby, o ktorú ste požiadali registráciou (čl. 6 ods. 1 písm. b GDPR); pri technických záznamoch, overení hCaptcha pri registrácii a riešení nahlásení oprávnený záujem na bezpečnosti služby a jej ochrane pred zneužitím (čl. 6 ods. 1 písm. f GDPR); a plnenie zákonných povinností (čl. 6 ods. 1 písm. c GDPR).</p>
 
 <h2 id="sk-where">5. Kde sú údaje a kto ich ešte dostane</h2>
@@ -139,7 +141,9 @@ PAGES = {
 <li><strong>Push notifications:</strong> a device identifier for delivering notifications (push token), see section 5.</li>
 <li><strong>Sign-up:</strong> when you create an account, the hCaptcha check (IP address, browser and device data, how you interact with the check), see section 5, and a record that you accepted the Terms of Use. Purpose: protecting against automated account creation.</li>
 </ul>
-<p>We do not process your phone contacts, location, advertising ID or app usage data.</p>
+<p><strong>Location</strong> only when you send it to a chat yourself or start live sharing (15 or 60 minutes, can be stopped at any time). Only the people in the chat receive it; in encrypted chats it is end-to-end encrypted, in public channels the server can read it too. Location is never determined in the background without active sharing. Map data (OpenStreetMap via the OpenFreeMap service) is fetched by our server, so the map provider does not see your IP address or location.</p>
+<p><strong>Disappearing messages and screen protection:</strong> the chat setting is stored on the server as part of the chat. With disappearing messages the server deletes messages after the chosen time and the psst apps stop showing them. If screen protection is on and someone takes a screenshot, a notice with their name is sent to the chat.</p>
+<p>We do not process your phone contacts, advertising ID or app usage data.</p>
 <p><strong>Legal basis:</strong> performance of a contract, i.e. providing the service you requested by registering (Art. 6(1)(b) GDPR); for technical logs, the hCaptcha check at sign-up and handling reports, our legitimate interest in keeping the service secure and preventing abuse (Art. 6(1)(f) GDPR); and compliance with legal obligations (Art. 6(1)(c) GDPR).</p>
 
 <h2 id="en-where">5. Where the data is and who else receives it</h2>
