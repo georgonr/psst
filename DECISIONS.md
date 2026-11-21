@@ -1071,3 +1071,15 @@ Overenie na produkcii: na <1 min testovacie kľúče, registrácia cez webový f
 hCaptcha) → účet qa-d91a vznikol so súhlasom s podmienkami → deaktivovaný; ostré kľúče späť (hash = ~/psst-keys).
 Iné formuláre s CAPTCHA MAS nemá (obnova hesla je vypnutá). Pri aktualizácii MAS treba patch preniesť alebo overiť,
 či upstream chybu opravil.
+
+**D92 — Správca psst je odteraz účet `gg` (namiesto `geo`).** Majiteľ si 21. 11. 2026 o 07:20 UTC vytvoril cez
+otvorenú registráciu účet `@gg:psst.pro` a o 07:24 UTC si sám deaktivoval `@geo:psst.pro` (MAS `deactivated_at`,
+Synapse `deactivated=1`; nič som na ňom nemenil — ostáva deaktivovaný, s príznakom admin v MAS, prihlásiť sa nedá).
+Správcovské práva v psst sú jediné: MAS `can_request_admin` (z neho MAS vydáva rozsah `urn:synapse:admin:*` pre
+Synapse admin API a admin stránka `/admin` ho overuje cez MAS admin API každých 5 min); Synapse príznak `admin` sa
+pri MAS nepoužíva (aj geo mal 0). `gg` dostal `mas-cli manage promote-admin gg` → MAS admin API: `admin=true`,
+aktívny. Admin stránka: `gg` pridaný do chránených účtov (`ADMIN_PROTECTED_USERS` predvolené `gg,geo,psstadmin` —
+nedá sa zablokovať ani mu resetovať heslo z /admin), kontajner `admin` prestavaný a reštartovaný. `.env`
+`OPERATOR_CONTACT` a príkaz nasadenia v poznámkach: `@gg:psst.pro`. Záložný servisný správca `psstadmin` funguje
+(MAS admin, Synapse admin token cez `members.sh list`). `review` a `review-partner` bez zmeny (nie sú admin).
+Poznámka: deaktivované testovacie účty `qa-rpadm`, `qa-d88adm` majú v MAS ešte príznak admin — prihlásiť sa nedajú.

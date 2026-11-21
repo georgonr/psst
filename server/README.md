@@ -46,7 +46,7 @@ Všetky dáta sú v `server/data/`, tajomstvá v `server/.env` a `server/secrets
 ## Administrácia — https://app.psst.pro/admin
 
 Členovia a nahlásenia v prehliadači (aj mobil), prihlásenie bežným účtom cez MAS; prístup len pre adminov
-(`can_request_admin` v MAS — teraz `geo`, nastaviť: `sudo scripts/members.sh admin <meno>`), ostatní 403.
+(`can_request_admin` v MAS — teraz `gg` a servisný `psstadmin`; `geo` je od 21. 11. 2026 deaktivovaný; existujúci účet povýšiť: `mas-cli manage promote-admin <meno>`, nový: `sudo scripts/members.sh admin <meno>`), ostatní 403.
 Zoznam členov s registráciou, poslednou aktivitou a stavom; zablokovať / odblokovať (vratné); nové heslo;
 nahlásenia (zablokovať, zmazať obsah). Pozvánky boli zrušené v D88. Audit log: `data/admin/audit.log`.
 Služba `admin` (server/admin) — DECISIONS D56.

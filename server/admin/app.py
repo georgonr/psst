@@ -39,7 +39,7 @@ SYNAPSE_ADMIN_TOKEN_FILE = "/secrets/admin_token"
 # Nahlásenia (D87): read-only rola vidí v DB synapse len tabuľky nahlásení a stĺpce metadát (deploy.sh), nie obsah
 SYN_DSN = "postgresql://psst_admin_ro:{}@postgres/synapse".format(open("/secrets/admin_db_password").read().strip())
 DATA = os.environ.get("ADMIN_DATA", "/data")
-PROTECTED = {u.strip() for u in os.environ.get("ADMIN_PROTECTED_USERS", "geo,psstadmin").split(",") if u.strip()}
+PROTECTED = {u.strip() for u in os.environ.get("ADMIN_PROTECTED_USERS", "gg,geo,psstadmin").split(",") if u.strip()}
 SERVICE_USERS = {"psstadmin"}
 REDIRECT_URI = f"https://{APP_DOMAIN}/admin/callback"
 SESSION_TTL = 30 * 60        # absolútna platnosť session
