@@ -1094,3 +1094,36 @@ ostávajú deaktivované a zamknuté, bez admin príznaku, e-mailov a relácií;
 (MAS ho drží obsadené), čo je pri zmazaných účtoch žiadúce. Miestnosti bez aktívneho člena neboli (4 miestnosti,
 všetky s aktívnym členom). Overené: zmazaný účet sa neprihlási (403) ani nenájde (profil 404), správcovia len gg a
 psstadmin, review a review-partner sa prihlásia s rozhovorom a skupinou na mieste.
+
+**D94 — Zvyšky značky Element (26.11.1).** Spoločná špecifikácia `docs/psst-26.11.1-spec.md`. Zoznamy nájdených
+a opravených miest: `forks/{android,ios,web}/PSST-ELEMENT-REMNANTS.md`. Android: prepisy v app module
+(`psst_overrides.xml`, Localazy ich neprepíše) — názov aktivity hovoru, texty hovoru, zvuky „psst (predvolený)“,
+názov zariadenia „psst Android“. iOS: `InfoPlist.strings` vo všetkých jazykoch prebíjali texty povolení „Element X“;
+dialóg zdieľania obrazovky v hovore („Element X, file://“) je výzva WebKitu s `CFBundleName`, ktorý je od D89/b4
+„psst“ — vlastné broadcast rozšírenie psst nemá. Web/desktop: logo a alt chybovej stránky a prihlásenia, mobilný
+sprievodca, názov widgetu hovoru, konfiguračné chyby, macOS texty povolení (kamera, mikrofón, poloha). Ostáva
+licenčný text „upravená verzia Element“ a nedosiahnuteľné Element Pro / Classic texty a vývojárske nastavenia.
+
+**D95 — Miznúce správy, základ (rozsah potvrdil majiteľ).** Štandard MSC1763 `m.room.retention` {max_lifetime}
+(5 min, 1 h, 1 deň, 1 týždeň; vypnuté = {}), meniť môže, kto smie poslať tento stav (v DM obaja). Server: Synapse
+`retention` (allowed 5m–1w, purge každých 5 min) + `experimental_features.msc1763_enabled`; mazanie aj v šifrovaných
+rozhovoroch (nečíta obsah); nemaže stavové udalosti, poslednú udalosť miestnosti (ostane skrytá) ani médiá.
+Klienti: voľba v nastaveniach rozhovoru, text v časovej osi, skrytie expirovaných správ (aj offline; web: js-sdk
+MSC1763 maže aj z IndexedDB). NIE v tejto verzii (ďalšia etapa, odhad 6–8 týždňov): mazanie z lokálnej DB a
+vyhľadávacieho indexu v Element X (Rust SDK nemá podporu, iOS by potreboval vlastný build SDK), z indexu desktopu
+(Seshat), mazanie príloh v šifrovaných rozhovoroch na serveri (server nevie, ku ktorej miestnosti patria).
+
+**D96 — Ochrana obrazovky.** Vlastný stav `eu.macet.psst.screen_protection` {enabled}. Android: FLAG_SECURE, kým je
+otvorený chránený rozhovor (zdieľané so zámkom PIN cez `PsstSecureWindow`), Android 14+ ScreenCaptureCallback
+→ upozornenie (pri FLAG_SECURE sa snímka spravidla nepodarí, upozornenie je pre prípad, že áno). iOS: prekrytie pri
+nahrávaní/zrkadlení a v prepínači appiek, upozornenie pri `userDidTakeScreenshotNotification` — len verejné API, nie
+trik s isSecureTextEntry (App Review 2.5.1). Desktop: `setContentProtection` počas chráneného rozhovoru (IPC
+`psstScreenProtection`). Web: len pravdivé upozornenie. Upozornenie o snímke = `m.notice` s `eu.macet.psst.screenshot`.
+
+**D97 — Poloha späť, len na vyžiadanie.** Poslať polohu + živé zdieľanie 15/60 min (Matrix beacons), povolenie až
+pri prvom použití s pravdivým textom; Android FINE/COARSE + FOREGROUND_SERVICE_LOCATION, nikdy
+ACCESS_BACKGROUND_LOCATION (`check-manifest.py`). Mapy: OpenFreeMap (OpenStreetMap, bez kľúča, nie reklamná firma)
+cez proxy psst `app.psst.pro/maps/` (nginx prepíše URL v JSON, cache 7 dní) — poskytovateľ máp vidí len IP servera.
+Statické náhľady sa vykresľujú v zariadení (MapLibre snapshotter), nie cez MapTiler static API. Obchody: poloha
+„collected“ (Google: E2EE výnimka neplatí pre verejné kanály; Apple: výnimku nemá) — `play-listing/FORMS.md`,
+`DECLARATIONS.md` §2d (služba v popredí typu location, video), `appstore-listing/FORMS.md`.
