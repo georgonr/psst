@@ -94,7 +94,20 @@ user_directory:
 encryption_enabled_by_default_for_room_type: invite
 
 # --- MatrixRTC / Element Call ---
+# D95: miznúce správy — politika miestnosti m.room.retention (MSC1763), ktorú nastavujú appky psst (5 min – 1 týždeň).
+# Bez politiky (predvolené) sa nič nemaže. Expirované udalosti Synapse klientom hneď nevydá a z databázy ich zmaže
+# najneskôr pri ďalšom behu (každých 5 min). Nemaže stavové udalosti a poslednú udalosť miestnosti (tá ostane skrytá);
+# prílohy (médiá) nemaže — to je ďalšia etapa.
+retention:
+  enabled: true
+  allowed_lifetime_min: 5m
+  allowed_lifetime_max: 1w
+  purge_jobs:
+    - interval: 5m
+
 experimental_features:
+  # D95: GET /_matrix/client/unstable/org.matrix.msc1763/retention/configuration (limity pre klientov)
+  msc1763_enabled: true
   # MSC4143: aktivuje aj nestabilný /_matrix/client/unstable/org.matrix.msc4143/rtc/transports (MSC4519)
   msc4143_enabled: true
   # MSC4502 + MSC4512: lk-jwt-service ako application service (overenie členstva, proxy /rtc/livekit)
