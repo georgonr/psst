@@ -427,7 +427,9 @@ compose run --rm --no-deps -T --entrypoint sh synapse -c '[ "$(stat -c %u /data)
 # MAS: text povinného políčka pri registrácii „mám aspoň 18 rokov a súhlasím s Podmienkami“ (D88) a značka psst
 # (titulok, tmavá téma, favicon, logo — D89): assets, šablóny a preklady z práve stiahnutého image upraví
 # scripts/mas-assets.py → data/config/mas-ui (read-only mount)
-MAS_IMAGE="$(sed -n 's|^ *image: \(ghcr.io/element-hq/matrix-authentication-service:[^ ]*\)$|\1|p' compose.yml | head -1)"
+# upstream image (mas/Dockerfile builds FROM it; templates/translations/assets come from it unchanged)
+MAS_IMAGE="ghcr.io/element-hq/matrix-authentication-service:$(sed -n 's/^ARG MAS_VERSION=//p' mas/Dockerfile)"
+docker image inspect "$MAS_IMAGE" >/dev/null 2>&1 || docker pull -q "$MAS_IMAGE" >/dev/null
 MAS_TMP="$(mktemp -d)"
 if docker create --name psst-mas-assets "$MAS_IMAGE" >/dev/null 2>&1 \
    && docker cp psst-mas-assets:/usr/local/share/mas-cli/assets "$MAS_TMP/assets" >/dev/null \
@@ -441,6 +443,9 @@ docker rm -f psst-mas-assets >/dev/null 2>&1 || true; rm -rf "$MAS_TMP"
 admin_secrets
 log "zostavujem psst-admin"
 compose build -q admin
+# D91: MAS s opraveným mas-cli (CAPTCHA hostname) — binárka z GitHub release, SHA-256 pripnutý v gite
+bash scripts/fetch-mas.sh >/dev/null || die "MAS: patched mas-cli sa nepodarilo stiahnuť/overiť (scripts/fetch-mas.sh)"
+compose build -q mas
 
 log "štartujem celý stack"
 compose up -d --build --remove-orphans

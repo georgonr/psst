@@ -7,3 +7,4 @@ backups/
 app/*
 !app/.gitkeep
 .old-stack-*/
+mas/mas-cli

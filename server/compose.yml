@@ -134,7 +134,10 @@ services:
 
   # Matrix Authentication Service — účty, prihlásenie, registrácia (len s pozývacím tokenom)
   mas:
-    image: ghcr.io/element-hq/matrix-authentication-service:1.29.0
+    # D91: official MAS 1.29.0 + patched mas-cli (CAPTCHA hostname, upstream #3549) — see mas/Dockerfile
+    build:
+      context: ./mas
+    image: psst-mas:1.29.0-psst1
     restart: unless-stopped
     logging: *logging
     depends_on:
