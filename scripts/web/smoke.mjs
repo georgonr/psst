@@ -65,7 +65,7 @@ check("config: no posthog analytics", !cfg.posthog);
 check("config: no sentry", !cfg.sentry);
 check("config: no bug_report_endpoint_url", !cfg.bug_report_endpoint_url);
 check("config: no integration manager", !cfg.integrations_ui_url && !cfg.integrations_rest_url);
-check("config: no map_style_url", !cfg.map_style_url);
+check("config: map_style_url via psst proxy (D97)", /^https:\/\/app\.psst\.pro\/maps\/styles\//.test(cfg.map_style_url || ""));
 check("config: no jitsi", !cfg.jitsi);
 check("config: element_call.use_exclusively", cfg.element_call?.use_exclusively === true);
 check("config: default theme custom-psst", cfg.default_theme === "custom-psst");
