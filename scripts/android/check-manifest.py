@@ -36,10 +36,9 @@ FORBIDDEN = {
     # D87: removed for Google Play (restricted permissions psst does not need) — must never come back
     "android.permission.REQUEST_INSTALL_PACKAGES": "permission REQUEST_INSTALL_PACKAGES (Play: only for package installers)",
     "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS": "permission REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (Play: not for FCM chat apps)",
-    "android.permission.ACCESS_FINE_LOCATION": "location permission ACCESS_FINE_LOCATION (feature removed)",
-    "android.permission.ACCESS_COARSE_LOCATION": "location permission ACCESS_COARSE_LOCATION (feature removed)",
-    "android.permission.ACCESS_BACKGROUND_LOCATION": "location permission ACCESS_BACKGROUND_LOCATION",
-    "android.permission.FOREGROUND_SERVICE_LOCATION": "foreground service type location",
+    # D97: location is back only on user request (send location, live sharing 15/60 min in a foreground service):
+    # ACCESS_FINE/COARSE_LOCATION and FOREGROUND_SERVICE_LOCATION are allowed; background location never.
+    "android.permission.ACCESS_BACKGROUND_LOCATION": "location permission ACCESS_BACKGROUND_LOCATION (never: no background location)",
     "com.google.android.gms.permission.AD_ID": "advertising ID permission AD_ID (Play form says: no advertising ID)",
 }
 LABEL = "psst"
