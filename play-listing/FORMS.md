@@ -52,7 +52,7 @@ Health, Advertising ID, potom vyhlásenia o povoleniach) — pri vypĺňaní sta
 | Violence, fear, sexuality, language, controlled substances, crude humor (app's own content) | **No** to all | appka sama obsah nevytvára |
 | Gambling / simulated gambling | No | |
 | Does the app allow users to interact or exchange content with other users? | **Yes** | správy, súbory, hovory |
-| Can users share their current physical location with other users? | **No** | poloha odstránená v b51 (FACTS.md §2) |
+| Can users share their current physical location with other users? | **Yes** (od 26.11.1) | „Poslať polohu“ a živé zdieľanie 15/60 min, len na vyžiadanie (D97) |
 | Does the app allow users to purchase digital goods? | No | |
 | Does the app contain advertising / promote tobacco/alcohol? | No | |
 | Is the app a web browser or search engine / unrestricted internet access? | No | |
@@ -101,7 +101,15 @@ služby, ktorý spracúva push token v mene appky; to Play nepovažuje za zdieľ
 | Device or other IDs → **Device or other IDs** | Yes | No | Required | App functionality | Matrix device ID, FCM registration token, Firebase Installation ID |
 | App activity → **App interactions** | Yes | No | Required | **Fraud prevention, security, and compliance** | **nové v D88:** hCaptcha pri registrácii (práca s overením: pohyby, dotyky, klávesy) |
 
-**Not collected:** Location (odstránená), Financial info, Health and fitness, Contacts, Calendar, Web browsing,
+| Location → **Approximate location**, **Precise location** | Yes | No | Optional | App functionality | **nové v 26.11.1 (D97):** len keď používateľ pošle polohu alebo spustí živé zdieľanie |
+
+**Poloha (26.11.1, D97) — prečo „collected“:** Google nepovažuje za zber údaje „unreadable by you or anyone other
+than the sender and recipient“ (support.google.com/googleplay/android-developer/answer/10787469, „Not in scope“).
+V šifrovaných rozhovoroch to platí, no polohu možno poslať aj do verejného kanála, ktorý šifrovaný nie je a server
+ju tam vidí → opatrne **Collected: Yes, Shared: No, Optional, App functionality**, Precise aj Approximate (appka
+žiada FINE aj COARSE). Deklarácia služby v popredí typu location: DECLARATIONS.md §2d.
+
+**Not collected:** Financial info, Health and fitness, Contacts, Calendar, Web browsing,
 In-app search history, Installed apps, Crash logs, Diagnostics, Advertising ID.
 
 **Mení hCaptcha (D88) odpovede v Data safety? Áno, jednu.** hCaptcha (Intuition Machines, Inc.) beží len na
@@ -145,7 +153,8 @@ Presné texty a video: **`play-listing/DECLARATIONS.md`**.
 | Full-screen intent | core functionality **Calling** — text v DECLARATIONS.md §1 |
 | Foreground service types | **microphone** (VoIP call), **camera** (video call), **shortService** (fetch message after push) — texty a video v DECLARATIONS.md §2 |
 | Photo and video permissions | netýka sa: appka nežiada READ_MEDIA_IMAGES/VIDEO (výber cez systémový picker) |
-| Location permissions | netýka sa: odstránené v b51 |
+| Location permissions | netýka sa: appka nežiada polohu na pozadí (ACCESS_BACKGROUND_LOCATION) |
+| Foreground service — location | **nové v 26.11.1:** DECLARATIONS.md §2d (text + video) |
 | Install packages | netýka sa: odstránené v b51 |
 | Battery optimisation (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) | netýka sa: odstránené v b51 |
 | SMS / Call log | netýka sa |

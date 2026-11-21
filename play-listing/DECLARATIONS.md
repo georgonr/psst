@@ -78,12 +78,31 @@ link, and the use case.
   > The notification for that message would not be shown.
 - **Video:** `https://psst.pro/video/psst-message-notification.mp4`
 
+### 2d. `location` — `LiveLocationSharingService` (od 26.11.1, D97)
+
+- **Use case:** Other — user-started live location sharing in a chat (Play category: "Location sharing").
+- **Description:**
+  > When the user chooses "Share live location" in a chat and picks 15 or 60 minutes, psst runs a foreground
+  > service of type location so the people in that chat keep seeing the user's current position while the app is
+  > in the background or the screen is locked. The service runs only during this user-started sharing, shows an
+  > ongoing notification with a Stop button, and stops by itself when the chosen time ends or when the user stops
+  > it. psst never requests background location (no ACCESS_BACKGROUND_LOCATION) and never determines the location
+  > without an active sharing session.
+- **User impact if deferred:**
+  > The other people would not see the user's position although the user started sharing it.
+- **User impact if interrupted:**
+  > The shared position would freeze for the others in the middle of the session (e.g. while walking to a meeting
+  > point), without the user noticing.
+- **Video:** `https://psst.pro/video/psst-live-location.mp4` (nahrá sa z emulátora pri vydaní 26.11.1 — RELEASE-26.11.1.md)
+- **Location permissions form** (App content → Location permissions): netýka sa — appka nežiada polohu na
+  pozadí (ACCESS_BACKGROUND_LOCATION); poloha len pri používaní a počas zdieľania spusteného používateľom.
+
 ## 3. Permissions that are NOT in the app any more (removed in b51, D87)
 
 | Permission | Why it was removed | Replacement |
 |---|---|---|
 | `REQUEST_INSTALL_PACKAGES` | Play allows it only for apps whose core purpose is installing packages | an `.apk` attachment is opened like any other file; updates are downloaded in the browser from app.psst.pro/download |
-| `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `FOREGROUND_SERVICE_LOCATION` | location sharing is not offered in psst (no map key); the live-location service and the location provider were removed | — |
+| ~~`ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`, `FOREGROUND_SERVICE_LOCATION`~~ | **vrátené v 26.11.1 (D97)** — len na vyžiadanie používateľa, pozri §2d | `ACCESS_BACKGROUND_LOCATION` ostáva zakázané |
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Play: not acceptable for chat/calling apps that can use FCM (developer.android.com/training/monitoring-device-state/doze-standby#exemption-cases, row "Instant messaging, chat, or calling app … Yes, using FCM → Not Acceptable") | the "Battery" step in Notifications & calls explains App info → Battery → Unrestricted and opens the app's system page |
 
 `scripts/android/check-manifest.py` fails the CI build and the signing script if any of them comes back.

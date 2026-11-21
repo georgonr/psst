@@ -47,7 +47,14 @@ nepoužívajú na sledovanie (tracking), reklamu ani analytiku. Všetky sú **Li
 | Identifiers → **Device ID** | Yes | App Functionality | Yes | No | Matrix device ID a APNs push token (server ho odovzdá Apple na doručenie upozornenia) |
 | Usage Data → **Product Interaction** | Yes | App Functionality | Yes | No | **nové v D88:** hCaptcha pri registrácii (práca s overením: pohyby, dotyky, klávesy) — ochrana pred robotmi |
 
-**Not collected:** Health & Fitness, Financial Info, Location, Sensitive Info, Contacts, Browsing History, Search
+| Location → **Precise Location** | Yes | App Functionality | Yes | No | **nové v 26.11.1 (D97):** len keď používateľ pošle polohu alebo spustí živé zdieľanie |
+
+**Poloha (26.11.1, D97):** Apple definuje „collect“ ako odoslanie mimo zariadenia tak, že k údajom má prevádzkovateľ
+prístup dlhšie, než trvá vybavenie požiadavky (developer.apple.com/app-store/app-privacy-details); výnimku pre E2EE
+neuvádza a polohu možno poslať aj do nešifrovaného verejného kanála → **Precise Location: Collected, App
+Functionality, Linked: Yes, Tracking: No**. Coarse Location netreba (appka posiela presnú polohu).
+
+**Not collected:** Health & Fitness, Financial Info, Sensitive Info, Contacts, Browsing History, Search
 History (vyhľadávanie v správach beží len v zariadení), Purchases, Usage Data okrem Product Interaction (žiadna
 analytika), Diagnostics (žiadne crash reporty), Surroundings, Body, Other Data.
 
