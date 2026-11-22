@@ -85,15 +85,16 @@ link, and the use case.
   > When the user chooses "Share live location" in a chat and picks 15 or 60 minutes, psst runs a foreground
   > service of type location so the people in that chat keep seeing the user's current position while the app is
   > in the background or the screen is locked. The service runs only during this user-started sharing, shows an
-  > ongoing notification with a Stop button, and stops by itself when the chosen time ends or when the user stops
-  > it. psst never requests background location (no ACCESS_BACKGROUND_LOCATION) and never determines the location
+  > ongoing notification ("Location sharing in progress") the whole time, and stops by itself when the chosen time
+  > ends or when the user taps Stop in the chat. psst never requests background location (no ACCESS_BACKGROUND_LOCATION) and never determines the location
   > without an active sharing session.
 - **User impact if deferred:**
   > The other people would not see the user's position although the user started sharing it.
 - **User impact if interrupted:**
   > The shared position would freeze for the others in the middle of the session (e.g. while walking to a meeting
   > point), without the user noticing.
-- **Video:** `https://psst.pro/video/psst-live-location.mp4` (nahrá sa z emulátora pri vydaní 26.11.1 — RELEASE-26.11.1.md)
+- **Video:** `https://psst.pro/video/psst-live-location.mp4` (Android 15 emulátor, build 26.11.1-b58, 2 min 36 s: vysvetlenie →
+  povolenie „While using the app“ → 15 minút → lišta Stop → appka na pozadí, trvalé upozornenie → Stop → „Live location ended“)
 - **Location permissions form** (App content → Location permissions): netýka sa — appka nežiada polohu na
   pozadí (ACCESS_BACKGROUND_LOCATION); poloha len pri používaní a počas zdieľania spusteného používateľom.
 

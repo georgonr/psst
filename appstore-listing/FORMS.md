@@ -66,8 +66,8 @@ web“; hCaptcha údaje uchováva dlhšie než na vybavenie požiadavky → „c
 - **pridať** Usage Data → **Product Interaction**: Collected, Purpose **App Functionality** (Apple ju definuje aj
   ako „prevent fraud, implement security measures“), **Linked to the user: Yes** (opatrne — IP adresa je osobný
   údaj podľa GDPR a Apple osobné údaje považuje za prepojené), **Tracking: No**;
-- **bez zmeny:** IP adresa nie je v Apple samostatný typ; polohu z nej nikto neurčuje → Location ostáva „Not
-  collected“; typ prehliadača a OS nie sú Device ID → Identifiers bez zmeny; Tracking ostáva **No**.
+- **bez zmeny:** IP adresa nie je v Apple samostatný typ; polohu z nej nikto neurčuje (Precise Location sa od 26.11.1
+  uvádza kvôli posielaniu polohy, nie kvôli IP — vyššie); typ prehliadača a OS nie sú Device ID → Identifiers bez zmeny; Tracking ostáva **No**.
 
 **Tracking:** „Do you or your third-party partners use data for tracking?“ → **No.** Appka nemá IDFA ani
 App Tracking Transparency prompt.

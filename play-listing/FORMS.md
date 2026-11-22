@@ -121,7 +121,7 @@ o Custom Tabs výslovne nehovorí, preto volíme opatrný výklad a deklarujeme:
   t. j. „service provider“), **Required** (bez overenia sa účet nevytvorí), Purpose **Fraud prevention, security,
   and compliance**, nie ephemeral (hCaptcha údaje krátko uchováva podľa svojich zásad);
 - **bez zmeny:** IP adresu Google vyžaduje uviesť len ako polohu, ak sa z nej poloha určuje — psst ani hCaptcha ju
-  na to pre nás nepoužívajú → Location ostáva „Not collected“; údaje o prehliadači a OS nie sú identifikátor
+  na to pre nás nepoužívajú (Location sa od 26.11.1 uvádza kvôli posielaniu polohy, nie kvôli IP — vyššie); údaje o prehliadači a OS nie sú identifikátor
   zariadenia → Device or other IDs bez zmeny; „Is all data encrypted in transit?“ ostáva Yes (HTTPS).
 Dôkaz: FACTS.md §1–3 (manifest b51, dex bez analytiky a reklamného ID, `event_id_only` push).
 
