@@ -1,81 +1,81 @@
 {
  "web": {
-  "build": 36,
-  "date": "20261120",
-  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
+  "build": 38,
+  "date": "20261121",
+  "note": "26.11.1: miznúce správy (základ), ochrana obrazovky, poloha, bez zvyškov Element (D94–D97)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261120-b36.tar.gz",
-    "sha256": "b6be5799533b3d26f27e8ff71c440085d445126546f23e7eb7698c40d5231b4d"
+    "name": "psst-web-20261121-b38.tar.gz",
+    "sha256": "726e218136949ec522cc9befb55372eeb4cbfae32282e0d6f970729834b951d6"
    }
   ]
  },
  "macos": {
-  "build": 36,
-  "date": "20261120",
-  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
+  "build": 38,
+  "date": "20261121",
+  "note": "26.11.1: miznúce správy (základ), ochrana obrazovky, poloha, bez zvyškov Element (D94–D97)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-macos-20261120-b36.dmg",
-    "sha256": "2ee8388bd4764b994146fb7bf2a01a364fd3eed31cf42c3ed8946ca2cc0c1caa"
+    "name": "psst-macos-20261121-b38.dmg",
+    "sha256": "da0c0ad7452dbe3d8b9dee970ca2b209789f010ee19121ebf97b24beb2db18bc"
    },
    {
-    "name": "psst-macos-20261120-b36.zip",
-    "sha256": "38ee1e7480ead1be5f4ad2a3b79532902d73b1f99c18f9c64e61cac1947c359a"
+    "name": "psst-macos-20261121-b38.zip",
+    "sha256": "5553867cd329e5f947866695ff47a5cd8d1267f78eb6dc7d0926010a0060ef62"
    }
   ]
  },
  "windows": {
-  "build": 36,
-  "date": "20261120",
-  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
+  "build": 38,
+  "date": "20261121",
+  "note": "26.11.1: miznúce správy (základ), ochrana obrazovky, poloha, bez zvyškov Element (D94–D97)",
   "dir": "desktop",
   "files": [
    {
-    "name": "psst-windows-20261120-b36-setup.exe",
-    "sha256": "92c5a8d9965248cff8f6e3262a2b46187e61d3b874ee28346562b75a061886f9"
+    "name": "psst-windows-20261121-b38-setup.exe",
+    "sha256": "d9b464b33ff20fe9ba5455655ff8fb54358ef48a88f0538a364aa3c11faf780d"
    },
    {
-    "name": "psst-windows-20261120-b36.msi",
-    "sha256": "d4a61ad83bd1774bdd98cf298e69cfbc7fc679c4417d0b20b42b5a2662424ce3"
+    "name": "psst-windows-20261121-b38.msi",
+    "sha256": "89447829f3861b0a8973f5c41749db3e8069fbf3a686857d1f866e76a0dd8ef7"
    }
   ]
  },
  "android": {
-  "build": 54,
-  "date": "20261120",
-  "note": "D88: rozhovor podľa presného mena účtu (krátke meno → @meno:psst.pro); registrácia otvorená s hCaptcha",
+  "build": 58,
+  "date": "20261121",
+  "note": "26.11.1: psst nastavenia v časovej osi (miznúce správy, ochrana obrazovky), len SK/EN (D98)",
   "dir": "android",
   "files": [
    {
-    "name": "psst-android-20261120-b54-arm64.apk",
-    "sha256": "814f10c7590e72a9f01e03591ecf0b4ec475370c45f247b8dfbcf68a21b6f0b2"
+    "name": "psst-android-20261121-b58-arm64.apk",
+    "sha256": "f656f6b422a7482a3736083b15aa39a444a3dd9bf4162441229fb850cc7022dd"
    },
    {
-    "name": "psst-android-20261120-b54-armv7.apk",
-    "sha256": "4e82f38752c9f9e0c6f42cf07ff62cdf01f16957fd3f5c26f1d482dc7bb22f71"
+    "name": "psst-android-20261121-b58-armv7.apk",
+    "sha256": "2580180cfe3e2d6de31aa84fbe9e1e0dbffa66746a8efa566434beac7b939144"
    },
    {
-    "name": "psst-android-20261120-b54-x86_64.apk",
-    "sha256": "16961d3afaa55896f1c106794ee5255ea1d50a2bbd7fce484a8a2c9ab43002d5"
+    "name": "psst-android-20261121-b58-x86_64.apk",
+    "sha256": "6002339b391bfa5957653ce9855121cbba6c2bf8703e40152aa46b871f96c324"
    },
    {
-    "name": "psst-android-20261120-b54.aab",
-    "sha256": "efa44490c7ff51993d4b575c8206d42ae016ab2befb97d63f85ea3d2ae6db6f4"
+    "name": "psst-android-20261121-b58.aab",
+    "sha256": "4828f7f809a16f0289891d27b463dab065e4d6739ed859a9f334872ae451a9d2"
    }
   ]
  },
  "ios": {
-  "build": 3,
-  "date": "20261120",
-  "note": "D88: chat podľa presného mena účtu (krátke meno → @meno:psst.pro), otvorená registrácia s hCaptcha",
+  "build": 6,
+  "date": "20261121",
+  "note": "26.11.1: psst nastavenia v časovej osi, len SK/EN (D98)",
   "dir": "ios",
   "files": [
    {
-    "name": "psst-ios-20261120-b3.ipa",
-    "sha256": "c7b1e8cfc460e3a9c91cc4de58f734313222b2e911828e0f9ea1d835382f9b6a"
+    "name": "psst-ios-20261121-b6.ipa",
+    "sha256": "7539974a8c8abe5a975f0764e259a9f1e689c13bdf55ff216ac0b28ec10f1cbd"
    }
   ]
  }
