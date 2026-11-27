@@ -4,6 +4,18 @@ Testovacia appka **psst lab** pre iPhone: bežný psst chat (server psst.pro) + 
 Meshtastic bez internetu, s vlastným šifrovaním psst. Len na test (TestFlight, interná skupina „psst“), nikam sa
 nezverejňuje. Rozhodnutia a dôvody: [DECISIONS.md](DECISIONS.md) L1-01 až L1-16.
 
+## 0. Stav (27. 11. 2026)
+
+- Kód: fork `georgonr/psst-ios` vetva `lab/meshtastic` (`725e858`), hlavné repo vetva `lab/meshtastic`.
+- Lokálne (Mac, Swift 6.1): 31 unit testov `PsstLab` PASS; test so skutočným rádiom PASS (sekcia 7).
+- CI (Xcode 27.2, run 46036679390): unit testy balíka PASS, kompilácia balíka pre iOS PASS, všetky Swift zdroje
+  appky sa skompilovali; simulátorový build padol len na linkovaní x86_64 (Rust SDK nemá x86_64) → opravené na
+  `ARCHS=arm64`, opakovaný beh zrušený (archív pre zariadenie je arm64).
+- **TestFlight: build zatiaľ NEnahraný.** Spustenie `scripts/ios/lab-testflight.sh release` (profil pre
+  `eu.macet.psst.lab`, secret, archív v GitHub Actions, upload, skupina „psst“) čaká na povolenie majiteľa —
+  appku pre iPhone tento Mac postaviť nevie (Intel, macOS 15.7, bez Xcode 27), takže jeden beh v GitHub Actions je
+  nevyhnutný. Po povolení: `scripts/ios/lab-testflight.sh release` na vetve `lab/meshtastic` (~60–90 min).
+
 ## 1. Inštalácia z TestFlightu
 
 1. Na iPhone otvorte appku **TestFlight** (prihlásená Apple ID, ktoré je v App Store Connect ako tester „Geo M“).
