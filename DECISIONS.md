@@ -1136,3 +1136,118 @@ lokalizácie prepnuté na sk. Ostatné jazyky systému dostanú angličtinu. Web
 značky (`brand` psst) cez premennú, preto ostáva bez zmeny; psst texty tam majú len SK/EN (ostatné jazyky → EN).
 Súčasne opravené zobrazenie psst nastavení v časovej osi Android/iOS: Rust SDK hlási `m.room.retention` ako
 `org.matrix.msc1763.retention` a filter Element X Android vyraďoval všetky vlastné stavy (aj ochranu obrazovky).
+
+## psst lab — LoRa / Meshtastic s vlastným šifrovaním (2026-11-27, dávka L1, len vetva `lab/meshtastic`)
+
+Testovacia iOS appka **psst lab** (`eu.macet.psst.lab`), nikam sa nezverejňuje. Kód je len vo vetvách
+`lab/meshtastic` (hlavné repo aj fork `georgonr/psst-ios`); vetvy `main`/`psst`, ostré buildy a verzia 26.11.x sa
+nemenili, server tiež nie. Návod a výsledky testov: [LAB-LORA.md](LAB-LORA.md).
+
+**L1-01 — Samostatný variant appky na vlastnej vetve forku.** `lab/meshtastic` vo `psst-ios` vychádza z `psst`
+(26.11.1, `c35055f`). Rozdiely voči psst sú len v `app.yml`, `target.yml`, ikone, štyroch miestach UI a v novom
+balíku `Components/PsstLab`. `MARKETING_VERSION` ostáva 26.11.1 (rovnaký kód; Element X podľa verzie spúšťa
+migrácie, iné číslo by ich mohlo spustiť nečakane), čísla buildov má psst lab vlastné od 1 — je to iný záznam
+v App Store Connect (`psst lab`, SKU `psst-lab`, založil majiteľ; nič nové sa nezakladalo okrem profilu).
+
+**L1-02 — Nič sa nezdieľa s psst.** Bundle `eu.macet.psst.lab`, skupina kľúčenky `<TEAM>.eu.macet.psst.lab`, **bez
+App Group entitlementu** (`APP_GROUP_IDENTIFIER = group.eu.macet.psst.lab` je len hodnota v Info.plist; bez
+entitlementu Element X použije vlastný kontajner appky — upstream fallback v `URL.appGroupContainerDirectory`).
+Bez rozšírení NSE a Share (potrebujú App Group), bez push (`aps-environment`), universal links a Communication
+Notifications. Dôsledky: psst lab **nedostáva push notifikácie** (Sygnal pozná len `eu.macet.psst`, server sa
+nemení), zdieľanie z iných appiek do psst lab nejde. Appka sa dá nainštalovať vedľa psst. Overuje to CI (bundle ID,
+žiadne PlugIns, entitlementy bez `application-groups`/`aps-environment`).
+
+**L1-03 — Ten istý server psst.pro, bežný chat ako v psst.** Konfigurácia homeservera, MAS prihlásenie a všetky
+funkcie chatu sú nezmenené. OAuth callback schéma `pro.psst.app` je v oboch appkách — `ASWebAuthenticationSession`
+odovzdá callback priamo relácii, ktorá ho otvorila, takže sa appky nebijú. Pusher sa nezaregistruje (bez APNs tokenu).
+
+**L1-04 — Meshtastic Client API, verzia.** Podľa meshtastic.org (client-api, docs 2.8, čítané 27. 11. 2026):
+BLE služba `6ba1b218-15a8-461f-9fa8-5dcae273eafd`, ToRadio `f75c76d2-…` (zápis), FromRadio `2c55e69e-…` (čítanie
+do prázdnej hodnoty), FromNum `ed9da18c-…` (notify); sériový stream s hlavičkou `0x94 0xC3 len_hi len_lo`
+(max. 512 B). Spojenie: `ToRadio.want_config_id = nonce` → my_info, node_info…, kanály, config → `config_complete_id
+= nonce`; potom pakety. Protobufy: oficiálne `meshtastic/protobufs` tag **v2.8.3** (2026-11-17); firmvér testovacieho
+Heltecu je 2.7.26 — protobuf je spätne aj dopredne kompatibilný (overené: načítanie konfigurácie, uzly, správy, ACK).
+Heartbeat každých 60 s (sériové API odpája nečinných klientov). Vzorom pre postup bola oficiálna appka
+Meshtastic-Apple, **kód z nej sa nepreberal**.
+
+**L1-05 — Licencie (overené v repozitároch).** `meshtastic/protobufs`: **GPL-3.0** (súbor LICENSE, v balíku
+`Components/PsstLab/proto/LICENSE`) → vygenerovaný Swift kód je odvodené dielo pod GPL-3.0. SwiftProtobuf 1.33.3:
+Apache-2.0 (zlučiteľná s GPLv3/AGPLv3). Meshtastic-Apple (GPL-3.0) len ako referencia, bez kopírovania kódu.
+Zlučiteľnosť: GPLv3 §13 aj AGPLv3 §13 výslovne dovoľujú spojiť dielo pod GPLv3 s dielom pod AGPLv3 do jedného
+programu; každá časť si ponechá svoju licenciu, celok sa šíri so zdrojovým kódom (fork je verejný na GitHube).
+Dôsledok: alternatívna komerčná licencia Elementu (`LicenseRef-Element-Commercial`) sa na psst lab nevzťahuje — psst
+používa AGPL, takže to nevadí. Distribúcia cez TestFlight má rovnaký status ako psst a oficiálna appka Meshtastic
+(GPL-3.0) v App Store.
+
+**L1-06 — Komunikačná vrstva oddelená od BLE.** Lokálny Swift balík `Components/PsstLab`: `MeshtasticProtobufs`
+(generované), `PsstMesh` (Client API nad ľubovoľným transportom, uzly, kanály, správy, stavy doručenia, šifrovanie,
+delenie, perzistencia), `PsstMeshBLE` (CoreBluetooth; protokolová logika `BLESession` je oddelená od CoreBluetooth
+a testovaná s falošným spojením), `PsstMeshSerial` + nástroj `psst-mesh` (Mac, sériový port — ten istý `PsstMesh`
+ako v appke), `PsstLabUI` (SwiftUI obrazovky LoRa). Balík sa kompiluje a testuje aj na Macu bez Xcode (Swift 6.1 CLT).
+
+**L1-07 — Limity dĺžky.** API: `Data.payload` max. **233 B** (`DATA_PAYLOAD_LEN`), LoRa rámec 255 B (16 B
+hlavička). Bežná textová správa Meshtastic: **200 B UTF-8** (ako oficiálne appky — rezerva na PKI réžiu 12 B).
+Šifrovaný rámec psst ≤ 200 B (6 B hlavička + 194 B šifrovaného textu); jedna správa max. **8 rámcov** = **1 535 B**
+textu (formát unesie 16). Namerané na vzduchu (LongFast EU868): plný rámec 236 B, **~2,0 s** vysielania; ACK ~0,5 s.
+
+**L1-08 — Nastavenia rádia sa nemenia.** Appka ani `psst-mesh` nič nezapisujú do konfigurácie (región, kanály,
+kľúče, čas), firmvér sa neaktualizuje. Jediná výnimka: ak rádio hlási región `UNSET`, appka ponúkne tlačidlo
+a `psst-mesh test` pošle `AdminMessage.set_config(lora.region = EU_868)` — **tu sa nepoužilo**, Heltec mal EU_868.
+Zistenie: Heltec má zapnuté MQTT („client proxy“) — firmvér ponúka klientovi kópie paketov na odoslanie do MQTT
+(`msh/2/e/PKI/…`); psst lab ich ignoruje (nič neposiela na internet), ale iný pripojený klient by mohol. Obsah psst
+správ je aj tam šifrovaný naším kľúčom.
+
+**L1-09 — Vlastné šifrovanie (psst E2E) priamych správ.** Každý používateľ má statický pár X25519 v Keychain
+(`AfterFirstUnlockThisDeviceOnly`, nesynchronizuje sa). Kľúč pre smer A→B = HKDF-SHA256(X25519(a, B),
+salt „psst-lab/lora/v1“, info = „psst-lab/lora/v1 msg“ ‖ pubA ‖ pubB ‖ uzolA ‖ uzolB) — zvlášť pre každý smer, takže
+rovnaké počítadlá na oboch stranách nikdy nepoužijú ten istý (kľúč, nonce). Šifra ChaCha20-Poly1305 (CryptoKit),
+nonce = 8 nulových B ‖ počítadlo (UInt32), počítadlo sa uloží **pred** odoslaním. AAD = magic, počítadlo, počet
+rámcov, uzol odosielateľa a príjemcu. Rámec: `0xB1` ‖ počítadlo (4 B) ‖ index<<4 | (počet−1) ‖ časť (šifrovaný text
+‖ 16 B tag sa delí na rámce). Príjemca skladá podľa (uzol, počítadlo), otvorí až kompletnú správu; ochrana proti
+opakovaniu = najvyššie počítadlo + okno 64 správ na kontakt (perzistentné), za videnú sa označí len overená správa.
+Overenie odosielateľa vyplýva zo statického X25519 (tag vie vytvoriť len držiteľ súkromného kľúča kontaktu; smer
+kľúča vylučuje odraz správy späť) + kontrola, že `from` paketu je uzol z karty. Bez podpisov (šetrí 64 B na rámec;
+dôsledok: popierateľnosť medzi dvoma stranami, čo je pri 1:1 v poriadku). Port `PRIVATE_APP` (256), aby iné
+appky Meshtastic nezobrazovali binárne dáta ako text. Rádio správu navyše zabalí do svojho PKI (log: „Use PKI!“).
+**Nie je:** forward secrecy (únik kľúča odhalí aj zachytené staré správy), skrytie metadát (hlavička Meshtastic:
+kto, komu, kedy), psst šifrovanie v kanáli (len 1:1).
+
+**L1-10 — Výmena kľúčov.** Karta `psstlab1:<base64url>` = verzia, uzol (4 B), verejný kľúč (32 B), Matrix ID,
+meno (~120 znakov). (a) Tlačidlo **„Prepojiť s LoRa“** v detaile 1:1 psst rozhovoru pošle do E2EE rozhovoru správu
+`m.text` s čitateľným textom, odtlačkom kľúča a kartou (aj v poli `eu.macet.psst.lab.lora_card`). psst lab druhej
+strany ju nájde pri zostavovaní časovej osi (`RoomTimelineItemFactory`) a prepojí kontakt **len ak odosielateľ
+Matrix správy = Matrix ID v karte**; staršia karta nikdy neprepíše novšiu (porovnanie času udalosti). (b) **QR kód**
+s tou istou kartou (LoRa → Môj kľúč / Prepojiť cez QR), pri ktorom dôvera vychádza z osobného stretnutia. Obe
+obrazovky ukazujú odtlačok kľúča na porovnanie. Nová karta s iným kľúčom vynuluje počítadlá a okno pre ten uzol.
+
+**L1-11 — Stavy doručenia.** *odosiela sa* (odovzdané rádiu) → *odoslané* (implicitné ACK: rádio počulo
+preposlanie / vysielanie kanála) → *potvrdené* (ACK od cieľového uzla; delená správa až keď prídu ACK všetkých
+rámcov) → *zlyhalo* (Routing chyba, napr. MAX_RETRANSMIT, alebo 120 s bez aktivity). Kanál končí na *odoslané*
+(Meshtastic pri broadcaste ACK od príjemcov nemá). **Oprava po prvom teste naostro:** všetky 3 rámce delenej správy
+odovzdané rádiu naraz → potvrdený len 1 z 3 do 120 s; po zavedení „stop-and-wait“ (ďalší rámec až po ACK/chybe
+predošlého, max. 75 s na rámec) prešli 3/3.
+
+**L1-12 — Uloženie.** Správy, uzly, kontakty, počítadlá a okná: JSON v Application Support appky
+(`completeUntilFirstUserAuthentication`), mimo zálohy kľúčov; súkromný kľúč len v Keychain. Prežijú reštart.
+
+**L1-13 — Bluetooth a poloha.** `NSBluetoothAlwaysUsageDescription` (EN + SK): „používa Bluetooth len na spojenie
+s vaším vlastným LoRa rádiom Meshtastic … nesleduje iné zariadenia ani vašu polohu“. Povolenie sa vypýta až pri
+otvorení LoRa (CBCentralManager vzniká lenivo). `UIBackgroundModes` + `bluetooth-central` (spojenie s rádiom pri
+zamknutej obrazovke, lokálna notifikácia prijatej LoRa správy), **bez `location`** — živé zdieľanie polohy v psst lab
+beží len v popredí (`LiveLocationManager` zapne `allowsBackgroundLocationUpdates` len pri režime `location`, inak
+by appka spadla). Pozície z rádií sa ignorujú.
+
+**L1-14 — Overenie.** Lokálny Mac (Intel, macOS 15.7) nemá Xcode; balík `PsstLab` sa testuje lokálne cez Swift 6.1
+CLT (`swift test`, 31 testov) a naostro cez `psst-mesh` na sériovom porte. Appka sa kompiluje a podpisuje len v CI
+(`ios-lab.yml`, runner `xcode-27`, verejný Xcode podľa D90). BLE na iPhone sa v CI overiť nedá (simulátor nemá
+Bluetooth) → unit testy `BLESessionTests` + test na iPhone podľa LAB-LORA.md.
+
+**L1-15 — Spúšťanie CI zápisom súboru.** `workflow_dispatch` funguje len pre workflowy na predvolenej vetve a lab
+nesmie ísť do `main`. `ios-lab.yml` sa preto spúšťa pushom zmeny `lab/ios-lab-build.json` (ref, režim
+`check`/`release`, číslo buildu, upload) do `lab/meshtastic`; robí to `scripts/ios/lab-testflight.sh`.
+Podpis: existujúci certifikát Apple Distribution, nový profil „psst lab AppStore eu.macet.psst.lab …“ (jediný nový
+objekt v Apple účte), secret `IOS_LAB_PROVISIONING_PROFILES_BASE64`. TestFlight: interná skupina „psst“ v appke
+psst lab, tester Geo M, žiadni externí testeri, nič na kontrolu.
+
+**L1-16 — Ikona a jazyk.** Ikona psst so žltým pásom „LAB“ (`Components/PsstLab/Scripts/make-lab-icon.swift`).
+Sekcia LoRa je len po slovensky (testovacia appka); zvyšok appky ostáva SK/EN ako psst.
