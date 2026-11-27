@@ -60,8 +60,10 @@ TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 "$PY" "$LAB" profile "$TMP/profiles"
 ( cd "$TMP/profiles" && zip -q ../lab-profiles.zip ./*.mobileprovision )
 base64 -i "$TMP/lab-profiles.zip" | gh secret set IOS_LAB_PROVISIONING_PROFILES_BASE64 -R "$REPO"
+# list first, then grep (a piped `grep -q` closes early → SIGPIPE → pipefail failure, same as D86)
+SECRETS="$(gh secret list -R "$REPO" --json name --jq '.[].name')"
 for s in IOS_DIST_CERT_P12_BASE64 IOS_DIST_CERT_PASSWORD APPLE_TEAM_ID APP_STORE_CONNECT_API_KEY_ID; do
-  gh secret list -R "$REPO" --json name --jq '.[].name' | grep -qx "$s" || { echo "secret $s missing (scripts/ios/release-testflight.sh sets it)"; exit 1; }
+  grep -qx "$s" <<<"$SECRETS" || { echo "secret $s missing (scripts/ios/release-testflight.sh sets it)"; exit 1; }
 done
 N="$("$PY" "$LAB" next-build)"
 echo "psst lab build number: $N"
