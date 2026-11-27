@@ -30,7 +30,9 @@ trigger() { # mode build upload
   python3 - "$ROOT/lab/ios-lab-build.json" "$REF" "$1" "$2" "$3" <<'PY'
 import json, sys
 p, ref, mode, n, up = sys.argv[1:]
-json.dump({"ref": ref, "mode": mode, "build_number": int(n), "upload": up == "true"}, open(p, "w"), indent=1)
+import datetime  # "requested" makes every request a change of the file → the push always starts the workflow
+json.dump({"ref": ref, "mode": mode, "build_number": int(n), "upload": up == "true",
+           "requested": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")}, open(p, "w"), indent=1)
 open(p, "a").write("\n")
 PY
   git -C "$ROOT" add lab/ios-lab-build.json
