@@ -105,7 +105,7 @@ jobs:
           xcodebuild build -project ElementX.xcodeproj -scheme ElementX -configuration Debug \
             -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/dd" \
             -clonedSourcePackagesDirPath "$RUNNER_TEMP/spm" -skipPackagePluginValidation -skipMacroValidation \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ONLY_ACTIVE_ARCH=YES > "$RUNNER_TEMP/sim.log" 2>&1 &
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO ARCHS=arm64 > "$RUNNER_TEMP/sim.log" 2>&1 &
           pid=$!
           while kill -0 $pid 2>/dev/null; do sleep 60; echo "[$(date +%T)] $(tail -1 "$RUNNER_TEMP/sim.log" | cut -c1-160)"; done
           wait $pid && rc=0 || rc=$?
