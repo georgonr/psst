@@ -1251,3 +1251,22 @@ psst lab, tester Geo M, žiadni externí testeri, nič na kontrolu.
 
 **L1-16 — Ikona a jazyk.** Ikona psst so žltým pásom „LAB“ (`Components/PsstLab/Scripts/make-lab-icon.swift`).
 Sekcia LoRa je len po slovensky (testovacia appka); zvyšok appky ostáva SK/EN ako psst.
+
+### Dávka L1b — build psst lab v TestFlighte (2026-11-27)
+
+**L1-17 — Behy v GitHub Actions: 2 z povolených 3.** (1) kontrola `check` run 46043109368 — overila opravu
+`ARCHS=arm64` (simulátorový build appky prešiel, aj unit testy a iOS kompilácia balíka); (2) `release` run
+46052971102 — archív, podpis, export, brána verejného Xcode (D90), kontroly IPA (bundle `eu.macet.psst.lab`, bez
+App Group, push a rozšírení), upload. Prvé spustenie skriptu skončilo ešte pred CI: kontrola secretov
+`gh secret list | grep -q` padala pod `pipefail` na SIGPIPE (rovnaká chyba ako v D86) → zoznam sa načíta najprv do
+premennej. Iné workflowy, vetvy ani ostrá appka psst sa nespúšťali.
+
+**L1-18 — psst lab build 1 (26.11.1) je v TestFlighte.** Spracovanie Apple: VALID za ~3 min. Nové objekty v Apple
+účte: profil „psst lab AppStore eu.macet.psst.lab 20261127-1854“, interná skupina „psst“ v appke psst lab
+(`hasAccessToAllBuilds`, tester Geo M), secret `IOS_LAB_PROVISIONING_PROFILES_BASE64` na GitHube. Exportné
+šifrovanie: `usesNonExemptEncryption = false` — rovnako ako ostrá psst (Info.plist `ITSAppUsesNonExemptEncryption
+= false`, len štandardné algoritmy). Stav: interne `IN_BETA_TESTING`, externe nič neodoslané
+(`READY_FOR_BETA_SUBMISSION` je predvolený stav), na kontrolu App Store nič.
+
+**L1-19 — MQTT na Heltecu ostáva zapnuté** (ide na vlastný server majiteľa). psst lab ani `psst-mesh` ho nemenia
+a pakety z MQTT proxy nespracúvajú; obsah psst správ je aj tam šifrovaný naším kľúčom (doplnenie k L1-08).

@@ -9,12 +9,9 @@ nezverejňuje. Rozhodnutia a dôvody: [DECISIONS.md](DECISIONS.md) L1-01 až L1-
 - Kód: fork `georgonr/psst-ios` vetva `lab/meshtastic` (`725e858`), hlavné repo vetva `lab/meshtastic`.
 - Lokálne (Mac, Swift 6.1): 31 unit testov `PsstLab` PASS; test so skutočným rádiom PASS (sekcia 7).
 - CI (Xcode 27.2, run 46036679390): unit testy balíka PASS, kompilácia balíka pre iOS PASS, všetky Swift zdroje
-  appky sa skompilovali; simulátorový build padol len na linkovaní x86_64 (Rust SDK nemá x86_64) → opravené na
-  `ARCHS=arm64`, opakovaný beh zrušený (archív pre zariadenie je arm64).
-- **TestFlight: build zatiaľ NEnahraný.** Spustenie `scripts/ios/lab-testflight.sh release` (profil pre
-  `eu.macet.psst.lab`, secret, archív v GitHub Actions, upload, skupina „psst“) čaká na povolenie majiteľa —
-  appku pre iPhone tento Mac postaviť nevie (Intel, macOS 15.7, bez Xcode 27), takže jeden beh v GitHub Actions je
-  nevyhnutný. Po povolení: `scripts/ios/lab-testflight.sh release` na vetve `lab/meshtastic` (~60–90 min).
+  appky sa skompilovali; simulátorový build po oprave `ARCHS=arm64` prešiel.
+- **TestFlight: psst lab 26.11.1 (1)** — VALID, interná skupina „psst“ (tester Geo M), exportné šifrovanie ako
+  v psst; CI: kontrola run 46043109368, release run 46052971102 (L1-17, L1-18).
 
 ## 1. Inštalácia z TestFlightu
 
