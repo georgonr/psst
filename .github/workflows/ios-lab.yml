@@ -75,7 +75,7 @@ jobs:
       - name: PsstLab package — compile for iOS (CoreBluetooth, SwiftUI, QR scanner)
         working-directory: ios/Components/PsstLab
         run: |
-          xcodebuild build -scheme PsstLab-Package -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/dd-pkg" \
+          xcodebuild build -scheme PsstLabUI -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/dd-pkg" \
             -skipPackagePluginValidation -skipMacroValidation CODE_SIGNING_ALLOWED=NO > "$RUNNER_TEMP/pkg-ios.log" 2>&1 && rc=0 || rc=$?
           grep -E "error:|warning: .*PsstLab" "$RUNNER_TEMP/pkg-ios.log" | grep -v MeshtasticProtobufs | sort -u | head -60 || true
           tail -3 "$RUNNER_TEMP/pkg-ios.log"
