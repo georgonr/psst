@@ -10,7 +10,8 @@ nezverejňuje. Rozhodnutia a dôvody: [DECISIONS.md](DECISIONS.md) L1-01 až L1-
 - Lokálne (Mac, Swift 6.1): 31 unit testov `PsstLab` PASS; test so skutočným rádiom PASS (sekcia 7).
 - CI (Xcode 27.2, run 46036679390): unit testy balíka PASS, kompilácia balíka pre iOS PASS, všetky Swift zdroje
   appky sa skompilovali; simulátorový build po oprave `ARCHS=arm64` prešiel.
-- **TestFlight: psst lab 26.11.1 (1)** — VALID, interná skupina „psst“ (tester Geo M), exportné šifrovanie ako
+- **TestFlight: psst lab 26.11.1 (2)** — oprava zatvárania LoRa pri vyhľadávaní (L1-20 až L1-23), CI run 46118859898.
+- TestFlight build 1 — VALID, interná skupina „psst“ (tester Geo M), exportné šifrovanie ako
   v psst; CI: kontrola run 46043109368, release run 46052971102 (L1-17, L1-18).
 
 ## 1. Inštalácia z TestFlightu

@@ -1299,3 +1299,7 @@ v tom istom zásobníku bez prezentácií; všetky delegáty CoreBluetooth, čas
 každých 50 ms s kolísajúcim RSSI. Bez opravy test padá (39× prehodené riadky, 180 aktualizácií za 3 s), s opravou
 prechádza (0 prehodení, ≤ 8 aktualizácií). Spolu 32 testov balíka PsstLab. Samotnú prezentáciu (koordinátor) unit
 test nezachytí — overí ju test na iPhone.
+
+**L1-24 — psst lab build 2 v TestFlighte.** Jeden beh v GitHub Actions (release run 46118859898; samostatná kontrola
+vynechaná — release spúšťa tie isté testy a kompiláciu, šetrí GitHub). VALID za ~8 min, interná skupina „psst“,
+exportné šifrovanie ako v psst, externe ani na kontrolu nič.
