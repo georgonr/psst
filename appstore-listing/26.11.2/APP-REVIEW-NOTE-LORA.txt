@@ -1,0 +1,26 @@
+App Review Information → Notes — paragraph to ADD for version 26.11.2 (paste it below the existing notes from
+../APP-REVIEW-NOTES.txt). The owner pastes it in App Store Connect manually; no script changes App Store metadata.
+
+New in 26.11.2: LoRa (optional)
+
+psst 26.11.2 adds an optional LoRa section. It lets psst send and receive short text messages over a Meshtastic
+LoRa radio that the user owns, connected to the iPhone over Bluetooth Low Energy. This is useful where there is
+no mobile network or internet. Direct LoRa messages between two psst users who have linked their keys are
+additionally end-to-end encrypted by psst (X25519 + ChaCha20-Poly1305); LoRa messages go from radio to radio
+and do not pass through psst servers.
+
+- The feature is optional and needs a Meshtastic LoRa radio (third-party hardware). Without a radio the app is
+  fully functional: chats, groups, calls, files and location sharing do not depend on LoRa.
+- Bluetooth permission is requested only when the user opens LoRa and taps "Search for devices via Bluetooth…".
+  psst does not use Bluetooth anywhere else, does not scan in the background and does not use Bluetooth to
+  determine location.
+
+How to see the screen without a radio:
+1. Sign in with the review account (see the notes above).
+2. On the home screen (chat list), tap the antenna button in the top bar (accessibility label "LoRa").
+   The LoRa screen opens.
+3. Tap "Search for devices via Bluetooth…". iOS shows the Bluetooth permission prompt with our purpose text
+   ("psst uses Bluetooth only when you open LoRa, to connect to your own Meshtastic LoRa radio and send and
+   receive LoRa messages. It does not track other devices or your location.").
+4. Without a radio nearby the list stays empty ("Searching for Meshtastic radios…"); nothing else is needed.
+   The rest of the app works the same whether Bluetooth is allowed or denied.

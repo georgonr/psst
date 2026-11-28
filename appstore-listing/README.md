@@ -21,3 +21,14 @@ Dĺžky textov (znaky / bajty):
 
 Snímky vznikli v iOS simulátore (CI `ios-store.yml`, iOS 27.2, stavový riadok 9:41) zo zdrojového kódu buildu psst iOS b2 na produkčnom serveri psst.pro s vymyslenými osobami
 (testovacie účty `qa-*`, po nafotení deaktivované, miestnosti zmazané). Bez alfa kanála (App Store ho odmieta).
+
+## Verzia 26.11.2 (D99)
+
+Vkladá **majiteľ ručne** v App Store Connect (žiadny skript metadáta App Store nemení; `scripts/ios/testflight.py`
+nahráva len build):
+
+| Súbor | Kam |
+|---|---|
+| `26.11.2/APP-REVIEW-NOTE-LORA.txt` | App Review Information → Notes: odsek o LoRa **pridať** pod doterajší text z `APP-REVIEW-NOTES.txt` (spolu ~3 800 znakov, limit 4 000) |
+| `26.11.2/WHATS-NEW-en-US.txt`, `26.11.2/WHATS-NEW-sk.txt` | verzia 26.11.2 → What's New in This Version (EN a SK, limit 4 000) |
+| `FORMS.md` → Copyright | `2026 GT` (App Information) |

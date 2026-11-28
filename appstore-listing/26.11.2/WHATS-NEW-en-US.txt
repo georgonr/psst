@@ -1,0 +1,3 @@
+LoRa messages (optional): with your own Meshtastic LoRa radio connected over Bluetooth, psst can send and receive short messages without mobile network or internet. Direct messages between linked psst contacts are end-to-end encrypted by psst.
+
+Fixes: more of the app is in Slovak, copyright updated and other small fixes.
