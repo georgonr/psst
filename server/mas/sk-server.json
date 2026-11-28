@@ -1,0 +1,206 @@
+{
+  "@psst": "PSST (D99): slovenské serverové texty MAS (šablóny), ktoré MAS 1.29.0 v translations/sk.json nemá. scripts/mas-assets.py ich doplní do translations/sk.json (existujúce slovenské texty nemení, okrem app.name/human_name a common.mxid, ktoré nastavuje D89). Kľúče = cesty ako v translations/en.json MAS.",
+  "action": {
+    "skip": "Preskočiť",
+    "start_over": "Začať odznova"
+  },
+  "branding": {
+    "privacy_policy": {
+      "alt": "Odkaz na zásady ochrany súkromia služby",
+      "link": "Zásady ochrany súkromia"
+    },
+    "terms_and_conditions": {
+      "alt": "Odkaz na podmienky používania služby",
+      "link": "Podmienky používania"
+    }
+  },
+  "mas": {
+    "account": {
+      "deactivated": {
+        "description": "Tento účet (<em>%(mxid)s</em>) bol zmazaný. Ak to nečakáte, obráťte sa na správcu servera.",
+        "heading": "Účet zmazaný"
+      },
+      "locked": {
+        "description": "Tento účet (<em>%(mxid)s</em>) je zablokovaný. Ak to nečakáte, obráťte sa na správcu servera.",
+        "heading": "Účet zablokovaný"
+      },
+      "logged_out": {
+        "description": "Táto relácia bola ukončená. Ak sa chcete znova prihlásiť, odhláste sa",
+        "heading": "Relácia ukončená"
+      }
+    },
+    "choose_display_name": {
+      "description": "Toto meno uvidia ostatní. Kedykoľvek ho môžete zmeniť.",
+      "headline": "Zvoľte si zobrazované meno"
+    },
+    "consent": {
+      "continue_to": "Pokračovať do <span>%(client_name)s</span>?",
+      "scope_list_preface": "Ak budete pokračovať, <span>%(client_name)s</span> bude môcť:",
+      "this_will_setup": "Týmto sa nastaví %(client_name)s (<span>%(client_uri)s</span>) s vaším účtom <span>%(server_name)s</span>.",
+      "use_another_account": "Použiť iný účet"
+    },
+    "device_card": {
+      "access_requested": "Prístup vyžiadaný",
+      "generic_device": "Zariadenie",
+      "ip_address": "IP adresa",
+      "security_code": "Bezpečnostný kód"
+    },
+    "device_code_link": {
+      "description": "Zadajte bezpečnostný kód zobrazený na druhom zariadení",
+      "headline": "Prepojte nové zariadenie so svojím účtom",
+      "verification_code": "Overovací kód"
+    },
+    "device_consent": {
+      "confirm_device": "Áno, potvrdzujem, že je to moje zariadenie a chcem ho prihlásiť.",
+      "denied": {
+        "description": "Odmietli ste prístup pre %(client_name)s. Toto okno môžete zavrieť.",
+        "heading": "Prístup odmietnutý"
+      },
+      "description": "<strong>Iné zariadenie</strong> chce prepojiť %(client_name)s s vaším účtom <span>%(server_name)s</span>. Uistite sa, že toto zariadenie poznáte.",
+      "grant_access": "Povoliť prístup",
+      "granted": {
+        "description": "Povolili ste prístup pre %(client_name)s. Toto okno môžete zavrieť.",
+        "heading": "Prístup povolený"
+      },
+      "title": "Povoliť prístup k vášmu účtu?",
+      "warning": {
+        "description": "Naozaj je to vaše zariadenie? Správcovia ani technická podpora vás nikdy nebudú žiadať, aby ste toto potvrdili.",
+        "title": "Chystáte sa povoliť vzdialenému zariadeniu prístup k vášmu účtu"
+      }
+    },
+    "device_display_name": {
+      "client_on_device": "%(client_name)s na %(device_name)s",
+      "name_for_platform": "%(name)s pre %(platform)s",
+      "unknown_device": "Neznáme zariadenie"
+    },
+    "email_in_use": {
+      "description": "Ak ste zabudli prihlasovacie údaje, môžete si účet obnoviť. Môžete tiež začať odznova a použiť inú e-mailovú adresu.",
+      "title": "E-mailová adresa <span>%(email)s</span> sa už používa"
+    },
+    "emails": {
+      "recovery": {
+        "click_button": "Nové heslo vytvoríte kliknutím na tlačidlo nižšie:",
+        "copy_link": "Skopírujte tento odkaz a vložte ho do prehliadača, aby ste vytvorili nové heslo:",
+        "create_new_password": "Vytvoriť nové heslo",
+        "fallback": "Tlačidlo nefunguje?",
+        "headline": "Požiadali ste o obnovenie hesla k účtu %(server_name)s.",
+        "subject": "Obnovenie hesla k účtu (%(mxid)s)",
+        "you_can_ignore": "Ak ste o nové heslo nežiadali, tento e-mail môžete ignorovať. Vaše súčasné heslo bude fungovať ďalej."
+      }
+    },
+    "errors": {
+      "captcha": "Overenie CAPTCHA zlyhalo, skúste to znova",
+      "email_banned": "Tento e-mail pravidlá servera zakazujú",
+      "email_domain_banned": "Túto doménu e-mailu pravidlá servera zakazujú",
+      "email_domain_not_allowed": "Túto doménu e-mailu pravidlá servera nepovoľujú",
+      "email_not_allowed": "Tento e-mail pravidlá servera nepovoľujú",
+      "rate_limit_exceeded": "Za krátky čas ste poslali príliš veľa požiadaviek. Počkajte niekoľko minút a skúste to znova.",
+      "username_all_numeric": "Meno používateľa nemôže obsahovať len číslice",
+      "username_banned": "Toto meno používateľa pravidlá servera zakazujú",
+      "username_invalid_chars": "Meno používateľa obsahuje nepovolené znaky. Použite malé písmená, číslice a znaky . _ - + / =",
+      "username_not_allowed": "Toto meno používateľa pravidlá servera nepovoľujú",
+      "username_too_long": "Meno používateľa je príliš dlhé",
+      "username_too_short": "Meno používateľa je príliš krátke"
+    },
+    "legacy_consent": {
+      "this_will_setup": "Týmto sa nastaví <span>%(client_name)s</span> s vaším účtom <span>%(server_name)s</span>."
+    },
+    "loading_failed": "Pri načítaní stránky sa niečo pokazilo. Skúste ju načítať znova.",
+    "login": {
+      "forgot_password": "Zabudli ste heslo?",
+      "link": {
+        "headline": "Prihláste sa a prepojte"
+      },
+      "username_or_email": "Meno používateľa alebo e-mail"
+    },
+    "policy_violation": {
+      "admin_scope_not_allowed": {
+        "description": "Táto aplikácia vyžaduje práva správcu. Ak chcete pokračovať, prihláste sa účtom správcu.",
+        "heading": "Vyžaduje sa prístup správcu"
+      },
+      "client_not_allowed": {
+        "description": "Táto aplikácia sa do tejto služby nesmie prihlásiť.",
+        "heading": "Aplikácia nie je povolená"
+      },
+      "too_many_sessions": {
+        "description": "Váš účet je už prihlásený na maximálnom počte zariadení. Ak chcete pokračovať, <span class=\"font-semibold\">odstráňte %(num_devices_to_remove)s z existujúcich zariadení</span> a prihláste sa znova.",
+        "heading": "Dosiahli ste limit zariadení",
+        "manage_devices": "Spravovať zariadenia"
+      }
+    },
+    "recovery": {
+      "consumed": {
+        "description": "Ak si chcete vytvoriť nové heslo, začnite odznova a vyberte „Zabudli ste heslo?“.",
+        "heading": "Odkaz na obnovenie hesla už bol použitý"
+      },
+      "disabled": {
+        "description": "Ak ste stratili prihlasovacie údaje, obráťte sa na správcu, ktorý vám účet obnoví.",
+        "heading": "Obnovenie účtu je vypnuté"
+      },
+      "expired": {
+        "description": "Požiadajte o nový e-mail, ktorý sa pošle na: <span>%(email)s</span>.",
+        "heading": "Platnosť odkazu na obnovenie hesla vypršala",
+        "resend_email": "Znova poslať e-mail"
+      },
+      "finish": {
+        "confirm": "Zadajte nové heslo ešte raz",
+        "description": "Zvoľte si nové heslo k svojmu účtu.",
+        "heading": "Obnovte si heslo",
+        "save_and_continue": "Uložiť a pokračovať"
+      },
+      "progress": {
+        "change_email": "Skúsiť iný e-mail",
+        "description": "Ak existuje účet s adresou <span>%(email)s</span>, poslali sme na ňu e-mail s odkazom na obnovenie hesla.",
+        "heading": "Skontrolujte si e-mail",
+        "resend_email": "Znova poslať e-mail"
+      },
+      "start": {
+        "description": "Pošleme vám e-mail s odkazom na obnovenie hesla.",
+        "heading": "Ak chcete pokračovať, zadajte e-mail"
+      }
+    },
+    "register": {
+      "javascript_required": "Na vytvorenie účtu je potrebný JavaScript. Zapnite JavaScript v prehliadači a načítajte túto stránku znova.",
+      "terms_of_service": "Mám aspoň 18 rokov a súhlasím s <a href=\"%s\" data-kind=\"primary\" class=\"cpd-link\">Podmienkami používania</a>"
+    },
+    "registration_token": {
+      "description": "Zadajte registračný kód od správcu servera.",
+      "field": "Registračný kód",
+      "headline": "Registračný kód"
+    },
+    "upstream_oauth2": {
+      "link_mismatch": {
+        "heading": "Tento externý účet je už prepojený s iným účtom."
+      },
+      "register": {
+        "choose_username": {
+          "description": "Neskôr sa to nedá zmeniť."
+        },
+        "enforced_by_policy": "Vyžadujú pravidlá servera",
+        "forced_display_name": "Použije sa toto zobrazované meno",
+        "forced_email": "Použije sa táto e-mailová adresa",
+        "forced_localpart": "Použije sa toto meno používateľa",
+        "import_data": {
+          "description": "Potvrďte údaje, ktoré sa prepoja s vaším novým účtom %(server_name)s.",
+          "heading": "Importujte svoje údaje"
+        },
+        "imported_from_upstream": "Importované z vášho externého účtu",
+        "imported_from_upstream_with_name": "Importované z vášho účtu %(human_name)s",
+        "link_existing": "Prepojiť s existujúcim účtom",
+        "provider_name": "Účet %(human_name)s",
+        "signup_with_upstream": {
+          "heading": "Pokračujte v registrácii účtom %(human_name)s"
+        },
+        "suggested_display_name": "Importovať zobrazované meno",
+        "suggested_email": "Importovať e-mailovú adresu",
+        "use": "Použiť"
+      },
+      "suggest_link": {
+        "heading": "Prepojte so svojím existujúcim účtom"
+      }
+    },
+    "verify_email": {
+      "6_digit_code": "6-miestny kód"
+    }
+  }
+}

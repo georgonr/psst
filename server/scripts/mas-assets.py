@@ -21,6 +21,12 @@ skompilované v assets/<jazyk>-<hash>.js a manifest.json k nim drží SRI hash (
      bez zmeny (aj .br/.gz), aby rozbehnuté stránky so starými odkazmi fungovali,
   4. v manifeste nastaví nové mená a prepočíta integrity.
 
+D99 — slovenčina: texty, ktoré MAS nemá preložené (serverové v translations/sk.json chýbajú, v React jazyku sk sú po
+anglicky), sú v server/mas/sk-server.json a server/mas/sk-frontend.json. Serverové sa doplnia do translations/sk.json;
+React jazyk sk (assets/sk-*.js: objekt `var e={…}` s reťazcami v `…` a časťou JSON.parse(`…`)) sa rozoberie na dáta,
+doplní a zapíše späť ako JSON (rovnaký modul, rovnaký export) — tiež pod novým menom súboru. Každá cesta kľúča musí
+existovať v anglickom origináli (pri novej verzii MAS s premenovaným kľúčom skript zlyhá, deploy to ohlási).
+
 Výsledok <out>/assets, <out>/manifest.json, <out>/templates a <out>/translations sa read-only pripoja do kontajnera
 MAS (compose.yml) na predvolené cesty /usr/local/share/mas-cli/…. Pri novej verzii
 MAS sa všetko zopakuje z nového image; ak sa kľúč nenájde, skript zlyhá (deploy.sh to ohlási).
@@ -92,6 +98,154 @@ TEMPLATE_PATCHES = {
     ],
 }
 GENERATED = re.compile(r"-p[0-9a-f]{8}\.(js|css)$")
+MAS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mas")
+
+
+def load_psst(name: str) -> dict:
+    d = json.load(open(os.path.join(MAS_DIR, name), encoding="utf-8"))
+    d.pop("@psst", None)
+    return d
+
+
+SK_SERVER = load_psst("sk-server.json")     # D99
+SK_FRONT = load_psst("sk-frontend.json")    # D99
+PLURAL = re.compile(r"^(.*):(zero|one|two|few|many|other)$")
+
+
+def leaves(d: dict, path: tuple = ()):
+    for k, v in d.items():
+        if isinstance(v, dict):
+            yield from leaves(v, path + (k,))
+        else:
+            yield path + (k,), v
+
+
+def has_path(d: dict, path: tuple) -> bool:
+    for k in path:
+        if not isinstance(d, dict) or k not in d:
+            return False
+        d = d[k]
+    return isinstance(d, str)
+
+
+def merge_texts(target: dict, texts: dict, english: dict, what: str) -> int:
+    """Doplní texty do target; každá cesta musí existovať v anglickom origináli (množné číslo: iný tvar toho kľúča)."""
+    n = 0
+    for path, value in leaves(texts):
+        ok = has_path(english, path)
+        m = PLURAL.match(path[-1])
+        if not ok and m:
+            ok = any(has_path(english, path[:-1] + (f"{m.group(1)}:{f}",)) for f in ("one", "other"))
+        if not ok:
+            sys.exit(f"mas-assets: {what}: kľúč {'.'.join(path)} v anglickom origináli nie je")
+        d = target
+        for k in path[:-1]:
+            d = d.setdefault(k, {})
+            if not isinstance(d, dict):
+                sys.exit(f"mas-assets: {what}: {'.'.join(path)} — nečakaný tvar")
+        d[path[-1]] = value
+        n += 1
+    return n
+
+
+class JsLocale:
+    """Skompilovaný jazyk React MAS: `var e={…};export{e as default};`. Kľúče sú identifikátory, čísla alebo "…",
+    hodnoty reťazce `…` / "…" (bez ${}), vnorené objekty alebo JSON.parse(`…`). Iný tvar → chyba."""
+
+    ESC = {"n": "\n", "t": "\t", "r": "\r", "b": "\b", "f": "\f", "v": "\v", "0": "\0"}
+
+    def __init__(self, text: str, name: str):
+        self.t, self.name = text, name
+        m = re.match(r"\s*var [A-Za-z_$][\w$]*=", text)
+        if not m:
+            self.fail(0, "chýba `var x=`")
+        self.start = m.end()
+        self.i = self.start
+        self.data = self.obj()
+        self.end = self.i
+        if not re.match(r";export\{[A-Za-z_$][\w$]* as default\};", text[self.end:]):
+            self.fail(self.end, "za objektom nie je `;export{… as default};`")
+
+    def fail(self, i: int, why: str):
+        sys.exit(f"mas-assets: {self.name}: nečakaný tvar jazyka na pozícii {i} ({why})")
+
+    def string(self) -> str:
+        q = self.t[self.i]
+        self.i += 1
+        out = []
+        while True:
+            c = self.t[self.i]
+            if c == q:
+                self.i += 1
+                return "".join(out)
+            if q == "`" and self.t.startswith("${", self.i):
+                self.fail(self.i, "${} v reťazci")
+            if c == "\\":
+                e = self.t[self.i + 1]
+                if e == "u":
+                    if self.t[self.i + 2] == "{":
+                        j = self.t.index("}", self.i)
+                        out.append(chr(int(self.t[self.i + 3:j], 16)))
+                        self.i = j + 1
+                    else:
+                        out.append(chr(int(self.t[self.i + 2:self.i + 6], 16)))
+                        self.i += 6
+                    continue
+                if e == "x":
+                    out.append(chr(int(self.t[self.i + 2:self.i + 4], 16)))
+                    self.i += 4
+                    continue
+                if e == "\n":
+                    self.i += 2
+                    continue
+                out.append(self.ESC.get(e, e))
+                self.i += 2
+                continue
+            out.append(c)
+            self.i += 1
+
+    def value(self):
+        c = self.t[self.i]
+        if c == "{":
+            return self.obj()
+        if c in "`\"":
+            return self.string()
+        if self.t.startswith("JSON.parse(", self.i):
+            self.i += len("JSON.parse(")
+            if self.t[self.i] not in "`\"'":
+                self.fail(self.i, "JSON.parse bez reťazca")
+            v = json.loads(self.string())
+            if self.t[self.i] != ")":
+                self.fail(self.i, "JSON.parse bez `)`")
+            self.i += 1
+            return v
+        self.fail(self.i, "neznáma hodnota")
+
+    def obj(self) -> dict:
+        if self.t[self.i] != "{":
+            self.fail(self.i, "očakávané {")
+        self.i += 1
+        d = {}
+        while self.t[self.i] != "}":
+            if self.t[self.i] in "`\"":
+                k = self.string()
+            else:
+                m = re.compile(r"[A-Za-z_$][\w$]*|\d+").match(self.t, self.i)
+                if not m:
+                    self.fail(self.i, "očakávaný kľúč")
+                k = m.group(0)
+                self.i = m.end()
+            if self.t[self.i] != ":":
+                self.fail(self.i, "očakávané :")
+            self.i += 1
+            d[k] = self.value()
+            if self.t[self.i] == ",":
+                self.i += 1
+        self.i += 1
+        return d
+
+    def render(self, data: dict) -> str:
+        return self.t[:self.start] + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + self.t[self.end:]
 
 
 def set_key(text: str, key: str, value: str) -> tuple[str, int]:
@@ -146,6 +300,7 @@ def patch_server(src: str, tmp: str) -> int:
                 sys.exit(f"mas-assets: šablóna {name}: „{old[:50]}“ nájdené {text.count(old)}×")
             text = text.replace(old, new)
         open(path, "w", encoding="utf-8").write(text)
+    en_server = json.load(open(os.path.join(trdir, "en.json"), encoding="utf-8"))
     n = 0
     for f in sorted(os.listdir(trdir)):
         if not f.endswith(".json"):
@@ -159,6 +314,8 @@ def patch_server(src: str, tmp: str) -> int:
                 v = v.replace(a, b)
             return v
         d = walk_strings(d, fix)
+        if lang == "sk":   # D99: chýbajúce slovenské serverové texty
+            merge_texts(d, SK_SERVER, en_server, "translations/sk.json")
         app = d.setdefault("app", {})
         app["name"] = "psst"
         app["human_name"] = "psst"
@@ -168,6 +325,8 @@ def patch_server(src: str, tmp: str) -> int:
         n += 1
     if n == 0:
         sys.exit("mas-assets: žiadne serverové preklady")
+    if not os.path.exists(os.path.join(trdir, "sk.json")):
+        sys.exit("mas-assets: serverový preklad sk.json chýba")
     return n
 
 
@@ -178,15 +337,25 @@ def main(src: str, out: str) -> None:
     adir = os.path.join(tmp, "assets")
     shutil.copytree(os.path.join(src, "assets"), adir)
     manifest = json.load(open(os.path.join(src, "manifest.json")))
-    tag = "p" + hashlib.sha256(json.dumps([TERMS, SK_EXTRA, FRONT_KEYS, NAME_REPLACE], sort_keys=True).encode()).hexdigest()[:8]
+    tag = "p" + hashlib.sha256(json.dumps([TERMS, SK_EXTRA, FRONT_KEYS, NAME_REPLACE, SK_FRONT],
+                                          sort_keys=True).encode()).hexdigest()[:8]
+    en_entry = manifest.get("locales/en.json")
+    if not en_entry or "locales/sk.json" not in manifest:
+        sys.exit("mas-assets: v manifeste chýba locales/en.json alebo locales/sk.json")
+    en_front = JsLocale(open(os.path.join(adir, en_entry["file"]), encoding="utf-8").read(), en_entry["file"]).data
     n_server = patch_server(src, tmp)
     content: dict[str, str] = {}      # basename -> nový obsah (len zmenené súbory)
     patched = 0
+    n_front = 0
     for name, entry in manifest.items():
         if not name.startswith("locales/") or not name.endswith(".json"):
             continue
         lang = name[len("locales/"):-len(".json")]
         text = open(os.path.join(adir, entry["file"]), encoding="utf-8").read()
+        if lang == "sk":   # D99: chýbajúce slovenské texty React
+            loc = JsLocale(text, entry["file"])
+            n_front = merge_texts(loc.data, SK_FRONT, en_front, entry["file"])
+            text = loc.render(loc.data)
         text, n = set_key(text, "terms_of_service", TERMS.get(lang, TERMS["*"]))
         if n != 1:
             sys.exit(f"mas-assets: {entry['file']}: kľúč terms_of_service nájdený {n}×")
@@ -239,7 +408,8 @@ def main(src: str, out: str) -> None:
     sync(tmp, out)
     shutil.rmtree(tmp)
     print(f"mas-assets: upravených jazykov {patched}, nových súborov {len(renamed)} (-{tag}), "
-          f"serverových prekladov {n_server}, šablóny {', '.join(TEMPLATE_PATCHES)}")
+          f"serverových prekladov {n_server}, šablóny {', '.join(TEMPLATE_PATCHES)}, "
+          f"slovenských textov React {n_front} a serverových {sum(1 for _ in leaves(SK_SERVER))}")
 
 
 if __name__ == "__main__":

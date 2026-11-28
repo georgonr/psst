@@ -1,0 +1,346 @@
+{
+  "@psst": "PSST (D99): slovenské texty stránok MAS (React), ktoré MAS 1.29.0 nemá preložené (v sk.json sú po anglicky). scripts/mas-assets.py ich vloží do skompilovaného jazyka sk (assets/sk-*.js) pod novým menom súboru. Kľúče = cesty ako vo frontend/locales/en.json MAS; množné číslo i18next: kľúč:one / kľúč:few / kľúč:other.",
+  "action": {
+    "clear": "Vymazať",
+    "close": "Zavrieť",
+    "collapse": "Zbaliť",
+    "confirm": "Potvrdiť",
+    "edit": "Upraviť",
+    "expand": "Rozbaliť",
+    "save_and_continue": "Uložiť a pokračovať",
+    "start_over": "Začať odznova"
+  },
+  "branding": {
+    "privacy_policy": {
+      "alt": "Odkaz na zásady ochrany súkromia služby",
+      "link": "Zásady ochrany súkromia"
+    },
+    "terms_and_conditions": {
+      "alt": "Odkaz na podmienky používania služby",
+      "link": "Podmienky používania"
+    }
+  },
+  "common": {
+    "e2ee": "Šifrovanie end-to-end",
+    "previous": "Predchádzajúce",
+    "saved": "Uložené",
+    "saving": "Ukladá sa…"
+  },
+  "frontend": {
+    "account": {
+      "account_password": "Heslo účtu",
+      "contact_info": "Kontaktné údaje",
+      "delete_account": {
+        "alert_description": "Tento účet sa natrvalo vymaže a k žiadnym svojim správam už nebudete mať prístup.",
+        "alert_title": "Prídete o všetky svoje údaje",
+        "button": "Zmazať účet",
+        "dialog_description": "<text>Potvrďte, že chcete zmazať svoj účet:</text>\n<profile />\n<list>\n<item>Účet už nebudete môcť znova aktivovať</item>\n<item>Už sa nebudete môcť prihlásiť</item>\n<item>Vaše meno používateľa už nikto nebude môcť znova použiť, ani vy</item>\n<item>Opustíte všetky miestnosti a priame rozhovory, v ktorých ste</item>\n</list>\n<text>Vaše staré správy ostanú viditeľné pre ľudí, ktorí ich dostali. Chcete svoje odoslané správy skryť pred ľuďmi, ktorí sa do miestností pripoja v budúcnosti?</text>",
+        "dialog_title": "Zmazať tento účet?",
+        "erase_checkbox_label": "Áno, skryť všetky moje správy pred novými členmi",
+        "incorrect_password": "Nesprávne heslo, skúste to znova",
+        "password_label": "Ak chcete pokračovať, zadajte heslo"
+      },
+      "edit_profile": {
+        "display_name_help": "Toto meno uvidia ostatní všade, kde ste prihlásení.",
+        "display_name_label": "Zobrazované meno",
+        "title": "Upraviť profil"
+      },
+      "password": {
+        "change_disabled": "Zmenu hesla vypol správca."
+      },
+      "sign_out": {
+        "button": "Odhlásiť sa z účtu",
+        "dialog": "Odhlásiť sa z tohto účtu?"
+      },
+      "title": "Váš účet"
+    },
+    "add_email_form": {
+      "email_denied_error": "Zadaný e-mail pravidlá servera nepovoľujú",
+      "email_field_help": "Pridajte ďalší e-mail, cez ktorý sa môžete dostať k tomuto účtu.",
+      "email_field_label": "Pridať e-mail",
+      "email_in_use_error": "Zadaný e-mail sa už používa",
+      "email_invalid_error": "Zadaný e-mail je neplatný",
+      "incorrect_password_error": "Nesprávne heslo, skúste to znova",
+      "password_confirmation": "Na pridanie tejto e-mailovej adresy potvrďte heslo účtu"
+    },
+    "browser_session_details": {
+      "current_badge": "Aktuálna"
+    },
+    "browser_sessions_overview": {
+      "body:one": "{{count}} aktívna relácia",
+      "body:few": "{{count}} aktívne relácie",
+      "body:other": "{{count}} aktívnych relácií",
+      "heading": "Prehliadače",
+      "no_active_sessions": {
+        "default": "Nie ste prihlásení v žiadnom webovom prehliadači.",
+        "inactive_90_days": "Všetky vaše relácie boli aktívne za posledných 90 dní."
+      }
+    },
+    "compat_session_detail": {
+      "client_details_title": "Informácie o klientovi"
+    },
+    "device_type_icon_label": {
+      "mobile": "Mobil",
+      "pc": "Počítač",
+      "tablet": "Tablet",
+      "unknown": "Neznámy typ zariadenia"
+    },
+    "email_in_use": {
+      "heading": "E-mailová adresa {{email}} sa už používa"
+    },
+    "end_session_button": {
+      "confirmation_modal_body_text": "Vždy majte prístup k inému overenému zariadeniu alebo ku kľúču na obnovenie, aby ste neprišli o históriu šifrovaných rozhovorov.",
+      "confirmation_modal_title": "Naozaj chcete odstrániť toto zariadenie?",
+      "text": "Odstrániť zariadenie"
+    },
+    "error": {
+      "subtitle": "Vyskytla sa neočakávaná chyba. Skúste to znova.",
+      "title": "Niečo sa pokazilo"
+    },
+    "errors": {
+      "captcha": "Overenie CAPTCHA zlyhalo, skúste to znova",
+      "email_banned": "Tento e-mail pravidlá servera zakazujú",
+      "email_domain_banned": "Túto doménu e-mailu pravidlá servera zakazujú",
+      "email_domain_not_allowed": "Túto doménu e-mailu pravidlá servera nepovoľujú",
+      "email_not_allowed": "Tento e-mail pravidlá servera nepovoľujú",
+      "field_invalid": "Toto pole je neplatné",
+      "invalid_email": "Zadajte platnú e-mailovú adresu",
+      "rate_limit_exceeded": "Za krátky čas ste poslali príliš veľa požiadaviek. Počkajte niekoľko minút a skúste to znova.",
+      "unspecified": "Niečo sa pokazilo. Skúste to znova.",
+      "username_all_numeric": "Meno používateľa nemôže obsahovať len číslice",
+      "username_banned": "Toto meno používateľa pravidlá servera zakazujú",
+      "username_invalid": "Meno používateľa môže obsahovať len malé písmená, číslice a znaky . _ - + / =",
+      "username_invalid_chars": "Meno používateľa obsahuje nepovolené znaky. Použite malé písmená, číslice a znaky . _ - + / =",
+      "username_not_allowed": "Toto meno používateľa pravidlá servera nepovoľujú",
+      "username_too_long": "Meno používateľa je príliš dlhé",
+      "username_too_short": "Meno používateľa je príliš krátke"
+    },
+    "last_active": {
+      "active_date": "Aktívne {{relativeDate}}",
+      "active_now": "Aktívne teraz",
+      "inactive_90_days": "Neaktívne viac ako 90 dní"
+    },
+    "nav": {
+      "device_limit_error": "Dosiahli ste limit zariadení",
+      "devices": "Zariadenia",
+      "plan": "Plán",
+      "settings": "Nastavenia"
+    },
+    "not_found_alert_title": "Nenašlo sa.",
+    "oauth2_client_detail": {
+      "details_title": "Informácie o klientovi",
+      "policy": "Zásady",
+      "terms": "Podmienky služby"
+    },
+    "oauth2_session_detail": {
+      "client_title": "Informácie o klientovi"
+    },
+    "pagination_controls": {
+      "total": "Spolu: {{totalCount}}"
+    },
+    "password_change": {
+      "failure": {
+        "description": {
+          "account_locked": "Váš účet je zablokovaný a teraz sa nedá obnoviť. Ak to nečakáte, obráťte sa na poskytovateľa svojho účtu.",
+          "expired_recovery_ticket": "Platnosť odkazu na obnovenie vypršala. Začnite obnovenie účtu odznova.",
+          "invalid_new_password": "Zvolené nové heslo je neplatné; možno nespĺňa nastavené bezpečnostné pravidlá.",
+          "no_current_password": "Nemáte žiadne súčasné heslo.",
+          "no_such_recovery_ticket": "Odkaz na obnovenie je neplatný. Ak ste ho skopírovali z e-mailu, skontrolujte, či ste skopírovali celý odkaz.",
+          "password_changes_disabled": "Zmena hesla je vypnutá.",
+          "recovery_ticket_already_used": "Odkaz na obnovenie už bol použitý. Znova sa použiť nedá.",
+          "unspecified": "Môže ísť o dočasný problém, skúste to neskôr. Ak problém pretrváva, obráťte sa na poskytovateľa svojho účtu.",
+          "wrong_password": "Zadané súčasné heslo je nesprávne. Skúste to znova."
+        },
+        "title": "Heslo sa nepodarilo zmeniť"
+      },
+      "new_password_again_label": "Zadajte nové heslo ešte raz",
+      "passwords_match": "Heslá sa zhodujú!",
+      "passwords_no_match": "Heslá sa nezhodujú",
+      "subtitle": "Zvoľte si nové heslo k svojmu účtu.",
+      "success": {
+        "description": "Vaše heslo bolo úspešne zmenené.",
+        "title": "Heslo zmenené"
+      },
+      "title": "Zmeňte si heslo"
+    },
+    "password_reset": {
+      "consumed": {
+        "subtitle": "Ak si chcete vytvoriť nové heslo, začnite odznova a vyberte „Zabudli ste heslo?“.",
+        "title": "Odkaz na obnovenie hesla už bol použitý"
+      },
+      "expired": {
+        "resend_email": "Znova poslať e-mail",
+        "subtitle": "Požiadajte o nový e-mail, ktorý sa pošle na: {{email}}",
+        "title": "Platnosť odkazu na obnovenie hesla vypršala"
+      },
+      "subtitle": "Zvoľte si nové heslo k svojmu účtu.",
+      "title": "Obnovte si heslo"
+    },
+    "password_strength": {
+      "placeholder": "Sila hesla",
+      "score": {
+        "0": "Mimoriadne slabé heslo",
+        "1": "Veľmi slabé heslo",
+        "2": "Slabé heslo",
+        "3": "Silné heslo",
+        "4": "Veľmi silné heslo"
+      },
+      "suggestion": {
+        "all_uppercase": "Niektoré písmená, nie však všetky, napíšte veľkými.",
+        "another_word": "Pridajte ďalšie, menej bežné slová.",
+        "associated_years": "Vyhnite sa rokom, ktoré s vami súvisia.",
+        "capitalization": "Veľkým nepíšte len prvé písmeno.",
+        "dates": "Vyhnite sa dátumom a rokom, ktoré s vami súvisia.",
+        "l33t": "Vyhnite sa predvídateľným náhradám písmen, napríklad „@“ namiesto „a“.",
+        "longer_keyboard_pattern": "Použite dlhšie vzory na klávesnici a viackrát zmeňte smer písania.",
+        "no_need": "Silné heslo vytvoríte aj bez symbolov, číslic či veľkých písmen.",
+        "pwned": "Ak toto heslo používate aj inde, zmeňte ho.",
+        "recent_years": "Vyhnite sa nedávnym rokom.",
+        "repeated": "Vyhnite sa opakovaným slovám a znakom.",
+        "reverse_words": "Vyhnite sa bežným slovám napísaným odzadu.",
+        "sequences": "Vyhnite sa bežným postupnostiam znakov.",
+        "use_words": "Použite viac slov, ale vyhnite sa bežným frázam."
+      },
+      "too_weak": "Toto heslo je príliš slabé",
+      "warning": {
+        "common": "Toto heslo sa bežne používa.",
+        "common_names": "Bežné mená a priezviská sa ľahko uhádnu.",
+        "dates": "Dátumy sa ľahko uhádnu.",
+        "extended_repeat": "Opakované vzory znakov ako „abcabcabc“ sa ľahko uhádnu.",
+        "key_pattern": "Krátke vzory na klávesnici sa ľahko uhádnu.",
+        "names_by_themselves": "Samotné mená alebo priezviská sa ľahko uhádnu.",
+        "pwned": "Vaše heslo uniklo pri úniku údajov na internete.",
+        "recent_years": "Nedávne roky sa ľahko uhádnu.",
+        "sequences": "Bežné postupnosti znakov ako „abc“ sa ľahko uhádnu.",
+        "similar_to_common": "Toto heslo sa podobá na bežne používané heslo.",
+        "simple_repeat": "Opakované znaky ako „aaa“ sa ľahko uhádnu.",
+        "straight_row": "Rady kláves idúce za sebou sa ľahko uhádnu.",
+        "top_hundred": "Toto heslo sa používa veľmi často.",
+        "top_ten": "Toto heslo patrí medzi najpoužívanejšie.",
+        "user_inputs": "Heslo by nemalo obsahovať osobné údaje ani údaje o stránke.",
+        "word_by_itself": "Samotné slová sa ľahko uhádnu."
+      }
+    },
+    "register": {
+      "captcha_incomplete": "Pred pokračovaním dokončite overenie CAPTCHA",
+      "captcha_loading": "Overenie CAPTCHA sa ešte načítava, chvíľu počkajte",
+      "continue_with_email": "Pokračovať s e-mailovou adresou",
+      "continue_with_password": "Pokračovať s heslom",
+      "continue_with_provider": "Pokračovať cez {{provider}}",
+      "terms_of_service": "Súhlasím s <a>Podmienkami používania</a>",
+      "username_available": "Toto meno používateľa je voľné",
+      "username_check_failed": "Nepodarilo sa overiť, či je toto meno používateľa voľné",
+      "username_checking": "Overuje sa dostupnosť…"
+    },
+    "reset_cross_signing": {
+      "cancelled": {
+        "description_1": "Toto okno môžete zavrieť a pokračovať v aplikácii.",
+        "description_2": "Ak nemáte prístup k žiadnemu inému overenému zariadeniu ani ku kľúču na obnovenie, na ďalšie používanie aplikácie musíte obnoviť svoju digitálnu identitu.",
+        "heading": "Obnovenie digitálnej identity bolo zrušené"
+      },
+      "description": "Ak nemáte prístup k žiadnemu inému overenému zariadeniu ani ku kľúču na obnovenie, na ďalšie používanie aplikácie musíte obnoviť svoju digitálnu identitu.",
+      "effect_list": {
+        "neutral_1": "Stratíte históriu správ, ktorá je uložená len na serveri",
+        "neutral_2": "Všetky svoje existujúce zariadenia a kontakty budete musieť znova overiť",
+        "positive_1": "Údaje o účte, kontakty, nastavenia a zoznam rozhovorov ostanú zachované"
+      },
+      "failure": {
+        "description": "Môže ísť o dočasný problém, skúste to neskôr. Ak problém pretrváva, obráťte sa na poskytovateľa svojho účtu.",
+        "heading": "Obnovenie digitálnej identity sa nepodarilo povoliť"
+      },
+      "finish_reset": "Dokončiť obnovenie",
+      "heading": "Obnovte svoju digitálnu identitu, ak sa nedá potvrdiť inak",
+      "start_reset": "Začať obnovenie",
+      "success": {
+        "description": "Obnovenie digitálnej identity je povolené na najbližších {{minutes}} minút. Toto okno môžete zavrieť a vrátiť sa do aplikácie.",
+        "heading": "Obnovenie digitálnej identity je povolené. Vráťte sa do aplikácie a dokončite ho."
+      },
+      "warning": "Digitálnu identitu obnovte, len ak nemáte prístup k inému overenému zariadeniu ani ku kľúču na obnovenie."
+    },
+    "session": {
+      "client_id_label": "ID klienta",
+      "current": "Aktuálne",
+      "device_id_label": "ID zariadenia",
+      "finished_label": "Ukončené",
+      "generic_browser_session": "Relácia v prehliadači",
+      "ip_label": "IP adresa",
+      "last_active_label": "Naposledy aktívne",
+      "name_for_platform": "{{name}} pre {{platform}}",
+      "scopes_label": "Rozsahy",
+      "set_device_name": {
+        "help": "Zadajte názov, podľa ktorého toto zariadenie spoznáte.",
+        "label": "Názov zariadenia",
+        "title": "Upraviť názov zariadenia"
+      },
+      "signed_in_label": "Prihlásené",
+      "title": "Podrobnosti o zariadení",
+      "unknown_browser": "Neznámy prehliadač",
+      "unknown_device": "Neznáme zariadenie",
+      "uri_label": "URI"
+    },
+    "session_detail": {
+      "alert": {
+        "text": "Táto relácia neexistuje alebo už nie je aktívna.",
+        "title": "Relácia sa nenašla: {{deviceId}}"
+      }
+    },
+    "user_email": {
+      "delete_button_confirmation_modal": {
+        "action": "Zmazať e-mail",
+        "body": "Zmazať tento e-mail?",
+        "incorrect_password": "Nesprávne heslo, skúste to znova",
+        "password_confirmation": "Na zmazanie tejto e-mailovej adresy potvrďte heslo účtu"
+      },
+      "delete_button_title": "Odstrániť e-mailovú adresu",
+      "email": "E-mail"
+    },
+    "user_sessions_overview": {
+      "approaching_session_limit_warning_description:one": "Využívate {{num_sessions}} z {{count}} miesta pre zariadenia. Keď dosiahnete limit, na pridanie ďalšieho zariadenia budete musieť niektoré odstrániť.",
+      "approaching_session_limit_warning_description:few": "Využívate {{num_sessions}} z {{count}} miest pre zariadenia. Keď dosiahnete limit, na pridanie ďalšieho zariadenia budete musieť niektoré odstrániť.",
+      "approaching_session_limit_warning_description:other": "Využívate {{num_sessions}} z {{count}} miest pre zariadenia. Keď dosiahnete limit, na pridanie ďalšieho zariadenia budete musieť niektoré odstrániť.",
+      "approaching_session_limit_warning_header": "Pozor, blížite sa k limitu zariadení",
+      "heading": "Kde ste prihlásení",
+      "hit_session_limit_warning_description:one": "Využívate {{num_sessions}} z {{count}} miesta pre zariadenia. Pri ďalšom prihlásení budete musieť niektoré zariadenie odstrániť.",
+      "hit_session_limit_warning_description:few": "Využívate {{num_sessions}} z {{count}} miest pre zariadenia. Pri ďalšom prihlásení budete musieť niektoré zariadenie odstrániť.",
+      "hit_session_limit_warning_description:other": "Využívate {{num_sessions}} z {{count}} miest pre zariadenia. Pri ďalšom prihlásení budete musieť niektoré zariadenie odstrániť.",
+      "hit_session_limit_warning_header": "Dosiahli ste limit zariadení",
+      "no_active_sessions": {
+        "default": "Nie ste prihlásení v žiadnej aplikácii.",
+        "inactive_90_days": "Všetky vaše relácie boli aktívne za posledných 90 dní."
+      },
+      "num_sessions_filtered_header": {
+        "header:one": "Filtru zodpovedá {{count}} zariadenie ({{unfiltered_session_total}})",
+        "header:few": "Filtru zodpovedajú {{count}} zariadenia ({{unfiltered_session_total}})",
+        "header:other": "Filtru zodpovedá {{count}} zariadení ({{unfiltered_session_total}})",
+        "unfiltered_session_total:one": "spolu {{count}}",
+        "unfiltered_session_total:few": "spolu {{count}}",
+        "unfiltered_session_total:other": "spolu {{count}}"
+      },
+      "num_sessions_header:one": "{{count}} zariadenie",
+      "num_sessions_header:few": "{{count}} zariadenia",
+      "num_sessions_header:other": "{{count}} zariadení",
+      "session_limit_info:one": "Využívate {{count}}/{{limit}} miest pre zariadenia",
+      "session_limit_info:few": "Využívate {{count}}/{{limit}} miest pre zariadenia",
+      "session_limit_info:other": "Využívate {{count}}/{{limit}} miest pre zariadenia"
+    },
+    "verify_email": {
+      "code_expired_alert": {
+        "description": "Platnosť kódu vypršala. Požiadajte o nový kód.",
+        "title": "Platnosť kódu vypršala"
+      },
+      "code_field_error": "Kód nebol rozpoznaný",
+      "code_field_label": "6-miestny kód",
+      "code_field_wrong_shape": "Kód musí mať 6 číslic",
+      "email_sent_alert": {
+        "description": "Nový kód zadajte nižšie.",
+        "title": "Nový kód odoslaný"
+      },
+      "enter_code_prompt": "Zadajte 6-miestny kód poslaný na: <email>{{email}}</email>",
+      "invalid_code_alert": {
+        "description": "Skontrolujte kód poslaný na váš e-mail a opravte polia nižšie.",
+        "title": "Zadali ste nesprávny kód"
+      },
+      "resend_code": "Znova poslať kód"
+    }
+  }
+}
