@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- psst (D111): landing page of shared psst links https://psst.pro/u/@user:psst.pro and https://psst.pro/r/<room>[/$event].
+     nginx serves this file for every /u/… and /r/… path; assets/link.js reads the address, shows the user / room and
+     the buttons. No external resources, no cookies, no analytics. The Open Graph tags are the same for every link
+     (link previews must not reveal who or which room it is). -->
+<html lang="sk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>psst — pozvánka na rozhovor / invitation to chat</title>
+<meta name="description" content="Otvorte odkaz v psst, súkromnom komunikátore na správy a hovory. · Open this link in psst, a private messenger for messages and calls.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0f17">
+<meta name="color-scheme" content="dark">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/assets/img/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="/assets/img/icon-180.png">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="psst">
+<meta property="og:title" content="psst — pozvánka na rozhovor · invitation to chat">
+<meta property="og:description" content="Súkromné správy a hovory, šifrované medzi zariadeniami. · Private messages and calls, encrypted between devices.">
+<meta property="og:image" content="https://psst.pro/assets/img/og-link.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="psst">
+<meta property="og:locale" content="sk_SK">
+<meta property="og:locale:alternate" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="psst — pozvánka na rozhovor · invitation to chat">
+<meta name="twitter:description" content="Súkromné správy a hovory, šifrované medzi zariadeniami. · Private messages and calls, encrypted between devices.">
+<meta name="twitter:image" content="https://psst.pro/assets/img/og-link.png">
+<meta name="twitter:image:alt" content="psst">
+<link rel="preload" href="/assets/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/site.css">
+<script src="/assets/link.js" defer></script>
+</head>
+<body class="min link">
+<main class="hero">
+<img class="logo" src="/assets/logo.svg" alt="psst" width="64" height="64">
+<p class="kicker" id="kicker">Pozvánka do psst</p>
+<h1 id="name">psst</h1>
+<p class="lead mxid" id="mxid"></p>
+<p class="lead" id="lead">Otvorte odkaz v aplikácii psst. Ak ju ešte nemáte, stiahnite si ju.</p>
+<div class="cta" id="cta">
+<a class="btn primary" id="open" href="https://app.psst.pro/">Otvoriť v psst</a>
+<a class="btn ghost" id="ios" href="https://apps.apple.com/app/id6836805351">Stiahnuť pre iPhone</a>
+<a class="btn ghost" id="android" href="https://app.psst.pro/download/">Android</a>
+<a class="btn ghost" id="web" href="https://app.psst.pro/">Otvoriť na webe</a>
+</div>
+<p class="plat" id="note">Odkaz neobsahuje správy. Obsah rozhovorov je šifrovaný medzi zariadeniami.</p>
+</main>
+<footer>© 2026 GT<nav class="legal-links" aria-label="Právne informácie / Legal"><a href="/privacy" id="privacy">Súkromie</a><a href="/terms" id="terms">Podmienky</a></nav></footer>
+</body>
+</html>

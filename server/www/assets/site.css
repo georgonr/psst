@@ -67,3 +67,10 @@ body.doc{max-width:760px;margin:0 auto;padding:16px 16px 48px;font-size:16px}
 .doc .callout{background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--acc);border-radius:10px;padding:14px 16px}
 .doc hr{border:0;border-top:1px solid var(--bd);margin:44px 0 0}
 .doc-foot{color:var(--mut);font-size:13px;border-top:1px solid var(--bd);margin-top:40px;padding-top:14px}
+
+/* stránka odkazov psst.pro/u/… a /r/… (D111) */
+.link .kicker{color:var(--acc2);font-weight:600;font-size:15px;letter-spacing:.02em;margin:0 0 8px}
+.link .hero h1{overflow-wrap:anywhere;word-break:break-word}
+.link .mxid{margin:-4px 0 12px;font-size:15px;overflow-wrap:anywhere}
+.link .mxid:empty{display:none}
+.link [hidden]{display:none}
