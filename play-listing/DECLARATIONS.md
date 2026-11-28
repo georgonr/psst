@@ -107,3 +107,73 @@ link, and the use case.
 | `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` | Play: not acceptable for chat/calling apps that can use FCM (developer.android.com/training/monitoring-device-state/doze-standby#exemption-cases, row "Instant messaging, chat, or calling app … Yes, using FCM → Not Acceptable") | the "Battery" step in Notifications & calls explains App info → Battery → Unrestricted and opens the app's system page |
 
 `scripts/android/check-manifest.py` fails the CI build and the signing script if any of them comes back.
+
+---
+
+## 4. Precise location declaration (`ACCESS_FINE_LOCATION`) — required from 27 January 2027 (D99)
+
+**What Google requires** (checked 28. 11. 2026; overiť znenie v prehliadači pred vyplnením):
+- Play Console Help „Minimum Scope: Foreground Location Access and the Location Button“
+  (https://support.google.com/googleplay/android-developer/answer/17033915): „All apps requesting precise location
+  (`ACCESS_FINE_LOCATION`) must complete a declaration in the Play Console“; timeline: 15. 4. 2026 oznámenie,
+  „December 2026: The declaration … will be available“ (anglická UK verzia stránky uvádza November 2026),
+  „January 27, 2027: Policy compliance is mandatory for all apps“, potom predĺženie v Play Console (US verzia
+  60 dní, UK verzia 30 dní — overiť v konzole).
+- Policy announcement 29. 10. 2026 (https://support.google.com/googleplay/android-developer/answer/18100766):
+  „Apps using `ACCESS_FINE_LOCATION` must complete a Play Console declaration“ to „justify why coarse location or
+  the location button is insufficient“.
+- Policy „Permissions and APIs that Access Sensitive Information“ (answer/16558241): „Foreground Services access
+  of device location must be user-initiated and temporary“.
+- **Android 17:** psst cieli na API 37. Pre appky s targetSdk 37+ je „Android location button … the required minimum
+  scope method“ pre jednorazové žiadosti; príklad Google: „One-time Sharing: Sending a current location to a friend
+  in a messaging app“. Tlačidlo dáva presnú polohu len na reláciu („strictly for foreground, transactional use“).
+  Ongoing FINE je pre „continuous, real-time tracking“; riadok „Live tracking“ má príklad „sharing ongoing location
+  with people“ — to je živé zdieľanie psst.
+- **Odporúčanie pre tím Androidu (pred 27. 1. 2027):** „Poslať polohu“ (jednorazovo) prerobiť na tlačidlo polohy
+  (`androidx.core.locationbutton`, zatiaľ alpha; pod Android 17 bežná výzva), živé zdieľanie 15/60 min nechať na
+  `ACCESS_FINE_LOCATION`. Ak to do termínu nebude, odpoveď nižšie uvedie obe funkcie pravdivo tak, ako sú.
+
+**Form answers (English, as filled in):**
+
+1. *Which user-facing features in your app require ACCESS_FINE_LOCATION?*
+   - **Live tracking** — "Share live location" in a chat: the user chooses 15 or 60 minutes and the people in that
+     chat see the user's position update in real time until the time ends or the user taps Stop.
+   - **One-time location sharing** — "Send location" in a chat: the user's current position is sent once as a
+     message. *(Vynechať, ak už bude „Send location“ cez tlačidlo polohy.)*
+
+2. *Explain why ACCESS_COARSE_LOCATION or LocationButton is not sufficient and you need ongoing
+   ACCESS_FINE_LOCATION.*
+   > psst is a private messenger. Live location sharing is started only by the user from a chat, for 15 or 60
+   > minutes, and is the reason psst needs ACCESS_FINE_LOCATION. During this session the position is updated
+   > continuously so the other people in the chat can follow the user on the map, for example while walking to a
+   > meeting point; approximate location (≥ 3 km²) would show a point that can be kilometres away and is useless
+   > for this. The session keeps running when the user switches to another app or locks the screen (foreground
+   > service of type location with an ongoing notification and a Stop action), which a session-scoped,
+   > foreground-only location button grant does not cover. Location is read only while a share is active (or once
+   > when the user sends their current position), never in the background otherwise: psst does not request
+   > ACCESS_BACKGROUND_LOCATION, has no ads or analytics, and does not use location for anything else. The
+   > permission is requested only the first time the user starts location sharing, after an in-app explanation.
+
+- Video (ak ho formulár žiada): ten istý ako pre službu v popredí §2d —
+  `https://psst.pro/video/psst-live-location.mp4`.
+- Fakty: D97 (len na vyžiadanie, 15/60 min, `ACCESS_BACKGROUND_LOCATION` zakázané v `check-manifest.py`),
+  manifest `features/location/impl/src/main/AndroidManifest.xml` (COARSE + FINE), `MapDefaults.permissions`.
+
+## 5. Bluetooth (LoRa, 26.11.2) — no Play declaration (D99)
+
+- `BLUETOOTH_SCAN` (`android:usesPermissionFlags="neverForLocation"`) and `BLUETOOTH_CONNECT` are runtime
+  permissions of the „Nearby devices“ group. Play has **no declaration form** for them: they are not in the list of
+  permissions requiring a declaration in „Permissions and APIs that Access Sensitive Information“
+  (answer/16558241: fine/background location, photos/videos, all files, SMS/Call Log, package visibility, install
+  packages, Health Connect, Accessibility, exact alarm, full-screen intent, local network, manage contacts).
+- `neverForLocation` = the app asserts it does not derive physical location from scan results
+  (developer.android.com/develop/connectivity/bluetooth/bt-permissions: „you can strongly assert that your app
+  doesn't derive physical location“; „some BLE beacons are filtered from the scan results“). Meshtastic radios
+  are found by their GATT service, so the filtering does not matter. psst keeps ACCESS_FINE_LOCATION for D97 only;
+  the BLE scan does not need it.
+- **Ak** Android drží spojenie s rádiom na pozadí službou v popredí (typ `connectedDevice`), treba ju vyhlásiť v
+  App content → Foreground service permissions s videom (answer/13392821: video „must show the in-app setup and
+  subsequent device interaction, not system settings“). Toto som v Android forku neoveril (LoRa tam v mojej kópii
+  ešte nie je) — overí tím Androidu podľa zlúčeného manifestu (`check-manifest.py --list`).
+- Local network permission (Android 17, deklarácia od 25. 8. 2027) sa LoRa cez BLE netýka; týkala by sa
+  pripojenia rádia cez Wi-Fi/TCP.
