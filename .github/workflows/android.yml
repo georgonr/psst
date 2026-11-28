@@ -43,9 +43,10 @@ jobs:
     steps:
       - id: m
         run: |
-          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          # D99: + 1 — b59 was built locally for 26.11.2, CI numbers continue above it
+          echo "build=$(( ${{ github.run_number }} + 1 ))" >> "$GITHUB_OUTPUT"
           echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
-          echo "psst Android build b${{ github.run_number }}, $(date -u +%Y-%m-%d)" >> "$GITHUB_STEP_SUMMARY"
+          echo "psst Android build b$(( ${{ github.run_number }} + 1 )), $(date -u +%Y-%m-%d)" >> "$GITHUB_STEP_SUMMARY"
 
   apk:
     name: Unsigned release APKs (gplay = FCM, per ABI)

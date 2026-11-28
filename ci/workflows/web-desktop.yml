@@ -55,7 +55,8 @@ jobs:
                   # PSST versioning (BUILD.md): build number = run number of this workflow, shared by web + desktop.
                   # Shown in Settings → Help & About (web and desktop) as e.g. "1.12.35-b12 (2026-11-15)".
                   PKG=$(jq -r .version apps/web/package.json)
-                  N=${{ github.run_number }}; D=$(date -u +%Y%m%d)
+                  # D99: + 1 — build b39 was made locally (no GitHub Actions run for 26.11.2), so CI numbers continue above it
+                  N=$(( ${{ github.run_number }} + 1 )); D=$(date -u +%Y%m%d)
                   echo "build=$N" >> "$GITHUB_OUTPUT"; echo "date=$D" >> "$GITHUB_OUTPUT"
                   echo "version=${PKG}-b${N} (${D:0:4}-${D:4:2}-${D:6:2})" >> "$GITHUB_OUTPUT"
                   echo "psst web/desktop build b$N, $D, web $(git rev-parse --short=8 HEAD)" >> "$GITHUB_STEP_SUMMARY"
