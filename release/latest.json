@@ -1,13 +1,13 @@
 {
  "web": {
-  "build": 39,
+  "build": 40,
   "date": "20261128",
-  "note": "26.11.2: slovenské preklady, © 2026 GT (lokálny build, D110)",
+  "note": "26.11.2: psst.pro odkazy namiesto matrix.to (D111), slovenské preklady, © 2026 GT (lokálny build)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261128-b39.tar.gz",
-    "sha256": "46ebe3c81f99f3b3dbcd3f0f63c701485246c20b0b1225557557ba037dee54a4"
+    "name": "psst-web-20261128-b40.tar.gz",
+    "sha256": "afe91f1190664b193e3c37e39f2fdd5b910d848b2a76ed3a698baf678e58e032"
    }
   ]
  },
@@ -68,14 +68,14 @@
   ]
  },
  "ios": {
-  "build": 7,
+  "build": 8,
   "date": "20261128",
-  "note": "26.11.2 (7): LoRa",
+  "note": "26.11.2 (8): LoRa, anglické texty LoRa opravené",
   "dir": "ios",
   "files": [
    {
-    "name": "psst-ios-20261128-b7.ipa",
-    "sha256": "10d07502000426537b3b8983c2965445402e7ca1d2af26a63a8f9695bfb09ae2"
+    "name": "psst-ios-20261128-b8.ipa",
+    "sha256": "143868ae32d177ae7a5ceb9009a7e27df87ca95e897a47d5ce5ea65086004a6f"
    }
   ]
  }

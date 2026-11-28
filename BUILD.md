@@ -46,7 +46,7 @@ návod na inštaláciu. Na serveri sú vždy len aktuálne súbory (`/opt/psst/s
 
 | Build | Kto nahrá | Ako |
 |---|---|---|
-| Android | `scripts/android/sign-release.sh` (lokálne, po podpise) | `scripts/release/upload-download.sh android …-arm64.apk` |
+| Android | `scripts/android/sign-release.sh` (lokálne, po podpise, **len s `PSST_UPLOAD_DOWNLOAD_PAGE=1`**, D111) | `scripts/release/upload-download.sh android …-arm64.apk` |
 | Windows + macOS | CI `web-desktop.yml`, job *Publish to app.psst.pro/download* | `scripts/release/upload-download.sh windows|macos …` |
 
 `upload-download.sh` nahrá súbor cez SSH ako `psst-dl` (kľúč smie len `server/scripts/downloads.py`: overí SHA-256
@@ -67,11 +67,24 @@ PSST_NOTE="čo sa zmenilo" scripts/release/fetch-web-desktop.sh <run-id> [--rele
 # --release: GitHub release web-b<N>; na serveri potom: sudo scripts/fetch-web.sh
 ```
 
+**Bez GitHub Actions (D110, 26.11.2):** web aj podpísaný a notarizovaný macOS build na tomto Macu:
+```sh
+cd ~/Developer/psst-web && ./scripts/layered.sh && cd apps/web && cp psst/config.json config.json && rm -rf webapp \
+  && VERSION="<verzia>-b<N> (RRRR-MM-DD)" pnpm run build          # web → apps/web/webapp
+node scripts/psst/check-no-matrix-to.mjs --bundle apps/web/webapp   # brána D111 (v koreni psst-web)
+scripts/desktop/build-mac-local.sh ~/Developer/psst-web <N> <RRRRMMDD>   # → dist/desktop/psst-macos-…-b<N>.{dmg,zip}
+```
+`build-mac-local.sh` skopíruje web do `apps/desktop/webapp`, zabalí `webapp.asar` (kontrola veľkosti a config.json),
+stavia **bez Nx cache** (`NX_SKIP_NX_CACHE=true` — `webapp.asar` nie je vstup Nx, z cache by vyšla appka s cudzím
+alebo prázdnym webom; tak vznikol nepoužiteľný b39) a overí, že appka nesie práve tento `webapp.asar`.
+Čísla CI web/desktop pokračujú nad lokálnymi (`run_number + 2`).
+
 ## 4. Android
 
 ```sh
 gh workflow run android.yml -R georgonr/psst
 PSST_NOTE="čo sa zmenilo" scripts/android/sign-release.sh --run <run-id>   # stiahne, podpíše kľúčom z ~/psst-keys
+# na app.psst.pro/download ide build len s PSST_UPLOAD_DOWNLOAD_PAGE=1 (inak ostane len v dist/)
 # výstup: dist/android/psst-android-<RRRRMMDD>-b<N>-{arm64,armv7,x86_64}.apk, …-b<N>.aab, SHA256SUMS; staré → dist/archive/android/
 scripts/android/check-manifest.py dist/android/*.apk dist/android/*.aab   # Play Protect (D83), beží aj v CI a pred podpisom
 scripts/android/search-gate.sh <x86_64.apk>   # vyhľadávanie v správach (D84), beží v sign-release.sh pred podpisom

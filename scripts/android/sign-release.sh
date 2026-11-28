@@ -13,6 +13,7 @@
 #              GitHub Actions run ID (repo $PSST_REPO, default georgonr/psst) into a temporary directory first.
 #   output-dir default: <repo>/dist/android (gitignored). With the default, the result is published via
 #              scripts/release/publish.py: older files -> dist/archive/android/, dist/LATEST.md updated.
+#   PSST_UPLOAD_DOWNLOAD_PAGE=1  also publish the arm64 APK on https://app.psst.pro/download (off by default, D111)
 #   PSST_NOTE  one sentence "what changed" for dist/LATEST.md (required when publishing to dist/android).
 #
 # File names (BUILD.md "Verzovanie"): psst-android-<YYYYMMDD>-b<build>-<abi>.apk, psst-android-<YYYYMMDD>-b<build>.aab
@@ -163,9 +164,13 @@ unset PSST_STORE_PASS PSST_KEY_PASS
 
 if [ "$PUBLISH" = 1 ]; then
   python3 "$REPO_ROOT/scripts/release/publish.py" android "$BUILD" "$DATE" --note "$PSST_NOTE" "${SIGNED[@]}"
-  # download page https://app.psst.pro/download (D59): upload + HTTPS SHA-256 check; failure = build failure
-  if [ "${PSST_SKIP_DOWNLOAD_PAGE:-0}" != 1 ]; then
+  # download page https://app.psst.pro/download (D59): upload + HTTPS SHA-256 check; failure = build failure.
+  # D111: only on explicit request (PSST_UPLOAD_DOWNLOAD_PAGE=1) — signing a build must never publish it by itself
+  # (26.11.2 b59 went to the page for ~4 minutes because the upload was the default).
+  if [ "${PSST_UPLOAD_DOWNLOAD_PAGE:-0}" = 1 ]; then
     "$REPO_ROOT/scripts/release/upload-download.sh" android "$REPO_ROOT/dist/android/psst-android-$DATE-b$BUILD-arm64.apk" "$PSST_NOTE"
+  else
+    echo "download page NOT updated (set PSST_UPLOAD_DOWNLOAD_PAGE=1 to publish this build on app.psst.pro/download)"
   fi
   rmdir "$OUT_DIR" 2>/dev/null || true
   OUT_DIR="$REPO_ROOT/dist/android"
