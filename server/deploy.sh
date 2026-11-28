@@ -63,7 +63,7 @@ fi
 
 # ----------------------------------------------------------------- domény
 # Hodnoty z existujúceho .env majú prednosť (server_name sa po prvom spustení NESMIE meniť).
-if [ -f .env ]; then for k in SERVER_NAME MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX TURN_DOMAIN WEB_DOMAIN WWW_DOMAIN NTFY_DOMAIN; do
+if [ -f .env ]; then for k in SERVER_NAME MATRIX_DOMAIN APP_DOMAIN CALL_DOMAIN AUTH_DOMAIN AUTH_PREFIX TURN_DOMAIN WEB_DOMAIN WWW_DOMAIN; do
   v="$(sed -n "s/^${k}=//p" .env | tail -1)"; [ -n "${!k+x}" ] || { grep -q "^${k}=" .env && printf -v "$k" '%s' "$v"; } || true
 done; fi
 # D85: Matrix server_name = psst.pro (ID @meno:psst.pro), homeserver + MAS na chat.psst.pro, web na app.psst.pro,

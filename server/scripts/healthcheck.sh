@@ -24,7 +24,7 @@ fi
 
 # --- HTTPS cez nginx (domény → 127.0.0.1, ako keby prišli zvonka)
 K=""; [ -f data/certbot/conf/live/psst/.psst-dummy ] && K="-k"
-RES=""; for d in "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" ${NTFY_DOMAIN:-} ${WEB_DOMAIN:-} ${WWW_DOMAIN:-} ${SERVER_NAME}; do RES+=" --resolve $d:443:127.0.0.1"; done
+RES=""; for d in "$MATRIX_DOMAIN" "$APP_DOMAIN" "$CALL_DOMAIN" "$AUTH_DOMAIN" ${WEB_DOMAIN:-} ${WWW_DOMAIN:-} ${SERVER_NAME}; do RES+=" --resolve $d:443:127.0.0.1"; done
 get() { curl -sS $K $RES --max-time 10 "$@"; }
 check() { # check <popis> <url> <grep-vzor>
   local body; body="$(get "$2" 2>&1)" || { bad "$1 ($2: $body)"; return; }
@@ -68,10 +68,6 @@ code="$(curl -sS -k --resolve psst-unknown.invalid:443:127.0.0.1 --max-time 5 -o
 [ "$code" = 000 ] && ok "neznámy Host: spojenie zatvorené (444)" || bad "neznámy Host dostal HTTP $code"
 code="$(curl -sS --resolve psst-unknown.invalid:80:127.0.0.1 --max-time 5 -o /dev/null -w '%{http_code}' http://psst-unknown.invalid/ 2>/dev/null || true)"
 [ "$code" = 000 ] && ok "neznámy Host na :80: bez presmerovania (444)" || bad "neznámy Host na :80 dostal HTTP $code"
-if [ -n "${NTFY_DOMAIN:-}" ]; then
-  code="$(get -o /dev/null -w '%{http_code}' "https://$NTFY_DOMAIN/")"
-  [ "$code" = 301 ] && ok "push doména len presmeruje (ntfy zrušený)" || bad "https://$NTFY_DOMAIN/ vrátil $code (očakávané 301)"
-fi
 get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/livekit/jwt/healthz" | grep -q 200 && ok "lk-jwt-service" || bad "lk-jwt-service (/livekit/jwt/healthz)"
 check "LiveKit SFU"                                 "https://$MATRIX_DOMAIN/livekit/sfu/" "OK"
 code="$(get -o /dev/null -w '%{http_code}' "https://$MATRIX_DOMAIN/_matrix/federation/v1/version")"
