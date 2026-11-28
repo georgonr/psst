@@ -1298,3 +1298,37 @@ Aby CI neopakovalo tieto čísla, workflowy web-desktop a android berú `run_num
 (Xcode na tomto Macu nie je): build 7 a 8 (2 zo 4 povolených behov). `publish.py` po novom zapisuje do sledovaného
 `release/latest.json` len svoju platformu (čerstvý `dist/` na tomto Macu predtým zmazal záznamy macOS/Windows/
 Android). Stránka na stiahnutie sa nemení: Android b59 a macOS b39 sú len v `dist/` (Play ešte kontroluje b54).
+
+**D111 — Vlastné odkazy psst.pro namiesto matrix.to.** Pozvánka z appky ukazovala náhľad matrix.to (logo a texty
+Matrixu). Všetky odkazy, ktoré appky vytvárajú (pozvať priateľa, zdieľať profil, odkaz na miestnosť a správu, QR,
+pätička pozvánky na webe), sú teraz na psst.pro — cez nastavenie permalinkov, nie prepisovaním textu:
+- **Formát:** používateľ `https://psst.pro/u/@meno:psst.pro`, miestnosť `https://psst.pro/r/%23alias:psst.pro` alebo
+  `/r/!id:psst.pro?via=psst.pro`, správa `/r/<miestnosť>/$udalosť`. Každý identifikátor je jeden segment cesty
+  (kódovanie ako `encodeURIComponent`, `@ ! $ :` ostávajú), `#` vždy ako `%23` (inak by začal fragment). Parsery
+  berú aj tvar `/r/#alias…`, `www.psst.pro`, staré matrix.to, `matrix:` URI a `app.psst.pro/#/room|user/…`.
+- **Text pozvánky:** SK „Ahoj, porozprávajme sa na psst: <odkaz>“, EN „Hi, let's talk on psst: <link>“.
+- **Web/desktop:** `PsstPermalinkConstructor` vyberie `permalink_prefix: https://psst.pro` (config.json vo forku aj
+  serverový default); odkazy psst.pro v správach sa otvárajú v klientovi a zobrazujú ako pill.
+- **iOS:** balík `Components/PsstLinks` (32 testov), most `PsstPermalinks.swift`; odkazy na miestnosti a správy
+  počíta SDK (výber via serverov) a hneď sa prevedú na psst.pro; Associated Domains `applinks:psst.pro`
+  (+ app.psst.pro).
+- **Android:** `PsstPermalinks` + `DefaultPermalinkBuilder`, SDK odkazy cez `SdkPermalinkConverter`; App Links
+  `autoVerify` pre psst.pro a www.psst.pro (`/u/`, `/r/`) v samostatnom filtri.
+- **Výnimka — zmienky v editore formátovaného textu (iOS, Android wysiwyg):** knižnica editora (matrix-rich-text-
+  editor, `matrix_mentions`) rozpozná zmienku len z adresy matrix.to / `matrix:`. S psst.pro by sa pill zmenil na
+  obyčajný odkaz a stratilo by sa `m.mentions` (označený človek by nedostal upozornenie). Preto v HTML zmienky
+  (`formatted_body`, používateľ ho nevidí, vidí len pill) ostáva matrix.to; web a obyčajný editor Androidu píšu psst.pro.
+  Všetky appky zobrazia obe podoby ako pill. Ak editor raz pribudne podpora vlastnej domény, výnimka sa zruší.
+- **Server (psst.pro):** `/.well-known/apple-app-site-association` (MHV67VMY8T.eu.macet.psst, `/u/*`, `/r/*`) a
+  `/.well-known/assetlinks.json` (presne zadaný obsah; upload kľúč = ten istý kľúč `3A:64:…:38:99`, iný na Macu nie
+  je) — 200, `application/json`, bez presmerovania. Stránka `/u/…` a `/r/…` (`link.html` + `assets/link.js`): logo,
+  SK/EN podľa prehliadača, tlačidlá Otvoriť v psst (Android `intent://…;package=eu.macet.psst`, inak `matrix:` URI),
+  Stiahnuť pre iPhone, Android (app.psst.pro/download), Otvoriť na webe. Profily používateľov psst nie sú verejné
+  (`/profile` chce token) — stránka ukáže len ID z odkazu; pri miestnosti len verejný súhrn (MSC3266). Open Graph a
+  Twitter značky sú pre všetky odkazy rovnaké (náhľad neprezradí, o koho ide), obrázok `og-link.png` 1200×630.
+  Vlastná CSP (len `connect-src` na homeserver), `noindex`, žiadne externé zdroje, cookies ani analytika.
+- **Brány:** každá platforma má kontrolu, ktorá zlyhá na matrix.to mimo allowlistu s dôvodom pri každej položke
+  (parsery starých odkazov, výnimka zmienok, testy, upstream dokumenty, validátor `navigateTo` v matrix-widget-api
+  Element Call): iOS `scripts/psst-check-no-matrix-to.sh` (zdroje v `ios-unit`/`ios-release`, hotové IPA
+  `--built`), Android `tools/psst/check-no-matrix-to.sh [apk]`, web `scripts/psst/check-no-matrix-to.mjs
+  [--bundle]` (aj ako unit test).

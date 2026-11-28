@@ -95,6 +95,8 @@ jobs:
           ls "$ANDROID_HOME/build-tools" "$ANDROID_HOME/ndk" 2>/dev/null || true
       - name: Assemble unsigned gplay release APKs
         run: ./gradlew :app:assembleGplayRelease $CI_GRADLE_ARG_PROPERTIES
+      - name: Gate — no matrix.to links in the sources and the release APK (D111)
+        run: bash tools/psst/check-no-matrix-to.sh app/build/outputs/apk/gplay/release/app-gplay-arm64-v8a-release-unsigned.apk
       - name: List outputs
         run: |
           ls -la app/build/outputs/apk/gplay/release/

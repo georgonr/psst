@@ -71,6 +71,9 @@ jobs:
                   VERSION: ${{ steps.version.outputs.version }}
               run: pnpm run build
 
+            - name: Gate — no matrix.to links in the sources and the built bundle (D111)
+              run: node scripts/psst/check-no-matrix-to.mjs --bundle apps/web/webapp
+
             - name: Package tarball
               run: |
                   test -f apps/web/webapp/config.json

@@ -35,7 +35,14 @@ supportedArchitectures:
   cpu: [x64, arm64]
 EOF
 pnpm install --frozen-lockfile --filter element-desktop >/dev/null
+# the web build goes into apps/desktop/webapp first (as web-desktop.yml does); without it asar-webapp packs an EMPTY
+# archive and the app shows nothing (b39 was built that way — never published)
+rm -rf webapp webapp.asar && cp -R ../web/webapp webapp
+cmp webapp/config.json ../web/psst/config.json
+grep -q -- "-b$N " webapp/version || { echo "web build in apps/web/webapp is not b$N: $(cat webapp/version)"; exit 2; }
 pnpm run asar-webapp >/dev/null
+[ "$(stat -f %z webapp.asar)" -gt 10000000 ] || { echo "webapp.asar too small: $(stat -f %z webapp.asar) bytes"; exit 2; }
+node_modules/.bin/asar extract-file webapp.asar config.json && cmp config.json ../web/psst/config.json && rm config.json
 export CSC_LINK="$KEYS/macos-devid/devid.p12" CSC_KEY_PASSWORD="$(cat "$KEYS/macos-devid/p12.pass")" CSC_IDENTITY_AUTO_DISCOVERY=true
 export APPLE_TEAM_ID="$TEAM" APPLE_API_KEY="$KEYS/AuthKey_$KEY_ID.p8" APPLE_API_KEY_ID="$KEY_ID" APPLE_API_ISSUER="$ISSUER"
 rm -rf dist

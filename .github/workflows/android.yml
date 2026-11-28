@@ -112,6 +112,8 @@ jobs:
             got=$(unzip -p app/build/outputs/apk/gplay/release/app-gplay-$abi-release-unsigned.apk "lib/$abi/libmatrix_sdk_ffi.so" | sha256sum | cut -d' ' -f1)
             echo "$abi aar=$want apk=$got"; [ "$want" = "$got" ]
           done
+      - name: Gate — no matrix.to links in the sources and the release APK (D111)
+        run: bash tools/psst/check-no-matrix-to.sh app/build/outputs/apk/gplay/release/app-gplay-arm64-v8a-release-unsigned.apk
       - name: Checkout psst (manifest check script)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
