@@ -16,7 +16,7 @@ plain UTF-8, so a byte search is exact for these names.
 D87 adds the permissions removed for Google Play (install packages, battery-optimisation exemption, location, AD_ID):
 the check fails if any of them comes back, e.g. through a library update. With --list it also prints every
 uses-permission of an APK (for play-listing/FACTS.md).
-D99 (LoRa / Meshtastic over Bluetooth LE) allows exactly four Bluetooth permissions: BLUETOOTH_SCAN, which must carry
+D100 (LoRa / Meshtastic over Bluetooth LE) allows exactly four Bluetooth permissions: BLUETOOTH_SCAN, which must carry
 usesPermissionFlags="neverForLocation", BLUETOOTH_CONNECT (both API 31+), and the legacy BLUETOOTH + BLUETOOTH_ADMIN
 only with maxSdkVersion 30. Any other Bluetooth permission (ADVERTISE, PRIVILEGED, …) fails the check. The APK check
 reads the attributes; the AAB check (protobuf manifests) checks the names.
@@ -45,7 +45,7 @@ FORBIDDEN = {
     "android.permission.ACCESS_BACKGROUND_LOCATION": "location permission ACCESS_BACKGROUND_LOCATION (never: no background location)",
     "com.google.android.gms.permission.AD_ID": "advertising ID permission AD_ID (Play form says: no advertising ID)",
 }
-# D99: the only Bluetooth permissions psst may declare (LoRa radios over BLE), with the attribute each must carry.
+# D100: the only Bluetooth permissions psst may declare (LoRa radios over BLE), with the attribute each must carry.
 BLUETOOTH_PREFIX = "android.permission.BLUETOOTH"
 BLUETOOTH_ALLOWED = {
     "android.permission.BLUETOOTH_SCAN": "neverForLocation",   # usesPermissionFlags neverForLocation (0x10000)
@@ -118,22 +118,22 @@ def check_bluetooth_apk(xmltree: str) -> list[str]:
         if not name.startswith(BLUETOOTH_PREFIX):
             continue
         if name not in BLUETOOTH_ALLOWED:
-            problems.append(f"Bluetooth permission not allowed (D99: only BLUETOOTH_SCAN/CONNECT, legacy BLUETOOTH/ADMIN ≤ 30) ({name})")
+            problems.append(f"Bluetooth permission not allowed (D100: only BLUETOOTH_SCAN/CONNECT, legacy BLUETOOTH/ADMIN ≤ 30) ({name})")
             continue
         rule = BLUETOOTH_ALLOWED[name]
         if rule == "neverForLocation":
             flags = as_int(attrs.get("usesPermissionFlags"))
             if flags is None or not flags & NEVER_FOR_LOCATION:
-                problems.append(f"BLUETOOTH_SCAN without usesPermissionFlags=neverForLocation (D99: the scan must not be usable for location) ({name})")
+                problems.append(f"BLUETOOTH_SCAN without usesPermissionFlags=neverForLocation (D100: the scan must not be usable for location) ({name})")
         elif rule == "maxSdkVersion=30":
             if as_int(attrs.get("maxSdkVersion")) != 30:
-                problems.append(f"legacy Bluetooth permission without maxSdkVersion=30 (D99) ({name})")
+                problems.append(f"legacy Bluetooth permission without maxSdkVersion=30 (D100) ({name})")
     return problems
 
 
 def check_bluetooth_aab(data: bytes, module: str) -> list[str]:
     names = {m.decode() for m in re.findall(rb"android\.permission\.BLUETOOTH[A-Z_]*", data)}
-    return [f"Bluetooth permission not allowed (D99) ({n}) in {module}" for n in sorted(names - set(BLUETOOTH_ALLOWED))]
+    return [f"Bluetooth permission not allowed (D100) ({n}) in {module}" for n in sorted(names - set(BLUETOOTH_ALLOWED))]
 
 
 def permissions(path: str) -> list[str]:
@@ -177,14 +177,14 @@ def main() -> int:
                 print(f"FAIL {os.path.basename(path)}: {p}")
         else:
             print(f"OK   {os.path.basename(path)}: no SMS / notification listener / accessibility / Play-restricted "
-                  f"permissions (D87); Bluetooth only SCAN (neverForLocation) / CONNECT / legacy ≤ 30 (D99)"
+                  f"permissions (D87); Bluetooth only SCAN (neverForLocation) / CONNECT / legacy ≤ 30 (D100)"
                   + (f"; label \"{LABEL}\"" if path.endswith(".apk") else ""))
         if listing and path.endswith(".apk"):
             for perm in permissions(path):
                 print(f"     uses-permission {perm}")
     if bad:
         print("Forbidden manifest entries: Play Protect blocks SMS / listener / accessibility on sideload (D83); the rest "
-              "were removed for Google Play (D87); Bluetooth is limited to the LoRa permissions (D99). Remove them before release.")
+              "were removed for Google Play (D87); Bluetooth is limited to the LoRa permissions (D100). Remove them before release.")
     return bad
 
 

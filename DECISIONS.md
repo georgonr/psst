@@ -1136,3 +1136,165 @@ lokalizácie prepnuté na sk. Ostatné jazyky systému dostanú angličtinu. Web
 značky (`brand` psst) cez premennú, preto ostáva bez zmeny; psst texty tam majú len SK/EN (ostatné jazyky → EN).
 Súčasne opravené zobrazenie psst nastavení v časovej osi Android/iOS: Rust SDK hlási `m.room.retention` ako
 `org.matrix.msc1763.retention` a filter Element X Android vyraďoval všetky vlastné stavy (aj ochranu obrazovky).
+
+## psst 26.11.2: LoRa na iOS a Androide, upratovanie (2026-11-28, dávka 29)
+
+**D99 — LoRa (Meshtastic) v ostrej psst pre iOS.** Kód z psst lab (vetva `lab/meshtastic`, L1-01 … L1-24) je
+v ostrej appke `eu.macet.psst` ako balík `Components/PsstLab` (bez ikony lab, názov appky v textoch z
+`CFBundleDisplayName`). Vstup: tlačidlo s anténou na domovskej obrazovke; obrazovka sa otvára cez
+`NavigationSplitCoordinator.setFullScreenCoverCoordinator` (poučenie L1c — inak ju SwiftUI pri zmene hierarchie
+zavrie), navigácia NavigationStack bez sheetov. V detaile priameho rozhovoru „Prepojiť s LoRa“ pošle kartu
+`psstlab1:` ako šifrovanú správu `m.text` s `eu.macet.psst.lab.lora_card`; karta z časovej osi sa prijme len od
+používateľa, ktorého Matrix ID nesie, nie vlastná, a len ak je novšia ako existujúce prepojenie. Voliteľná: appka
+bez rádia funguje celá, povolenie Bluetooth sa pýta až pri hľadaní rádia. `NSBluetoothAlwaysUsageDescription`
+pravdivo (EN/SK: pripojenie k vlastnému rádiu Meshtastic na posielanie správ bez internetu); režim na pozadí
+`bluetooth-central` **nie** (len pri otvorenej appke — menej povolení a menej otázok pri kontrole). Texty LoRa
+(~140 kľúčov) v `Resources/{en,sk}.lproj`, testy: žiadny slovenský literál v kóde, texty obrazoviek lokalizované.
+Overené v IPA buildu 7: NSE.appex, ShareExtension.appex, aps-environment, App Groups, communication notifications,
+UIBackgroundModes (audio, fetch, processing, voip, location) a balík `PsstLab_PsstMesh.bundle` en/sk — push,
+rozšírenia, hovory, miznúce správy, ochrana obrazovky a poloha sa nestratili.
+
+**D100 — LoRa v Androide, ten istý formát.** `libraries/psstmesh` (čisté JVM, bez Androidu — dá sa testovať na Macu
+cez sériový port) + `features/lora` (api/impl/test). Oficiálne protobufy Meshtastic v2.8.3 bez úprav (GPL-3.0,
+kompatibilná s AGPL-3.0) ako Java lite, Client API rovnako ako iOS (want_config → config_complete, heartbeat 60 s,
+stop-and-wait: jeden rámec naraz, timeout rámca 75 s, ACK 120 s), zoznam rádií v poradí prvého výskytu, max
+2 obnovenia/s. Kryptografia **BouncyCastle 1.85** (Bouncy Castle Licence = MIT): platforma na minSdk 24 nemá X25519
+ani ChaCha20-Poly1305 s vlastným nonce. Súkromný kľúč vznikne v appke, uložený zašifrovaný kľúčom AES-GCM
+z Android Keystore v `noBackupFilesDir` (Keystore na API 24 neudrží exportovateľný X25519). **Žiadna AdminMessage**:
+Android nenastavuje región rádia, len povie, nech ho používateľ nastaví v appke Meshtastic. Vstup: tlačidlo LoRa
+v hornej lište domovskej obrazovky (na hornom back stacku, zmena domovskej obrazovky ho nezavrie), „Prepojiť
+s LoRa“ v detaile priameho rozhovoru — odmietnuté v nešifrovanom rozhovore a kým nebolo pripojené rádio; karty
+z časovej osi s tými istými pravidlami ako iOS. Povolenia: BLUETOOTH_SCAN s `neverForLocation`, BLUETOOTH_CONNECT,
+staré BLUETOOTH/BLUETOOTH_ADMIN s `maxSdkVersion 30`, pýtané až pri „Hľadať rádiá“; na Androide ≤ 11 systém pre
+BLE sken chce FINE polohu, tá je už deklarovaná pre polohu (D97) — nič nové, žiadna poloha na pozadí.
+`scripts/android/check-manifest.py` povolí presne tieto Bluetooth povolenia (SCAN musí mať neverForLocation,
+staré musia mať maxSdk 30), akékoľvek iné zhodí build. Chýba oproti iOS: lokálne upozornenie na správu LoRa na
+pozadí a riadok „Otvoriť LoRa“ v detaile rozhovoru (ďalšia verzia).
+
+**D101 — Kompatibilita iOS ↔ Android: spoločné testovacie vektory a test cez Heltec.** `TestVectors/
+psst-lora-vectors-v1.json` (psst-ios `Components/PsstLab`, kópia bez zmeny v psstmesh `src/test/resources`):
+identity a (Heltec !bd460df0) a b (T-LoRa !ea251718) s verejnými testovacími kľúčmi, kľúče smerov, správy (1, 2
+a 8 rámcov, prázdna s počítadlom 70000), karty, okno proti opakovaniu, poškodené rámce. Obe implementácie musia
+vyrobiť a prijať tie isté bajty (Swift 38 testov, JVM 61 testov). Cez skutočné rádio: Android (JVM, psstmesh) poslal
+cez Heltec 1- a 3-rámcovú správu, každý rámec potvrdený uzlom !ea251718, presné bajty zo vzduchu dekódoval Swift
+(`psst-mesh decode`); Swift poslal 1- a 3-rámcovú správu, rámce dekódoval JVM (`gradlew :libraries:psstmesh:decodeFrames`).
+Obidva smery PASS. Prvý beh Swiftu: 3-rámcová správa bez ACK od uzla (rádiová linka), opakovanie hneď OK.
+Príjem psst správy zo vzduchu nejde: druhé rádio nemá klienta psst. Rádio ani MQTT sa nemenili.
+
+**D102 — Android R8: obfuskácia ostáva zapnutá.** Odstránené `-dontobfuscate`, zmenšovanie bolo zapnuté už predtým;
+explicitné keep pravidlá: Rust SDK / uniffi / JNA, JNI opusencoder, polia protobuf-lite, Parcelable CREATOR (Element
+Call, matrix-rtc, WebRTC a kotlinx.serialization majú vlastné). Overené release APK (obfuskované) na emulátore API 34
+a 35: prihlásenie MAS, zoznam miestností, E2EE správy oboma smermi, miznúce správy, ochrana obrazovky, poloha,
+obrazovky LoRa, nastavenia, licencie, odhlásenie — bez FATAL a bez chýb R8 v logcat. `ndk.debugSymbolLevel =
+SYMBOL_TABLE`, AAB nesie mapovací súbor R8. Natívne symboly v lokálnom AAB **nie sú**: Mac nemá NDK a všetky
+pribalené .so okrem libjnidispatch sú už stripnuté (Play ich teda nedostane ani z CI). Mapovací súbor sa archivuje
+s každým buildom (`dist/android/mapping-b<N>.txt`) — stack trace z APK mimo Play sú obfuskované.
+
+**D103 — Android: drobnosti pred 26.11.2.** Slovenčina: „Noví členovia vidia históriu“ a ~290 ďalších textov
+upstreamu, pre ktoré Localazy slovenčinu nemá — ako prekrytia v module app (synchronizácia Localazy ich nevráti do
+angličtiny); vynechané obrazovky, na ktoré sa v psst nedá dostať. Ťuknutie na upozornenie živej polohy otvorí
+miestnosť bežiaceho zdieľania (ten istý deep link ako pri správach). Návod na batériu podľa skutočných textov
+Android 14 a 15 (EN/SK): „Spotreba batérie aplikáciou“, na Androide 15 navyše „Povoliť používanie na pozadí“ pred
+voľbou Bez obmedzení. Variant **fdroid sa nezostaví** (Metro: chýba `Set<PushProvider>`, od 84208b65 je Firebase len
+v gplay a UnifiedPush vypnutý) — psst dodáva len gplay; oprava alebo odstránenie z dokumentácie je na ďalšiu verziu.
+
+**D104 — Staré adresy na macet.eu: v repozitároch psst už nie sú, server ich nepozná, DNS záznamy treba zmazať.**
+- **Stav repozitárov:** v georgonr/psst (mimo histórie v DECISIONS.md a REPORT.md, ktoré sú záznamom minulosti a
+  nemenia sa) ani v psst-web nie je žiadna adresa `*.macet.eu`. Ostávajú len identifikátory, ktoré sa meniť
+  nesmú (D85): balík / bundle `eu.macet.psst`, App Group, pusher app_id, typy udalostí `eu.macet.psst.*`,
+  Firebase projekt `psst-macet`, podpisový certifikát Android s `O=macet.eu`. Názov firmy MACET, s.r.o. sa nemení.
+- **Server (repo):** šablóny nginx nemajú pre staré názvy vhost, certifikát ani presmerovanie (D85). Zvyšok bol
+  len `NTFY_DOMAIN` (bývalé `push.macet.eu` → 301): `deploy.sh` ho už nečíta a `healthcheck.sh` preň nečaká 301.
+- **Presmerovanie 301 nie (úsudok):** overené zvonka 28. 11. 2026 — `chat|app|call|push|psst|ntfy.macet.eu` stále
+  ukazujú na server psst (204.168.160.131) a dostanú na :443 odmietnutý TLS handshake (`unrecognized name`), na :80
+  prázdnu odpoveď (444). Presmerovanie by na HTTPS potrebovalo certifikát pre staré názvy, teda vrátiť macet.eu do
+  certifikátu psst, a nemalo by komu slúžiť: staré relácie sú pre iný server_name a nedajú sa preniesť (D85), staré
+  buildy (Android b44, desktop b27) pýtajú `latest.json` na starej doméne cez HTTPS a z presmerovania na nový
+  server by im nič nevzniklo bez novej inštalácie; členovia dostali odkaz priamo. Čistejšie je záznamy zmazať.
+- **DNS záznamy na zmazanie** (zóna macet.eu u Webglobe; overené `dig` priamo na ns1.webglobe.sk, TTL 3600; iné typy
+  — AAAA, CNAME, TXT, MX, CAA, `_acme-challenge`, SRV `_matrix` — pre ne neexistujú):
+  | Názov | Typ | Hodnota |
+  |---|---|---|
+  | chat.macet.eu | A | 204.168.160.131 |
+  | app.macet.eu | A | 204.168.160.131 |
+  | call.macet.eu | A | 204.168.160.131 |
+  | push.macet.eu | A | 204.168.160.131 |
+  | psst.macet.eu | A | 204.168.160.131 |
+  | ntfy.macet.eu | A | 204.168.160.131 |
+  - **Nemazať:** koreň `macet.eu`, `www`, `fx`, `zakazky` a wildcard `*.macet.eu` (195.181.248.25, hosting firmy) —
+    nepatria psst. `turn.`, `auth.`, `pst.macet.eu` (a ďalšie) samostatný záznam nemajú, odpovedá za ne wildcard.
+  - Po zmazaní budú aj tieto názvy odpovedať cez wildcard (hosting Webglobe: HTTP 301 na https, HTTPS s cudzím
+    certifikátom) — obsah psst ani certifikát psst tam nebude. API token na DNS nie je, zmazanie robí majiteľ ručne.
+
+**D105 — Autorské práva psst sú „© 2026 GT“.** Tam, kde psst ukazuje vlastné autorské práva: pätička psst.pro
+(úvodná SK/EN, /privacy, /terms, /delete-account, /support — namiesto „Powered by GT“), web a desktop (Pomocník a O
+aplikácii → Verzie, pätička prihlasovacích obrazoviek), desktop metadáta (macOS O aplikácii
+`NSHumanReadableCopyright`, Windows `LegalCopyright` — predtým „Copyright © 2026 psst“ z autora v package.json),
+App Store pole Copyright `2026 GT` (Apple pridá „©“), koniec úplného popisu v Google Play (Play pole Copyright nemá).
+Nemenia sa licenčné texty (AGPL, „psst is free software based on Element…“), hlavičky zdrojových súborov upstreamu
+ani prevádzkovateľ MACET, s.r.o. v Podmienkach, Súkromí a kontaktoch. Android: O aplikácii → Copyright „© 2026 GT“;
+iOS: Právne informácie → riadok Copyright „© 2026 GT“.
+
+**D106 — Chýbajúce slovenské texty na webe a desktope.** Element Web 1.12.35 mal v sk.json 182 nepreložených
+kľúčov, shared-components 190 a desktop 7 (v slovenskom rozhraní sa ukazovali anglicky: filtre a ponuky zoznamu
+miestností, výber emoji, dlaždice hovorov, chyby dešifrovania, šifrovanie a obnovenie, odhlásenie zariadenia,
+prihlásenie QR, pozvánky, sekcie, vlákna…). Preložené všetky okrem labs, devtools a Element Call mock (v psst
+skryté). Kontrola: zástupné symboly `%(…)s` a značky `<…>` sedia s angličtinou, oxfmt OK, `matrix-gen-i18n` OK
+(zmazal nepoužívaný kľúč `powered_by_matrix`). Nadpis „Source code“ v Pomocníkovi je preložený („Zdrojový kód“),
+licenčná veta ostáva anglicky. Výrazy podľa existujúceho prekladu: rozhovor, miestnosť, kľúč na obnovenie,
+úložisko kľúčov, digitálna identita, poskytovateľ účtu.
+
+**D107 — Slovenčina na stránkach MAS (prihlásenie, registrácia, účet).** MAS 1.29.0 nemá v serverových
+prekladoch `translations/sk.json` 112 kľúčov (pätička Zásady / Podmienky, chyby mena a CAPTCHA, súhlas, prepojenie
+zariadenia, zablokovaný / zmazaný účet, obnovenie…) a v React jazyku sk je 227 textov po anglicky („Your account“,
+dialóg zmazania účtu, sila hesla, zariadenia, chyby…). Tým istým mechanizmom ako D88/D89 (bez forku MAS):
+- texty sú v `server/mas/sk-server.json` (111) a `server/mas/sk-frontend.json` (231 vrátane slovenského
+  množného čísla `:few`); `scripts/mas-assets.py` ich pri deployi doplní — serverové do `translations/sk.json`,
+  React do skompilovaného `assets/sk-*.js`: modul (`var e={…}` s reťazcami v \`…\` a `JSON.parse(\`…\`)`) sa
+  rozoberie na dáta, doplní a zapíše späť ako JSON v tom istom module s tým istým exportom;
+- upravený jazyk dostane nové meno `…-p<tag>` (tag zahŕňa aj nové texty) — staré immutable assets v cache nič
+  nerozbijú (poučenie D88);
+- každá cesta kľúča musí byť v anglickom origináli, inak deploy skončí (pri novej verzii MAS);
+- dialóg zmazania účtu je po slovensky bez „(MXID)“ a bez bodu o identity serveri (ako D89 v angličtine);
+  text políčka 18+ a hlášky hCaptcha nastavuje ďalej D88.
+- Overené lokálne na kópii živých assets psst (moduly en/sk) a šablónach / prekladoch MAS v1.29.0: parser vráti
+  presne upstream preklady, prepis späť je zhodný, modul sa načíta v node (`default.frontend.account.title` =
+  „Váš účet“), manifest a SRI prepočítané.
+- **Nasadené 28. 11. 2026** podľa pravidiel servera: pred zmenou záloha databáz a konfigurácie, reštart len
+  kontajnera MAS, potom overené prihlásenie, registrácia s hCaptcha (SK aj EN stránka), správy, hovory (rtc foci,
+  lk-jwt) a healthcheck — všetko OK; účty gg, psstadmin, review, review-partner, milan nedotknuté.
+
+**D108 — App Store 26.11.2: poznámka pre kontrolu o LoRa a „Čo je nové“.** `appstore-listing/26.11.2/`:
+anglický odsek do App Review Notes (LoRa je voliteľná, potrebuje vlastné rádio Meshtastic cez BLE, appka bez neho
+funguje celá, povolenie Bluetooth až po „Search for devices via Bluetooth…“ na obrazovke LoRa; kontrolór ju otvorí
+tlačidlom s anténou na domovskej obrazovke aj bez rádia) a What's New EN/SK. Pravdivo: šifrovanie psst end-to-end
+platí pre priame správy medzi prepojenými kontaktmi psst, kanály majú len šifrovanie Meshtastic. Vkladá majiteľ
+ručne; žiadny skript metadáta nemení.
+
+**D109 — Google Play: deklarácia presnej polohy a Data safety pre LoRa.** Podklady v `play-listing/DECLARATIONS.md`
+§4 a `play-listing/FORMS.md` §7 (LoRa):
+- **Presná poloha:** od 27. 1. 2027 musí každá appka s `ACCESS_FINE_LOCATION` vyplniť deklaráciu v Play Console
+  (Minimum Scope, support.google.com/googleplay/android-developer/answer/17033915; oznámenie 29. 10. 2026,
+  answer/18100766). Odpoveď psst: Live tracking (živé zdieľanie 15/60 min) a One-time location sharing (poslať
+  polohu), obe spustené používateľom, s odôvodnením, prečo približná poloha / tlačidlo polohy nestačí. psst cieli na
+  API 37 (Android 17), kde je pre jednorazové žiadosti tlačidlo polohy požadovaná minimálna cesta — tímu Androidu
+  odporúčam do 27. 1. 2027 posúdiť „Poslať polohu“ cez tlačidlo polohy (živé zdieľanie zostáva na FINE).
+- **LoRa a Data safety:** správy LoRa idú z telefónu cez BLE do vlastného rádia používateľa a odtiaľ rádiom, nikdy
+  cez servery psst ani tretej strany; prevádzkovateľ k nim nemá prístup. Google definuje „collect“ ako odoslanie
+  z appky mimo zariadenia, o priamom prenose medzi zariadeniami / do periférie nehovorí. Opatrne: **formulár sa
+  nemení** — „Messages → Other in-app messages“ je už deklarované ako Collected (Required, App functionality),
+  takže pokrýva aj správy LoRa pri ľubovoľnom výklade; karta s verejným kľúčom pri „Link with LoRa“ ide ako
+  bežná správa psst (už deklarované). Appka neposiela polohu cez LoRa; BLE sken s `neverForLocation` polohu
+  neodvodzuje → Location bez zmeny (deklarované kvôli D97).
+- **Bluetooth:** pre BLUETOOTH_SCAN / BLUETOOTH_CONNECT Play deklaráciu nevyžaduje (nie sú v zozname politiky
+  Permissions and APIs that Access Sensitive Information, answer/16558241). Ak by Android držal spojenie s rádiom
+  na pozadí službou v popredí (typ connectedDevice), treba deklaráciu služby v popredí s videom (answer/13392821).
+
+**D110 — Buildy 26.11.2 na tomto Macu, GitHub len pre iOS.** Podľa pokynu (procesor tohto počítača, GitHub len na
+nutné) sa web, desktop a Android zostavili lokálne, rovnakými krokmi ako workflowy: web b39 (nasadený na
+app.psst.pro), macOS b39 (`scripts/desktop/build-mac-local.sh`: Developer ID, notarizácia, staple; dočasná keychain
+sa po builde zmaže), Android b59 (gplay, `PSST_BUILD_NUMBER=59`, podpis lokálne `scripts/android/sign-release.sh`).
+Aby CI neopakovalo tieto čísla, workflowy web-desktop a android berú `run_number + 1`. iOS ide len cez GitHub Actions
+(Xcode na tomto Macu nie je): build 7 a 8 (2 zo 4 povolených behov). `publish.py` po novom zapisuje do sledovaného
+`release/latest.json` len svoju platformu (čerstvý `dist/` na tomto Macu predtým zmazal záznamy macOS/Windows/
+Android). Stránka na stiahnutie sa nemení: Android b59 a macOS b39 sú len v `dist/` (Play ešte kontroluje b54).

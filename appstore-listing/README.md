@@ -22,7 +22,7 @@ Dĺžky textov (znaky / bajty):
 Snímky vznikli v iOS simulátore (CI `ios-store.yml`, iOS 27.2, stavový riadok 9:41) zo zdrojového kódu buildu psst iOS b2 na produkčnom serveri psst.pro s vymyslenými osobami
 (testovacie účty `qa-*`, po nafotení deaktivované, miestnosti zmazané). Bez alfa kanála (App Store ho odmieta).
 
-## Verzia 26.11.2 (D99)
+## Verzia 26.11.2 (D108)
 
 Vkladá **majiteľ ručne** v App Store Connect (žiadny skript metadáta App Store nemení; `scripts/ios/testflight.py`
 nahráva len build):

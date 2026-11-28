@@ -19,7 +19,7 @@ Dôkazy: `play-listing/FACTS.md` (rovnaký kód a server ako iOS), IPA b3 (`dist
 | Age Rating | pozri bod 5 | |
 | Privacy Policy URL | `https://psst.pro/privacy` | stránka verejná, SK + EN |
 | **Pozor** | Dnešná hodnota v App Store Connect je `https://app.psst.pro/privacy.html` (nastavil ju skript v dávke 19). Funguje, lebo presmeruje na psst.pro/privacy, ale odporúčam ju prepísať na `https://psst.pro/privacy` (neurobil som to: do App Store Connect sa okrem buildu nič neposielalo). | `scripts/ios/testflight.py` PRIVACY_URL |
-| Copyright | `2026 GT` | Apple pred hodnotu sám pridá „©“, v App Store sa zobrazí „© 2026 GT“ (D99). Prevádzkovateľ v Podmienkach, Súkromí a kontaktoch ostáva MACET, s.r.o. |
+| Copyright | `2026 GT` | Apple pred hodnotu sám pridá „©“, v App Store sa zobrazí „© 2026 GT“ (D105). Prevádzkovateľ v Podmienkach, Súkromí a kontaktoch ostáva MACET, s.r.o. |
 
 ## 2. Pricing and Availability
 

@@ -108,7 +108,7 @@ def main():
     STATE.write_text(json.dumps(state, indent=1, ensure_ascii=False))
     # tracked copy for the CI check of the download page (scripts/release/check-download-page.py, D59)
     (ROOT / "release").mkdir(exist_ok=True)
-    # D99: merge only this platform — a fresh local dist/ (another machine) must not drop the other platforms' entries
+    # D110: merge only this platform — a fresh local dist/ (another machine) must not drop the other platforms' entries
     tracked_path = ROOT / "release" / "latest.json"
     tracked = json.loads(tracked_path.read_text()) if tracked_path.exists() else {}
     tracked[a.platform] = state[a.platform]

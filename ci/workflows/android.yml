@@ -43,7 +43,7 @@ jobs:
     steps:
       - id: m
         run: |
-          # D99: + 1 — b59 was built locally for 26.11.2, CI numbers continue above it
+          # D110: + 1 — b59 was built locally for 26.11.2, CI numbers continue above it
           echo "build=$(( ${{ github.run_number }} + 1 ))" >> "$GITHUB_OUTPUT"
           echo "date=$(date -u +%Y%m%d)" >> "$GITHUB_OUTPUT"
           echo "psst Android build b$(( ${{ github.run_number }} + 1 )), $(date -u +%Y-%m-%d)" >> "$GITHUB_STEP_SUMMARY"

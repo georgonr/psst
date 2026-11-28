@@ -110,7 +110,7 @@ link, and the use case.
 
 ---
 
-## 4. Precise location declaration (`ACCESS_FINE_LOCATION`) — required from 27 January 2027 (D99)
+## 4. Precise location declaration (`ACCESS_FINE_LOCATION`) — required from 27 January 2027 (D109)
 
 **What Google requires** (checked 28. 11. 2026; overiť znenie v prehliadači pred vyplnením):
 - Play Console Help „Minimum Scope: Foreground Location Access and the Location Button“
@@ -159,7 +159,7 @@ link, and the use case.
 - Fakty: D97 (len na vyžiadanie, 15/60 min, `ACCESS_BACKGROUND_LOCATION` zakázané v `check-manifest.py`),
   manifest `features/location/impl/src/main/AndroidManifest.xml` (COARSE + FINE), `MapDefaults.permissions`.
 
-## 5. Bluetooth (LoRa, 26.11.2) — no Play declaration (D99)
+## 5. Bluetooth (LoRa, 26.11.2) — no Play declaration (D109)
 
 - `BLUETOOTH_SCAN` (`android:usesPermissionFlags="neverForLocation"`) and `BLUETOOTH_CONNECT` are runtime
   permissions of the „Nearby devices“ group. Play has **no declaration form** for them: they are not in the list of

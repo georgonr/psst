@@ -109,7 +109,7 @@ V šifrovaných rozhovoroch to platí, no polohu možno poslať aj do verejného
 ju tam vidí → opatrne **Collected: Yes, Shared: No, Optional, App functionality**, Precise aj Approximate (appka
 žiada FINE aj COARSE). Deklarácia služby v popredí typu location: DECLARATIONS.md §2d.
 
-**LoRa (26.11.2, D99) — formulár sa nemení.** Správy LoRa idú z telefónu cez Bluetooth LE do vlastného rádia
+**LoRa (26.11.2, D109) — formulár sa nemení.** Správy LoRa idú z telefónu cez Bluetooth LE do vlastného rádia
 Meshtastic používateľa a odtiaľ rádiom k ďalším rádiám; nikdy cez servery psst ani tretej strany a prevádzkovateľ
 k nim nemá prístup. Google: „'Collect' means transmitting data from your app off a user's device“, „'Sharing'
 refers to transferring user data collected from your app to a third party“, mimo rozsahu sú údaje „only processed

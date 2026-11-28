@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# PSST (D99): signed + notarized macOS desktop build ON THIS MAC (same steps as web-desktop.yml → desktop-mac), for
+# PSST (D110): signed + notarized macOS desktop build ON THIS MAC (same steps as web-desktop.yml → desktop-mac), for
 # releases made without GitHub Actions. Needs: Command Line Tools (codesign, notarytool, stapler), pnpm, the web build
 # in <psst-web>/apps/web/webapp (built with the same build number), keys in ~/psst-keys (never printed).
 #
