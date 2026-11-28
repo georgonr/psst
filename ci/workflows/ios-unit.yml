@@ -31,6 +31,9 @@ jobs:
           lfs: false
           submodules: false
           persist-credentials: false
+      - name: Gate — no matrix.to links in the sources (D111)
+        working-directory: ios
+        run: bash scripts/psst-check-no-matrix-to.sh
       - name: Select public Xcode
         run: psst/scripts/ios/select-xcode.sh psst/ci/ios-public-xcode.json
       - name: Tools + project

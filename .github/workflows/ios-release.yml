@@ -91,6 +91,9 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      - name: Gate — no matrix.to links in the sources (D111)
+        working-directory: ios
+        run: bash scripts/psst-check-no-matrix-to.sh
       - name: Select public (GM) Xcode — explicit build from ci/ios-public-xcode.json (D90)
         run: |
           # never "latest": on this runner /Applications/Xcode_27.3.app is a BETA (27C5020n) and App Store Connect
@@ -262,6 +265,12 @@ jobs:
         run: |
           python3 psst/scripts/ios/check-ipa-xcode.py "$RUNNER_TEMP/export/psst.ipa" psst/ci/ios-public-xcode.json | tee -a "$GITHUB_STEP_SUMMARY"
 
+      - name: Gate — no matrix.to in the exported app's texts/plists (D111)
+        working-directory: ios
+        run: |
+          rm -rf "$RUNNER_TEMP/ipa-check" && mkdir -p "$RUNNER_TEMP/ipa-check"
+          unzip -q "$RUNNER_TEMP/export/psst.ipa" -d "$RUNNER_TEMP/ipa-check"
+          bash scripts/psst-check-no-matrix-to.sh --built "$RUNNER_TEMP/ipa-check/Payload"
       - name: Upload to TestFlight
         if: ${{ inputs.upload_to_testflight }}
         env:
