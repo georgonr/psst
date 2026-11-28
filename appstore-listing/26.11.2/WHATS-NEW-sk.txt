@@ -1,3 +1,3 @@
-Správy cez LoRa (voliteľné): s vlastným rádiom Meshtastic LoRa pripojeným cez Bluetooth psst posiela a prijíma krátke správy aj bez mobilnej siete či internetu. Priame správy medzi prepojenými kontaktmi psst šifruje psst end-to-end.
+Správy cez LoRa (voliteľné): s vlastným rádiom Meshtastic LoRa pripojeným cez Bluetooth psst posiela a prijíma krátke správy aj bez mobilnej siete či internetu. Priame správy medzi prepojenými kontaktmi psst šifruje end-to-end.
 
 Opravy: viac textov po slovensky, aktualizované autorské práva a ďalšie drobné opravy.
