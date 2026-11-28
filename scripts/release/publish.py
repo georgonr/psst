@@ -108,7 +108,11 @@ def main():
     STATE.write_text(json.dumps(state, indent=1, ensure_ascii=False))
     # tracked copy for the CI check of the download page (scripts/release/check-download-page.py, D59)
     (ROOT / "release").mkdir(exist_ok=True)
-    (ROOT / "release" / "latest.json").write_text(json.dumps(state, indent=1, ensure_ascii=False) + "\n")
+    # D99: merge only this platform — a fresh local dist/ (another machine) must not drop the other platforms' entries
+    tracked_path = ROOT / "release" / "latest.json"
+    tracked = json.loads(tracked_path.read_text()) if tracked_path.exists() else {}
+    tracked[a.platform] = state[a.platform]
+    tracked_path.write_text(json.dumps(tracked, indent=1, ensure_ascii=False) + "\n")
     # SHA256SUMS covers every current file in the directory
     sums = []
     for plat, e in state.items():

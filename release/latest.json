@@ -1,13 +1,13 @@
 {
  "web": {
-  "build": 38,
-  "date": "20261121",
-  "note": "26.11.1: miznúce správy (základ), ochrana obrazovky, poloha, bez zvyškov Element (D94–D97)",
+  "build": 39,
+  "date": "20261128",
+  "note": "26.11.2: slovenské preklady, © 2026 GT (lokálny build, D99)",
   "dir": "web",
   "files": [
    {
-    "name": "psst-web-20261121-b38.tar.gz",
-    "sha256": "726e218136949ec522cc9befb55372eeb4cbfae32282e0d6f970729834b951d6"
+    "name": "psst-web-20261128-b39.tar.gz",
+    "sha256": "46ebe3c81f99f3b3dbcd3f0f63c701485246c20b0b1225557557ba037dee54a4"
    }
   ]
  },
@@ -68,14 +68,14 @@
   ]
  },
  "ios": {
-  "build": 6,
-  "date": "20261121",
-  "note": "26.11.1: psst nastavenia v časovej osi, len SK/EN (D98)",
+  "build": 7,
+  "date": "20261128",
+  "note": "26.11.2 (7): LoRa",
   "dir": "ios",
   "files": [
    {
-    "name": "psst-ios-20261121-b6.ipa",
-    "sha256": "7539974a8c8abe5a975f0764e259a9f1e689c13bdf55ff216ac0b28ec10f1cbd"
+    "name": "psst-ios-20261128-b7.ipa",
+    "sha256": "10d07502000426537b3b8983c2965445402e7ca1d2af26a63a8f9695bfb09ae2"
    }
   ]
  }
