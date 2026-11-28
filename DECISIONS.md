@@ -1270,3 +1270,32 @@ premennej. Iné workflowy, vetvy ani ostrá appka psst sa nespúšťali.
 
 **L1-19 — MQTT na Heltecu ostáva zapnuté** (ide na vlastný server majiteľa). psst lab ani `psst-mesh` ho nemenia
 a pakety z MQTT proxy nespracúvajú; obsah psst správ je aj tam šifrovaný naším kľúčom (doplnenie k L1-08).
+
+### Dávka L1c — LoRa sa zatvárala pri vyhľadávaní zariadení (2026-11-28)
+
+**L1-20 — Diagnóza: zatvorenie okna, nie pád.** App Store Connect API pre psst lab build 1: 0 pádov
+(`betaFeedbackCrashSubmissions`), 0 feedbackov, žiadne diagnostické podpisy. Hlásenie („na zlomok sekundy sa ukážu
+zariadenia, potom sa LoRa zavrie a ukáže sa zoznam kontaktov“) zodpovedá zrušeniu SwiftUI prezentácie.
+
+**L1-21 — Príčina.** Build 1 prezentoval LoRa cez `.fullScreenCover` pripojený na `HomeScreen` (vnútri
+`NavigationStack` koordinátora) a vyhľadávanie cez `.sheet` pripojený na sekciu `List`. Element X sám upozorňuje
+(`NavigationSplitCoordinatorView`), že prezentácie nižšie v hierarchii SwiftUI zruší pri zmene hierarchie. Počas
+vyhľadávania sa hierarchia menila neustále: CoreBluetooth hlási každé vysielanie (`AllowDuplicates`) — desiatky
+za sekundu na rádio — a každé prepísalo `@Published radios` zoradené podľa RSSI (riadky sa navyše prehadzovali
+pod prstom, preto sa na zariadenie nedalo ťuknúť). K tomu systémové okno povolenia Bluetooth / párovania (appka
+prejde do stavu inactive). Simulátor ani CI Bluetooth nemajú, presnú sekvenciu na iPhone som nevidel.
+
+**L1-22 — Oprava (poriadna, podľa vzoru Elementu).** (1) LoRa prezentuje `PsstLabLoRaRouter` cez
+`NavigationSplitCoordinator.setFullScreenCoverCoordinator` (najvyššia úroveň, rovnako ako Element prezentuje
+vyhľadávanie v adresári); registruje ho `ChatsTabFlowCoordinator`, obe tlačidlá (domovská obrazovka, detail
+rozhovoru) volajú router. (2) V LoRa nie je žiadny `.sheet`/`.fullScreenCover`: jeden `NavigationStack` s cestou
+(`LoRaRoute`), vyhľadávanie je krok v ňom (po výbere sa vráti späť), QR skener je priamo v obrazovke.
+(3) Zoznam rádií v poradí prvého nájdenia (nikdy sa nepreraďuje) a aktualizácie zlúčené na max. 2 za sekundu
+(časovač doručí posledný stav). Celý ďalší postup (výber → PIN → pripojené → uzly → rozhovor → odoslanie) beží
+v tom istom zásobníku bez prezentácií; všetky delegáty CoreBluetooth, časovače a callbacky sú na hlavnom vlákne
+(`CBCentralManager(queue: .main)`, `MainActor.assumeIsolated`, `Timer` na hlavnom run loope).
+
+**L1-23 — Regresný test.** `ScanListTests`: simulovaný skener postupne pridá 4 rádiá a 3 s ich znova ohlasuje
+každých 50 ms s kolísajúcim RSSI. Bez opravy test padá (39× prehodené riadky, 180 aktualizácií za 3 s), s opravou
+prechádza (0 prehodení, ≤ 8 aktualizácií). Spolu 32 testov balíka PsstLab. Samotnú prezentáciu (koordinátor) unit
+test nezachytí — overí ju test na iPhone.
