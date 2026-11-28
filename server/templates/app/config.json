@@ -1,4 +1,5 @@
 {
+    "permalink_prefix": "https://psst.pro",
     "default_server_config": {
         "m.homeserver": {
             "base_url": "https://__MATRIX_DOMAIN__",
