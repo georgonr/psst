@@ -109,6 +109,22 @@ V šifrovaných rozhovoroch to platí, no polohu možno poslať aj do verejného
 ju tam vidí → opatrne **Collected: Yes, Shared: No, Optional, App functionality**, Precise aj Approximate (appka
 žiada FINE aj COARSE). Deklarácia služby v popredí typu location: DECLARATIONS.md §2d.
 
+**LoRa (26.11.2, D99) — formulár sa nemení.** Správy LoRa idú z telefónu cez Bluetooth LE do vlastného rádia
+Meshtastic používateľa a odtiaľ rádiom k ďalším rádiám; nikdy cez servery psst ani tretej strany a prevádzkovateľ
+k nim nemá prístup. Google: „'Collect' means transmitting data from your app off a user's device“, „'Sharing'
+refers to transferring user data collected from your app to a third party“, mimo rozsahu sú údaje „only processed
+locally on the user's device“ a údaje „unreadable by you or anyone other than the sender and recipient“
+(answer/10787469). O priamom prenose medzi zariadeniami / do periférie Google nehovorí, takže doslovný výklad
+„off device“ by ich mohol zahrnúť. Pri **ľubovoľnom** výklade je to už pokryté: **Messages → Other in-app messages**
+je deklarované ako Collected, Required, App functionality; priame správy medzi prepojenými kontaktmi sú navyše E2EE
+(X25519 + ChaCha20-Poly1305), kanály len šifrovaním Meshtastic. Karta s verejným kľúčom pri „Link with LoRa“ ide
+ako bežná správa psst (Messages) alebo QR kódom (v zariadení). Číslo uzla a názov rádia sa ukladajú len v zariadení
+a vysielajú len rádiom (nie developerovi) → Device or other IDs bez zmeny. Appka cez LoRa polohu neposiela
+(len TEXT_MESSAGE / PRIVATE_APP / ROUTING / NODEINFO; prípadné vysielanie GPS polohy je nastavenie firmvéru
+rádia, nie psst) a BLE sken má `neverForLocation` → Location bez zmeny (deklarované kvôli D97). Shared: nič nové.
+Bluetooth povolenia: DECLARATIONS.md §5 (žiadna deklarácia). Pozn.: overené na kóde iOS (PsstLab); Android LoRa
+treba skontrolovať rovnako (porty, žiadny upload).
+
 **Not collected:** Financial info, Health and fitness, Contacts, Calendar, Web browsing,
 In-app search history, Installed apps, Crash logs, Diagnostics, Advertising ID.
 
@@ -158,6 +174,8 @@ Presné texty a video: **`play-listing/DECLARATIONS.md`**.
 | Install packages | netýka sa: odstránené v b51 |
 | Battery optimisation (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS) | netýka sa: odstránené v b51 |
 | SMS / Call log | netýka sa |
+| Precise location (`ACCESS_FINE_LOCATION`) — **povinné od 27. 1. 2027** | DECLARATIONS.md §4 (Live tracking + One-time location sharing, odôvodnenie) |
+| Bluetooth (BLUETOOTH_SCAN neverForLocation, BLUETOOTH_CONNECT; LoRa 26.11.2) | netýka sa — Play nemá deklaráciu (DECLARATIONS.md §5); služba v popredí connectedDevice len ak ju Android použije |
 
 Konečný zoznam povolení b51 je vo FACTS.md §2.
 
