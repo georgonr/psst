@@ -68,14 +68,14 @@
   ]
  },
  "ios": {
-  "build": 8,
+  "build": 9,
   "date": "20261128",
-  "note": "26.11.2 (8): LoRa, anglické texty LoRa opravené",
+  "note": "26.11.2 (9): psst.pro odkazy namiesto matrix.to (D111), LoRa",
   "dir": "ios",
   "files": [
    {
-    "name": "psst-ios-20261128-b8.ipa",
-    "sha256": "143868ae32d177ae7a5ceb9009a7e27df87ca95e897a47d5ce5ea65086004a6f"
+    "name": "psst-ios-20261128-b9.ipa",
+    "sha256": "1ec015f00e9a545ab17dcd3a8227011739f615fc70f5f971fc218c33d5919888"
    }
   ]
  }

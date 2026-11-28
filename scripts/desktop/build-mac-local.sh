@@ -46,7 +46,8 @@ node_modules/.bin/asar extract-file webapp.asar config.json && cmp config.json .
 export CSC_LINK="$KEYS/macos-devid/devid.p12" CSC_KEY_PASSWORD="$(cat "$KEYS/macos-devid/p12.pass")" CSC_IDENTITY_AUTO_DISCOVERY=true
 export APPLE_TEAM_ID="$TEAM" APPLE_API_KEY="$KEYS/AuthKey_$KEY_ID.p8" APPLE_API_KEY_ID="$KEY_ID" APPLE_API_ISSUER="$ISSUER"
 rm -rf dist
-pnpm run build --universal --publish never -m dmg zip -c.buildVersion="$N" -c.extraMetadata.psstBuild="$N" -c.extraMetadata.psstBuildDate="$D"
+# never the Nx cache: webapp.asar is not an Nx input, a cached build would ship the previous (or an empty) webapp
+NX_SKIP_NX_CACHE=true NX_DAEMON=false pnpm run build --universal --publish never -m dmg zip -c.buildVersion="$N" -c.extraMetadata.psstBuild="$N" -c.extraMetadata.psstBuildDate="$D"
 unset CSC_KEY_PASSWORD
 
 DMG="$(ls dist/psst-*.dmg)"
@@ -58,6 +59,7 @@ xcrun stapler staple "$DMG"
 
 OUT="$ROOT/dist/desktop"; mkdir -p "$OUT"
 APP=dist/mac-universal/psst.app
+cmp "$APP/Contents/Resources/webapp.asar" webapp.asar || { echo "the app does not carry this webapp.asar"; exit 2; }
 {
   codesign --verify --deep --strict --verbose=2 "$APP" 2>&1
   codesign -dvv "$APP" 2>&1 | grep -E 'Authority|TeamIdentifier|flags|Timestamp'
