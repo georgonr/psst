@@ -16,6 +16,10 @@ plain UTF-8, so a byte search is exact for these names.
 D87 adds the permissions removed for Google Play (install packages, battery-optimisation exemption, location, AD_ID):
 the check fails if any of them comes back, e.g. through a library update. With --list it also prints every
 uses-permission of an APK (for play-listing/FACTS.md).
+D99 (LoRa / Meshtastic over Bluetooth LE) allows exactly four Bluetooth permissions: BLUETOOTH_SCAN, which must carry
+usesPermissionFlags="neverForLocation", BLUETOOTH_CONNECT (both API 31+), and the legacy BLUETOOTH + BLUETOOTH_ADMIN
+only with maxSdkVersion 30. Any other Bluetooth permission (ADVERTISE, PRIVILEGED, …) fails the check. The APK check
+reads the attributes; the AAB check (protobuf manifests) checks the names.
 Exit code 0 = clean, 1 = forbidden entry found (or label wrong), 2 = usage/tool error.
 """
 import glob
@@ -41,6 +45,15 @@ FORBIDDEN = {
     "android.permission.ACCESS_BACKGROUND_LOCATION": "location permission ACCESS_BACKGROUND_LOCATION (never: no background location)",
     "com.google.android.gms.permission.AD_ID": "advertising ID permission AD_ID (Play form says: no advertising ID)",
 }
+# D99: the only Bluetooth permissions psst may declare (LoRa radios over BLE), with the attribute each must carry.
+BLUETOOTH_PREFIX = "android.permission.BLUETOOTH"
+BLUETOOTH_ALLOWED = {
+    "android.permission.BLUETOOTH_SCAN": "neverForLocation",   # usesPermissionFlags neverForLocation (0x10000)
+    "android.permission.BLUETOOTH_CONNECT": None,
+    "android.permission.BLUETOOTH": "maxSdkVersion=30",
+    "android.permission.BLUETOOTH_ADMIN": "maxSdkVersion=30",
+}
+NEVER_FOR_LOCATION = 0x10000
 LABEL = "psst"
 
 
@@ -62,12 +75,65 @@ def check_apk(path: str) -> list[str]:
     out = subprocess.run([tool, "dump", "xmltree", "--file", "AndroidManifest.xml", path],
                          check=True, capture_output=True, text=True).stdout
     problems = [f"{why} ({name})" for name, why in FORBIDDEN.items() if f'"{name}"' in out]
+    problems += check_bluetooth_apk(out)
     # application label: the first android:label after "E: application"
     app = out.split("E: application", 1)[1] if "E: application" in out else ""
     m = re.search(r"android:label\([^)]*\)=(\"[^\"]*\"|@0x[0-9a-f]+)", app.split("E: ", 1)[0])
     if not m or m.group(1) != f'"{LABEL}"':
         problems.append(f"application label is {m.group(1) if m else 'missing'}, expected literal \"{LABEL}\"")
     return problems
+
+
+def uses_permissions(xmltree: str) -> list[dict]:
+    """uses-permission / uses-permission-sdk-23 elements of an `aapt2 dump xmltree` output with their attributes."""
+    elements = []
+    for block in re.split(r"\n(?=\s*E: )", xmltree):
+        head = block.lstrip()
+        if not (head.startswith("E: uses-permission ") or head.startswith("E: uses-permission-sdk-23 ")):
+            continue
+        attrs = {}
+        for m in re.finditer(r"A: (?:http://schemas.android.com/apk/res/android:)?(\w+)\([^)]*\)=(\"[^\"]*\"|\S+)", block):
+            value = m.group(2)
+            if value.startswith('"'):
+                value = value[1:-1]
+            attrs[m.group(1)] = value
+        elements.append(attrs)
+    return elements
+
+
+def as_int(value: str | None) -> int | None:
+    if value is None:
+        return None
+    value = value.split(")")[-1]  # aapt2 may print "(type 0x11)0x10000"
+    try:
+        return int(value, 0)
+    except ValueError:
+        return None
+
+
+def check_bluetooth_apk(xmltree: str) -> list[str]:
+    problems = []
+    for attrs in uses_permissions(xmltree):
+        name = attrs.get("name", "")
+        if not name.startswith(BLUETOOTH_PREFIX):
+            continue
+        if name not in BLUETOOTH_ALLOWED:
+            problems.append(f"Bluetooth permission not allowed (D99: only BLUETOOTH_SCAN/CONNECT, legacy BLUETOOTH/ADMIN ≤ 30) ({name})")
+            continue
+        rule = BLUETOOTH_ALLOWED[name]
+        if rule == "neverForLocation":
+            flags = as_int(attrs.get("usesPermissionFlags"))
+            if flags is None or not flags & NEVER_FOR_LOCATION:
+                problems.append(f"BLUETOOTH_SCAN without usesPermissionFlags=neverForLocation (D99: the scan must not be usable for location) ({name})")
+        elif rule == "maxSdkVersion=30":
+            if as_int(attrs.get("maxSdkVersion")) != 30:
+                problems.append(f"legacy Bluetooth permission without maxSdkVersion=30 (D99) ({name})")
+    return problems
+
+
+def check_bluetooth_aab(data: bytes, module: str) -> list[str]:
+    names = {m.decode() for m in re.findall(rb"android\.permission\.BLUETOOTH[A-Z_]*", data)}
+    return [f"Bluetooth permission not allowed (D99) ({n}) in {module}" for n in sorted(names - set(BLUETOOTH_ALLOWED))]
 
 
 def permissions(path: str) -> list[str]:
@@ -86,6 +152,7 @@ def check_aab(path: str) -> list[str]:
             for name, why in FORBIDDEN.items():
                 if name.encode() in data:
                     problems.append(f"{why} ({name}) in {n}")
+            problems += check_bluetooth_aab(data, n)
     return problems
 
 
@@ -110,13 +177,14 @@ def main() -> int:
                 print(f"FAIL {os.path.basename(path)}: {p}")
         else:
             print(f"OK   {os.path.basename(path)}: no SMS / notification listener / accessibility / Play-restricted "
-                  f"permissions (D87)" + (f"; label \"{LABEL}\"" if path.endswith(".apk") else ""))
+                  f"permissions (D87); Bluetooth only SCAN (neverForLocation) / CONNECT / legacy ≤ 30 (D99)"
+                  + (f"; label \"{LABEL}\"" if path.endswith(".apk") else ""))
         if listing and path.endswith(".apk"):
             for perm in permissions(path):
                 print(f"     uses-permission {perm}")
     if bad:
         print("Forbidden manifest entries: Play Protect blocks SMS / listener / accessibility on sideload (D83); the rest "
-              "were removed for Google Play (D87). Remove them before release.")
+              "were removed for Google Play (D87); Bluetooth is limited to the LoRa permissions (D99). Remove them before release.")
     return bad
 
 
