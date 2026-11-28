@@ -27,3 +27,4 @@ psst vás nerobí anonymnými. Server pozná vaše meno používateľa, zariaden
 
 psst je postavený na otvorenom štandarde Matrix a open-source aplikáciách Element. Zdrojový kód: https://github.com/georgonr/psst
 Zásady ochrany súkromia: https://psst.pro/privacy · Podmienky používania: https://psst.pro/terms
+© 2026 GT

@@ -27,3 +27,4 @@ psst does not make you anonymous. The server knows your username, your devices a
 
 psst is built on the open Matrix standard and the open-source Element apps. Source code: https://github.com/georgonr/psst
 Privacy Policy: https://psst.pro/privacy · Terms of Use: https://psst.pro/terms
+© 2026 GT

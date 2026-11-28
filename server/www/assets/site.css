@@ -45,7 +45,7 @@ footer{color:var(--mut);font-size:13px;opacity:.8;padding:8px 0}
 }
 @media (max-height:620px){.logo{margin-bottom:16px}.lead{margin-bottom:22px}.plat{margin-top:20px}}
 
-/* pätička úvodnej stránky: dva malé odkazy pod „Powered by GT“ (D87) */
+/* pätička úvodnej stránky: dva malé odkazy pod „© 2026 GT“ (D87, D99) */
 .legal-links{display:flex;justify-content:center;gap:14px;margin-top:4px}
 .legal-links a{color:var(--mut);font-size:12px;text-decoration:none}
 .legal-links a:hover{color:var(--fg);text-decoration:underline}

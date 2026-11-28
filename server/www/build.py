@@ -97,7 +97,7 @@ def page(t):
 <div class="cta"><a class="btn primary" href="{DOWNLOAD}">{e(t["dl"])}</a><a class="btn ghost" href="{LOGIN}">{e(t["login"])}</a></div>
 <p class="plat" aria-label="{e(t["platforms_label"])}">{e(t["platforms"])}</p>
 </main>
-<footer>Powered by GT<nav class="legal-links" aria-label="{e(t["legal_label"])}"><a href="/privacy">{e(t["privacy"])}</a><a href="/terms">{e(t["terms"])}</a></nav></footer>
+<footer>© 2026 GT<nav class="legal-links" aria-label="{e(t["legal_label"])}"><a href="/privacy">{e(t["privacy"])}</a><a href="/terms">{e(t["terms"])}</a></nav></footer>
 </body>
 </html>
 '''
@@ -176,7 +176,7 @@ def legal_page(slug):
 {en['body'].strip()}
 </section>
 </main>
-<footer class="doc-foot">{e(OPERATOR['name'])} · <a href="mailto:{OPERATOR['email']}">{OPERATOR['email']}</a> · Powered by GT</footer>
+<footer class="doc-foot">{e(OPERATOR['name'])} · <a href="mailto:{OPERATOR['email']}">{OPERATOR['email']}</a> · © 2026 GT</footer>
 </body>
 </html>
 '''
